@@ -65,6 +65,12 @@ def me(request: Request):
 
 @app.put('/api/hexes/{q}/{r}')
 async def update(q: int, r: int, request: Request):
+    import math
+    # Match the frontend's full-canvas coordinate bounds; no arbitrary off-map inserts.
+    width = math.sqrt(3) * 80
+    if not (0 <= r < math.ceil((2200 + 80) / 120)
+            and math.ceil(-0.5 - r / 2) <= q <= math.floor(3200 / width + 0.5 - r / 2)):
+        raise HTTPException(404, 'Гекс вне полотна')
     body = bytearray()
     async for chunk in request.stream():
         body.extend(chunk)
@@ -85,10 +91,10 @@ async def update(q: int, r: int, request: Request):
         if value and (not value.isascii() or not value.isdigit() or not 0 <= int(value) <= maximum):
             raise HTTPException(400, f'{key}: требуется целое число 0–{maximum}')
     with connect() as conn:
-        row = conn.execute('UPDATE hexes SET data=data || %s, updated_at=now() WHERE q=%s AND r=%s RETURNING data',
-                           (Jsonb(payload), q, r)).fetchone()
-        if row is None:
-            raise HTTPException(404, 'Гекс не найден')
+        row = conn.execute('''INSERT INTO hexes(q,r,data) VALUES (%s,%s,%s)
+                           ON CONFLICT(q,r) DO UPDATE
+                           SET data=hexes.data || %s, updated_at=now() RETURNING data''',
+                           (q, r, Jsonb({'Q': str(q), 'R': str(r), **payload}), Jsonb(payload))).fetchone()
     return {'saved': True, 'row': row[0]}
 
 @app.get('/')

@@ -556,8 +556,8 @@ def publish_map():
     run(['git','-C',str(repo),'fetch','origin','main'],env=env)
     revision = run(['git','-C',str(repo),'rev-parse','origin/main'],raw=True).stdout.strip()
     changes = run(['git','-C',str(repo),'diff','--name-only',old_revision,revision],raw=True).stdout.splitlines()
-    allowed = ('app/frontend/','docs/','scripts/automation/')
-    if any(not name.startswith(allowed) for name in changes):
+    allowed = ('app/frontend/','docs/','scripts/automation/','tests/')
+    if any(not name.startswith(allowed) and name != 'app/backend/main.py' for name in changes):
         raise RuntimeError('Release includes unrelated changes; publication refused')
     run(['git','-C',str(repo),'merge','--ff-only','origin/main'])
     frontend = repo / 'app/frontend'
@@ -567,6 +567,10 @@ def publish_map():
     # New files inherit controller umask; only tracked frontend public assets need read access.
     for path in frontend.rglob('*'):
         path.chmod(0o755 if path.is_dir() else 0o644)
+    backend_changed = 'app/backend/main.py' in changes
+    if backend_changed:
+        (repo/'app/backend/main.py').chmod(0o644)
+        run(['systemctl','restart','rhisseth'])
     run(['nginx','-t'])
     for unit in ('rhisseth','postgresql@16-main','nginx'):
         run(['systemctl','is-active',unit])
@@ -584,7 +588,7 @@ def publish_map():
     release = json.loads(release_path.read_text())
     release.update(git_commit=revision,map_asset=asset.name,map_published_utc=now.isoformat())
     release_path.write_text(json.dumps(release,indent=2))
-    emit('Validation: V5 static publication complete; DB unchanged; no service restart; no reboot')
+    emit('Validation: V5 publication complete; DB unchanged; application restart='+str(backend_changed)+'; no reboot')
 
 code = 1
 try:

@@ -2,6 +2,8 @@
 
 const RADIUS = 80;
 const HEX_WIDTH = Math.sqrt(3) * RADIUS;
+const MAP_WIDTH = 3200;
+const MAP_HEIGHT = 2200;
 const VERSION = "Rhisseth · Artistic V5 · интерактивная сетка";
 const API_BASE = "/api";
 let csrfToken = '';
@@ -92,12 +94,22 @@ form.addEventListener("submit", async (event) => {
 
 function render(rows) {
   const fragment = document.createDocumentFragment();
-  rows.filter((row) => row["Категория"] !== "Вне полотна").forEach((row) => {
+  const byCoordinates = new Map(rows.map((row) => [`${Number(row.Q)},${Number(row.R)}`, row]));
+  const visibleRows = [];
+  // Include every cell intersecting the image, independent of legacy terrain labels.
+  for (let r = 0; r < Math.ceil((MAP_HEIGHT + RADIUS) / (RADIUS * 1.5)); r++) {
+    const firstQ = Math.ceil(-0.5 - r / 2);
+    const lastQ = Math.floor(MAP_WIDTH / HEX_WIDTH + 0.5 - r / 2);
+    for (let q = firstQ; q <= lastQ; q++) {
+      visibleRows.push(byCoordinates.get(`${q},${r}`) ?? { Q: String(q), R: String(r) });
+    }
+  }
+  visibleRows.forEach((row) => {
     const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
     polygon.setAttribute("points", polygonPoints(Number(row.Q), Number(row.R)));
     polygon.setAttribute("class", "hex-hit");
     polygon.setAttribute("tabindex", "0");
-    polygon.setAttribute("aria-label", `Гекс Q ${row.Q}, R ${row.R}: ${row["Тип местности"]}`);
+    polygon.setAttribute("aria-label", `Гекс Q ${row.Q}, R ${row.R}: ${row["Тип местности"] || "Нет данных"}`);
     polygon.addEventListener("contextmenu", (event) => { event.preventDefault(); showCard(row, event, polygon); });
     polygon.addEventListener("keydown", (event) => {
       if (event.key === "Enter" || event.key === " ") {
