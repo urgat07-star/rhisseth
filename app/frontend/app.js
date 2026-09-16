@@ -2,7 +2,7 @@
 
 const RADIUS = 80;
 const HEX_WIDTH = Math.sqrt(3) * RADIUS;
-const VERSION = "Rhisseth · Artistic V5";
+const VERSION = "Rhisseth · Artistic V5 · интерактивная сетка";
 const API_BASE = "/api";
 let csrfToken = '';
 

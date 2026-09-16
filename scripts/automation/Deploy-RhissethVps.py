@@ -502,10 +502,10 @@ def audit_map():
         if request('/index.php',{'login':name,'password':password,'csrf':csrf})[0]!=303:
             raise RuntimeError('Synthetic login validation failed')
         status,page=request('/interactive-map/')
-        if status!=200 or b'terrain-map-group3-artistic-v5.png' not in page:
+        if status!=200 or b'terrain-map-group3-artistic-v5-no-grid.png' not in page:
             raise RuntimeError('Authenticated map does not reference V5')
-        status,asset=request('/interactive-map/terrain-map-group3-artistic-v5.png')
-        expected=(ROOT/'repository/app/frontend/terrain-map-group3-artistic-v5.png').read_bytes()
+        status,asset=request('/interactive-map/terrain-map-group3-artistic-v5-no-grid.png')
+        expected=(ROOT/'repository/app/frontend/terrain-map-group3-artistic-v5-no-grid.png').read_bytes()
         if status!=200 or hashlib.sha256(asset).digest()!=hashlib.sha256(expected).digest():
             raise RuntimeError('HTTPS PNG differs from published V5')
         status,body=request('/api/hexes')
@@ -561,8 +561,8 @@ def publish_map():
         raise RuntimeError('Release includes unrelated changes; publication refused')
     run(['git','-C',str(repo),'merge','--ff-only','origin/main'])
     frontend = repo / 'app/frontend'
-    asset = frontend / 'terrain-map-group3-artistic-v5.png'
-    if not asset.is_file() or 'terrain-map-group3-artistic-v5.png' not in (frontend/'index.html').read_text():
+    asset = frontend / 'terrain-map-group3-artistic-v5-no-grid.png'
+    if not asset.is_file() or asset.name not in (frontend/'index.html').read_text():
         raise RuntimeError('V5 asset/reference missing')
     # New files inherit controller umask; only tracked frontend public assets need read access.
     for path in frontend.rglob('*'):

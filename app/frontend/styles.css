@@ -40,11 +40,11 @@ main { padding: clamp(12px, 2vw, 28px); }
   box-shadow: 0 22px 70px #0009;
 }
 
-.map-stage { position: relative; width: 100%; aspect-ratio: 1514 / 1039; }
+.map-stage { position: relative; width: 100%; aspect-ratio: 1508 / 1043; }
 .map-stage img, #hex-overlay { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .map-stage img { user-select: none; }
 #hex-overlay { z-index: 2; }
-.hex-hit { fill: transparent; stroke: transparent; stroke-width: 6; cursor: context-menu; transition: fill .12s, stroke .12s; }
+.hex-hit { fill: transparent; stroke: #172b3870; stroke-width: 1; vector-effect: non-scaling-stroke; cursor: context-menu; transition: fill .12s, stroke .12s; }
 .hex-hit:hover, .hex-hit.selected { fill: #f2d68328; stroke: #f3df9c; }
 .hex-hit:focus { outline: none; fill: #f2d68335; stroke: #fff1b5; }
 
