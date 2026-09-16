@@ -470,6 +470,80 @@ def validate_hosting():
     run(['free','-m'])
     run(['systemctl','show','rhisseth','postgresql@16-main','nginx','--property=MemoryCurrent','--property=NRestarts','--property=ActiveState'])
 
+def audit_map():
+    import math
+    import bcrypt
+    sys.path.insert(0,str(ROOT/'repository/app/backend'))
+    from db import connect
+    os.environ['DB_HOST']='127.0.0.1'
+    os.environ['DB_PASSWORD_FILE']=str(ROOT/'secrets/db-password.txt')
+    context=ssl.create_default_context(cafile=str(ROOT/'secrets/tls.crt'))
+    class NoRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self,*args,**kwargs):
+            return None
+    jar=http.cookiejar.CookieJar()
+    opener=urllib.request.build_opener(urllib.request.HTTPSHandler(context=context),urllib.request.HTTPCookieProcessor(jar),NoRedirect())
+    def request(path,payload=None):
+        data=urllib.parse.urlencode(payload).encode() if payload else None
+        req=urllib.request.Request('https://62.113.109.168'+path,data=data)
+        try:
+            with opener.open(req,timeout=25) as response:
+                return response.status,response.read()
+        except urllib.error.HTTPError as error:
+            return error.code,error.read()
+    name='mapaudit_'+secrets.token_hex(6)
+    password=secrets.token_urlsafe(24)
+    stored=bcrypt.hashpw(password.encode(),bcrypt.gensalt(rounds=12)).decode()
+    try:
+        with connect() as conn:
+            role=conn.execute("SELECT role_id FROM roles WHERE role_alias='admin'").fetchone()[0]
+            conn.execute('INSERT INTO users(user_login,user_pass,user_email,role_id) VALUES (%s,%s,%s,%s)',(name,stored,name+'@invalid.test',role))
+        csrf=re.search(rb'name="csrf" value="([a-f0-9]+)"',request('/index.php')[1])[1].decode()
+        if request('/index.php',{'login':name,'password':password,'csrf':csrf})[0]!=303:
+            raise RuntimeError('Synthetic login validation failed')
+        status,page=request('/interactive-map/')
+        if status!=200 or b'terrain-map-group3-artistic-v5.png' not in page:
+            raise RuntimeError('Authenticated map does not reference V5')
+        status,asset=request('/interactive-map/terrain-map-group3-artistic-v5.png')
+        expected=(ROOT/'repository/app/frontend/terrain-map-group3-artistic-v5.png').read_bytes()
+        if status!=200 or hashlib.sha256(asset).digest()!=hashlib.sha256(expected).digest():
+            raise RuntimeError('HTTPS PNG differs from published V5')
+        status,body=request('/api/hexes')
+        if status!=200:
+            raise RuntimeError('Live hex API validation failed')
+        rows={(int(row['Q']),int(row['R'])):row for row in json.loads(body)}
+        covered=0
+        missing=set()
+        excluded=set()
+        total=0
+        for y in range(5,2200,10):
+            for x in range(5,3200,10):
+                r=y/120
+                q=x/(math.sqrt(3)*80)-r/2
+                s=-q-r
+                rq,rr,rs=round(q),round(r),round(s)
+                dq,dr,ds=abs(rq-q),abs(rr-r),abs(rs-s)
+                if dq>dr and dq>ds:
+                    rq=-rr-rs
+                elif dr>ds:
+                    rr=-rq-rs
+                key=(rq,rr)
+                total+=1
+                if key not in rows:
+                    missing.add(key)
+                elif rows[key]['Категория']=='Вне полотна':
+                    excluded.add(key)
+                else:
+                    covered+=1
+        emit('Authenticated HTTPS: login, map HTML, V5 PNG SHA256 and live hex API passed; certificate explicitly trusted from pinned SSH')
+        emit('Live grid diagnostic: '+json.dumps({'rows':len(rows),'rendered':sum(row['Категория']!='Вне полотна' for row in rows.values()),'coverage_percent':round(100*covered/total,3),'missing_cells':sorted(missing),'excluded_sampled_cells':sorted(excluded)}))
+        identity=json.loads(request('/api/me')[1])
+        emit('Edit access for synthetic admin: '+str(identity['can_edit'])+'; no hex PUT performed')
+    finally:
+        with connect() as conn:
+            conn.execute('DELETE FROM users WHERE user_login=%s',(name,))
+        emit('Temporary validation account/sessions removed; existing accounts and all hex values unchanged; no restart/reboot')
+
 def publish_map():
     repo = ROOT / 'repository'
     old_revision = run(['git','-C',str(repo),'rev-parse','HEAD'],raw=True).stdout.strip()
@@ -533,6 +607,8 @@ try:
         emit('Validation: post-migration database backup saved; existing account data and map retained')
     elif operation == 'publish-map':
         publish_map()
+    elif operation == 'audit-map':
+        audit_map()
     else:
         raise RuntimeError('Unknown operation')
     code = 0

@@ -9,7 +9,7 @@ import sys
 from zoneinfo import ZoneInfo
 
 rid = 'da44a388-e458-4379-ab4c-c204696804b2'
-if len(sys.argv) != 3 or sys.argv[1] != rid or sys.argv[2] not in ('inspect', 'install', 'validate', 'hosting', 'snapshot', 'publish-map'):
+if len(sys.argv) != 3 or sys.argv[1] != rid or sys.argv[2] not in ('inspect', 'install', 'validate', 'hosting', 'snapshot', 'publish-map', 'audit-map'):
     raise SystemExit('Invalid approved operation')
 operation = sys.argv[2]
 now = dt.datetime.now(dt.timezone.utc)
@@ -64,7 +64,7 @@ try:
         result = ssh(['scp', *options, str(root / 'temp/hosting-bkp.zip'),str(root / 'temp/sql-bkp.zip'),'root@62.113.109.168:/opt/rhisseth/temp/'])
         if result.returncode:
             raise RuntimeError('Reviewed hosting archives transfer failed')
-    interpreter = '/opt/rhisseth/venv/bin/python' if operation in ('hosting','validate') else 'python3'
+    interpreter = '/opt/rhisseth/venv/bin/python' if operation in ('hosting','validate','audit-map') else 'python3'
     process = subprocess.Popen(['sshpass', '-e', 'ssh', *options, 'root@62.113.109.168', f'{interpreter} /opt/rhisseth/scripts/automation/Deploy-RhissethVps.py {operation}'], env=ssh_env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     for line in process.stdout:
         emit(line.rstrip().replace(password, '<redacted>'))
