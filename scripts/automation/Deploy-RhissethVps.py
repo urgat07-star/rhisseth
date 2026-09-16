@@ -45,6 +45,8 @@ def inspect():
     run(['df', '-h', '/'])
     run(['ss', '-lnt'])
     run(['nginx', '-t'])
+    run(['systemctl', 'status', 'postgresql@16-main', '--no-pager'], check=False)
+    run(['journalctl', '-u', 'postgresql@16-main', '-n', '15', '--no-pager'], check=False)
     config = run(['nginx', '-T'], raw=True).stdout
     for line in config.splitlines():
         if re.match(r'^# configuration file|^\s*(listen|server_name|root|ssl_certificate|include)\s', line):
@@ -94,7 +96,11 @@ def install():
     password_file.chmod(0o640)
     shutil.chown(password_file, user='root', group='rhisseth')
     password = password_file.read_text().strip()
+    pg_config = Path('/etc/postgresql/16/main/conf.d/rhisseth.conf')
+    if pg_config.exists():
+        pg_config.chmod(0o644)
     run(['systemctl', 'enable', '--now', 'postgresql'])
+    run(['systemctl', 'start', 'postgresql@16-main'])
     if sql("SELECT count(*) FROM pg_roles WHERE rolname='rhisseth';") == '0':
         sql('CREATE ROLE rhisseth LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE PASSWORD ' + "'" + password.replace("'", "''") + "';", secret=True)
     if sql("SELECT count(*) FROM pg_database WHERE datname='rhisseth';") == '0':
@@ -104,11 +110,22 @@ def install():
     if not version.startswith('16.'):
         raise RuntimeError('Expected Ubuntu PostgreSQL 16 for native test deployment')
     shutil.copy2(native / 'postgresql-test.conf', '/etc/postgresql/16/main/conf.d/rhisseth.conf')
+    pg_config.chmod(0o644)
     run(['systemctl', 'restart', 'postgresql@16-main'])
     venv = ROOT / 'venv'
     if not (venv / 'bin/python').is_file():
         run(['python3', '-m', 'venv', str(venv)])
     run([str(venv / 'bin/pip'), 'install', '--disable-pip-version-check', '--no-cache-dir', '-r', str(repo / 'app/backend/requirements.lock')])
+    # Code/runtime are non-secret and must be readable by the service user.
+    # Secret and backup directories retain their separate restrictive modes.
+    for tree in (repo, venv):
+        for parent, directories, files in os.walk(tree):
+            Path(parent).chmod(0o755)
+            for name in files:
+                file = Path(parent) / name
+                if not file.is_symlink():
+                    file.chmod(0o755 if file.stat().st_mode & 0o111 else 0o644)
+    run(['runuser', '-u', 'rhisseth', '--', str(venv / 'bin/python'), '-c', 'import fastapi, psycopg; print("Service-user runtime access verified")'])
     app_env = {**os.environ, 'DB_HOST': '127.0.0.1', 'DB_PASSWORD_FILE': str(password_file)}
     run([str(venv / 'bin/python'), str(repo / 'app/backend/migrate.py')], env=app_env)
     count = run(['runuser', '-u', 'postgres', '--', 'psql', '-X', '-At', '-d', 'rhisseth', '-c', 'SELECT count(*) FROM hexes']).stdout.strip()
@@ -130,6 +147,7 @@ def install():
         run(['openssl', 'req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-days', '30', '-keyout', str(secret_dir / 'tls.key'), '-out', str(secret_dir / 'tls.crt'), '-subj', '/CN=62.113.109.168', '-addext', 'subjectAltName=IP:62.113.109.168,DNS:rhisseth.ru'], raw=True)
     (secret_dir / 'tls.key').chmod(0o600)
     shutil.copy2(native / 'rhisseth.service', '/etc/systemd/system/rhisseth.service')
+    Path('/etc/systemd/system/rhisseth.service').chmod(0o644)
     shutil.copy2(native / 'nginx-logrotate.conf', '/etc/logrotate.d/rhisseth')
     run(['systemctl', 'daemon-reload'])
     run(['systemctl', 'enable', '--now', 'rhisseth'])
