@@ -483,6 +483,12 @@ try:
         validate()
     elif operation == 'hosting':
         hosting()
+    elif operation == 'snapshot':
+        backup_database('after-hosting')
+        run(['git','-C',str(ROOT/'repository'),'rev-parse','HEAD'])
+        run(['git','-C',str(ROOT/'repository'),'status','--porcelain'])
+        run(['runuser','-u','postgres','--','psql','-X','-At','-d','rhisseth','-c',"SELECT count(*),md5(string_agg(data::text,'' ORDER BY r,q)) FROM hexes"])
+        emit('Validation: post-migration database backup saved; existing account data and map retained')
     else:
         raise RuntimeError('Unknown operation')
     code = 0

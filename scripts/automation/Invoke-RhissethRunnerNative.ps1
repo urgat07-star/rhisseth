@@ -2,7 +2,7 @@
 param([string]$ResourceId = '',
       [ValidateSet('Inspect-RhissethVpsFromRunner.py', 'Consolidate-RhissethRunnerFiles.py', 'Deploy-RhissethFromRunner.py')]
       [string]$ScriptName = 'Inspect-RhissethVpsFromRunner.py',
-      [ValidateSet('inspect', 'install', 'validate', 'hosting')][string]$Operation = 'inspect')
+      [ValidateSet('inspect', 'install', 'validate', 'hosting', 'snapshot')][string]$Operation = 'inspect')
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../..')).Path
 $workspaceRoot = (Resolve-Path -LiteralPath (Join-Path $root '..')).Path
@@ -31,7 +31,7 @@ try {
         $out = & scp.exe @opts "$root/scripts/automation/Deploy-RhissethVps.py" 'avalon@10.210.52.128:/home/avalon/rhisseth.ru/scripts/automation/Deploy-RhissethVps.py' 2>&1
         if ($LASTEXITCODE -ne 0) { $out | Add-Content -LiteralPath $log; throw 'VPS payload transfer to runner failed' }
         if ($Operation -eq 'hosting') {
-            $out = & ssh.exe @opts avalon@10.210.52.128 'mkdir -p /home/avalon/rhisseth.ru/temp' 2>&1
+            $out = & ssh.exe @opts avalon@10.210.52.128 'mkdir -p /home/avalon/rhisseth.ru/temp && chmod 700 /home/avalon/rhisseth.ru/temp' 2>&1
             if ($LASTEXITCODE -ne 0) { throw 'Runner archive directory preparation failed' }
             $out = & scp.exe @opts "$root/temp/hosting-bkp.zip" "$root/temp/sql-bkp.zip" 'avalon@10.210.52.128:/home/avalon/rhisseth.ru/temp/' 2>&1
             if ($LASTEXITCODE -ne 0) { $out | Add-Content -LiteralPath $log; throw 'Archive transfer to runner failed' }

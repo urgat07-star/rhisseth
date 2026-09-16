@@ -9,7 +9,7 @@ import sys
 from zoneinfo import ZoneInfo
 
 rid = 'da44a388-e458-4379-ab4c-c204696804b2'
-if len(sys.argv) != 3 or sys.argv[1] != rid or sys.argv[2] not in ('inspect', 'install', 'validate', 'hosting'):
+if len(sys.argv) != 3 or sys.argv[1] != rid or sys.argv[2] not in ('inspect', 'install', 'validate', 'hosting', 'snapshot'):
     raise SystemExit('Invalid approved operation')
 operation = sys.argv[2]
 now = dt.datetime.now(dt.timezone.utc)
@@ -27,6 +27,11 @@ try:
     if socket.gethostname().lower().split('.')[0] != 'stu-automation-01':
         raise RuntimeError('Runner identity mismatch')
     emit('Preflight: runner identity verified; audit logging writable; VPS host key pinned from prior operation')
+    if (root/'temp/sql-bkp.zip').exists():
+        (root/'temp').chmod(0o700)
+        for name in ('hosting-bkp.zip','sql-bkp.zip'):
+            (root/'temp'/name).chmod(0o600)
+        emit('Runner archive permissions verified: private directory and owner-only files')
     env = os.environ.copy()
     phrase = Path('/etc/avalon-runner/passbolt/passphrase').read_text().rstrip('\r\n')
     env['USERPASSWORD'] = phrase
@@ -50,17 +55,21 @@ try:
     if result.returncode:
         raise RuntimeError('Reviewed VPS script transfer failed')
     if operation == 'hosting':
+        (root/'temp').chmod(0o700)
+        for name in ('hosting-bkp.zip','sql-bkp.zip'):
+            (root/'temp'/name).chmod(0o600)
         result = ssh(['ssh', *options, 'root@62.113.109.168', 'mkdir -p /opt/rhisseth/temp && chmod 700 /opt/rhisseth/temp'])
         if result.returncode:
             raise RuntimeError('VPS archive directory preparation failed')
         result = ssh(['scp', *options, str(root / 'temp/hosting-bkp.zip'),str(root / 'temp/sql-bkp.zip'),'root@62.113.109.168:/opt/rhisseth/temp/'])
         if result.returncode:
             raise RuntimeError('Reviewed hosting archives transfer failed')
-    process = subprocess.Popen(['sshpass', '-e', 'ssh', *options, 'root@62.113.109.168', f'python3 /opt/rhisseth/scripts/automation/Deploy-RhissethVps.py {operation}'], env=ssh_env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    interpreter = '/opt/rhisseth/venv/bin/python' if operation in ('hosting','validate') else 'python3'
+    process = subprocess.Popen(['sshpass', '-e', 'ssh', *options, 'root@62.113.109.168', f'{interpreter} /opt/rhisseth/scripts/automation/Deploy-RhissethVps.py {operation}'], env=ssh_env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     for line in process.stdout:
         emit(line.rstrip().replace(password, '<redacted>'))
     code = process.wait()
-    if code == 0 and operation in ('install', 'validate', 'hosting'):
+    if code == 0 and operation in ('install', 'validate', 'hosting', 'snapshot'):
         certificate = root / '.local/vps-test-tls.crt'
         certificate.parent.mkdir(parents=True, exist_ok=True)
         result = ssh(['scp', *options, 'root@62.113.109.168:/opt/rhisseth/secrets/tls.crt', str(certificate)])
@@ -68,7 +77,7 @@ try:
             raise RuntimeError('Public certificate retrieval failed')
         emit('External validation: TLS certificate trusted from pinned SSH transport')
         endpoints = [('http://62.113.109.168/', '301'), ('https://62.113.109.168/health', '401')]
-        if operation == 'hosting':
+        if operation in ('hosting','snapshot'):
             endpoints.append(('https://62.113.109.168/index.php','200'))
         for url, expected in endpoints:
             result = subprocess.run(['curl', '--max-time', '20', '--cacert', str(certificate), '-sS', '-o', '/dev/null', '-w', '%{http_code}', url], capture_output=True, text=True)
