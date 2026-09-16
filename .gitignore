@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+deploy/secrets/*
+!deploy/secrets/README.md
+.venv/
+__pycache__/
+*.pyc
+backups/
+*.dump
+*.log
+.local/
+reports/

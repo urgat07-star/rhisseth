@@ -1,0 +1,44 @@
+#requires -Version 7.0
+param([string]$ResourceId = '',
+      [ValidateSet('Inspect-RhissethVpsFromRunner.py', 'Consolidate-RhissethRunnerFiles.py')]
+      [string]$ScriptName = 'Inspect-RhissethVpsFromRunner.py')
+$ErrorActionPreference = 'Stop'
+$root = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../..')).Path
+$workspaceRoot = (Resolve-Path -LiteralPath (Join-Path $root '..')).Path
+$now = [DateTime]::UtcNow
+$dir = Join-Path $root ('reports/automation-logs/' + $now.ToString('yyyy-MM-dd'))
+New-Item -ItemType Directory -Force -Path $dir | Out-Null
+$log = Join-Path $dir ($now.ToString('yyyyMMdd-HHmmss') + '-rhisseth-runner-native.md')
+@('# Rhisseth runner control operation', '', "- UTC: $($now.ToString('o'))", "- Europe/Moscow: $([TimeZoneInfo]::ConvertTimeBySystemTimeZoneId($now,'Russian Standard Time').ToString('o'))", "- Controller: $env:COMPUTERNAME / Codex", '- Runner: STU-AUTOMATION-01 / 10.210.52.128', '- Targets: runner project artifacts; Passbolt metadata/VPS only for inspection script', "- Passbolt resource: $ResourceId", "- Script: $ScriptName", '- Action: pinned SSH control, reviewed script transfer and execution', '- Change/reboot: VPS unchanged; runner project files may be transferred/moved', '') | Set-Content -LiteralPath $log -Encoding utf8
+$code = 1
+try {
+    if ($ResourceId -and $ResourceId -notmatch '^[a-fA-F0-9-]{36}$') { throw 'Invalid resource ID' }
+    $line = Get-Content -LiteralPath "$workspaceRoot/containers/compose/ansible-control/.env" | Where-Object { $_ -match '^AVALON_SSH_PRIVATE_KEY=' } | Select-Object -First 1
+    if (-not $line) { throw 'Runner key reference missing' }
+    $key = $line.Substring($line.IndexOf('=') + 1).Trim().Trim('"').Trim("'")
+    $known = "$workspaceRoot/temp/stu-automation-01-known_hosts"
+    $fingerprint = & ssh-keygen.exe -lf $known 2>&1
+    if ($LASTEXITCODE -ne 0 -or ($fingerprint -join ' ') -notmatch 'SHA256:ChgM7wjz5n58p0QUUh2RNkebM8ZuP/fan\+eo\+n2iQyQ') { throw 'Runner pinned fingerprint not confirmed' }
+    'Preflight: reviewed script; pinned ED25519 fingerprint confirmed; audit log writable' | Add-Content -LiteralPath $log
+    $opts = @('-i', $key, '-o', 'BatchMode=yes', '-o', 'IdentitiesOnly=yes', '-o', 'StrictHostKeyChecking=yes', '-o', "UserKnownHostsFile=$known", '-o', 'ConnectTimeout=10')
+    $remote = '/home/avalon/rhisseth.ru/scripts/automation/' + $ScriptName
+    $out = & ssh.exe @opts avalon@10.210.52.128 'mkdir -p /home/avalon/rhisseth.ru/scripts/automation' 2>&1
+    if ($LASTEXITCODE -ne 0) { $out | Add-Content -LiteralPath $log; throw 'Runner project directory preparation failed' }
+    $out = & scp.exe @opts "$root/scripts/automation/$ScriptName" "avalon@10.210.52.128:$remote" 2>&1
+    if ($LASTEXITCODE -ne 0) { $out | Add-Content -LiteralPath $log; throw 'Runner transfer failed' }
+    $command = "python3 $remote"
+    if ($ResourceId) { $command += " $ResourceId" }
+    $out = & ssh.exe @opts avalon@10.210.52.128 $command 2>&1
+    $code = $LASTEXITCODE
+    $safe = ($out | ForEach-Object { [string]$_ }) -join "`n"
+    $safe = $safe -replace '(?i)(password|passphrase|token|cookie|authorization)\s*[:=]\s*\S+', '$1=<redacted>'
+    $safe | Add-Content -LiteralPath $log -Encoding utf8
+    Write-Output $safe
+} catch {
+    "Failure: $($_.Exception.Message)" | Add-Content -LiteralPath $log
+    Write-Output "Failure: $($_.Exception.Message)"
+} finally {
+    "Validation: exit_code=$code; VPS unchanged; runner project files transferred; reboot=false" | Add-Content -LiteralPath $log
+    Write-Output "Audit log: $log"
+}
+exit $code

@@ -1,0 +1,26 @@
+# Overlay for a dedicated 1 vCPU / 1 GB test VPS; tune after measurements.
+services:
+  db:
+    mem_limit: 320m
+    cpus: 0.50
+    command:
+      - postgres
+      - -c
+      - shared_buffers=64MB
+      - -c
+      - work_mem=2MB
+      - -c
+      - maintenance_work_mem=32MB
+      - -c
+      - autovacuum_work_mem=16MB
+      - -c
+      - max_connections=20
+      - -c
+      - max_parallel_workers_per_gather=0
+  app:
+    mem_limit: 200m
+    cpus: 0.35
+    command: [uvicorn, 'main:app', --host, '0.0.0.0', --port, '8080', --workers, '1', --limit-concurrency, '8']
+  proxy:
+    mem_limit: 96m
+    cpus: 0.15

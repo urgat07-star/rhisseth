@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rhisseth — интерактивная карта</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">RHISSETH</p>
+      <h1>Оперативная карта</h1>
+    </div>
+    <div class="hint"><span class="mouse-icon">◐</span> Правая кнопка — открыть редактор гекса</div>
+  </header>
+
+  <main>
+    <section id="map-viewport" class="map-viewport" aria-label="Интерактивная карта гексов">
+      <div id="loading" class="loading">Загрузка данных карты…</div>
+      <div id="map-stage" class="map-stage">
+        <img id="terrain-map" src="terrain-map-final-v2.png" alt="Финальная карта местности Rhisseth V2 с горами, холмами и реками" draggable="false">
+        <svg id="hex-overlay" viewBox="0 0 3200 2200" aria-label="Интерактивная гекс-сетка"></svg>
+      </div>
+
+      <aside id="hex-card" class="hex-card" hidden role="dialog" aria-labelledby="card-title">
+        <button id="close-card" class="close" type="button" aria-label="Закрыть">×</button>
+        <p class="card-kicker">СВЕДЕНИЯ О ГЕКСЕ</p>
+        <h2 id="card-title">Q0 · R0</h2>
+        <p id="card-coordinates" class="coordinates"></p>
+        <form id="hex-form">
+          <label>Категория<select name="Категория"><option>Суша</option><option>Побережье</option><option>Море</option><option>Вне полотна</option></select></label>
+          <label>Ландшафт<input name="Тип местности" list="terrain-list"></label>
+          <datalist id="terrain-list"><option value="Горы"><option value="Холмы"><option value="Густой лес"><option value="Равнина"><option value="Мелководье"><option value="Шельф"><option value="Открытое море"><option value="Глубоководье"></datalist>
+          <label>Объект<input name="Дополнительный объект" placeholder="Например: Река"></label>
+          <div class="numeric-grid">
+            <label>Пресная вода<input name="Пресная вода" type="number" min="0" max="5"></label>
+            <label>Проходимость<input name="Проходимость" type="number" min="0" max="5"></label>
+            <label>Защита<input name="Защита" type="number" min="0" max="4"></label>
+            <label>Плодородие<input name="Плодородие" type="number" min="0" max="5"></label>
+            <label>Опасность<input name="Опасность" type="number" min="0" max="5"></label>
+          </div>
+          <label>Основной ресурс<input name="Основной ресурс"></label>
+          <label>Богатство ресурса<input name="Богатство ресурса" type="number" min="0" max="5"></label>
+          <label>Комментарий<textarea name="Комментарий" rows="2"></textarea></label>
+          <button class="save" type="submit">Сохранить</button>
+          <p class="hint">Перерисовка изображения будет подключена отдельным этапом.</p>
+          <p id="save-status" class="save-status" aria-live="polite"></p>
+        </form>
+      </aside>
+    </section>
+  </main>
+
+  <footer id="data-status">Final V2 · подключение к PostgreSQL…</footer>
+  <script src="app.js" defer></script>
+</body>
+</html>

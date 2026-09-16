@@ -1,0 +1,49 @@
+name: rhisseth
+services:
+  db:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: rhisseth
+      POSTGRES_USER: rhisseth
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets: [db_password]
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: [CMD-SHELL, 'pg_isready -U rhisseth -d rhisseth']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  app:
+    build:
+      context: ..
+      dockerfile: deploy/docker/Dockerfile
+    restart: unless-stopped
+    environment:
+      DB_HOST: db
+      DB_PASSWORD_FILE: /run/secrets/db_password
+    secrets: [db_password]
+    depends_on:
+      db:
+        condition: service_healthy
+  proxy:
+    image: caddy:2
+    restart: unless-stopped
+    ports: ['80:80', '443:443']
+    environment:
+      DOMAIN: ${DOMAIN:?Set DOMAIN}
+      ADMIN_USER: ${ADMIN_USER:?Set ADMIN_USER}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:?Set ADMIN_PASSWORD_HASH}
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [app]
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+volumes:
+  postgres_data:
+  caddy_data:
+  caddy_config:
