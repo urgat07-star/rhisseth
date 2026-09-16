@@ -478,6 +478,8 @@ def audit_map():
     os.environ['DB_HOST']='127.0.0.1'
     os.environ['DB_PASSWORD_FILE']=str(ROOT/'secrets/db-password.txt')
     context=ssl.create_default_context(cafile=str(ROOT/'secrets/tls.crt'))
+    # Trust only the certificate retrieved over pinned SSH; legacy certificate uses IP identity.
+    context.check_hostname=False
     class NoRedirect(urllib.request.HTTPRedirectHandler):
         def redirect_request(self,*args,**kwargs):
             return None
@@ -485,7 +487,7 @@ def audit_map():
     opener=urllib.request.build_opener(urllib.request.HTTPSHandler(context=context),urllib.request.HTTPCookieProcessor(jar),NoRedirect())
     def request(path,payload=None):
         data=urllib.parse.urlencode(payload).encode() if payload else None
-        req=urllib.request.Request('https://62.113.109.168'+path,data=data)
+        req=urllib.request.Request('https://rhisseth.ru'+path,data=data)
         try:
             with opener.open(req,timeout=25) as response:
                 return response.status,response.read()
@@ -508,11 +510,22 @@ def audit_map():
         expected=(ROOT/'repository/app/frontend/terrain-map-group3-artistic-v5-no-grid.png').read_bytes()
         if status!=200 or hashlib.sha256(asset).digest()!=hashlib.sha256(expected).digest():
             raise RuntimeError('HTTPS PNG differs from published V5')
+        if b'preserveAspectRatio="none"' not in page:
+            raise RuntimeError('Overlay scaling configuration missing')
+        for filename in ('app.js','styles.css'):
+            status,content=request('/interactive-map/'+filename+'?v=v5-live-grid')
+            expected=(ROOT/'repository/app/frontend'/filename).read_bytes()
+            if status!=200 or content!=expected:
+                raise RuntimeError('Published frontend differs: '+filename)
         status,body=request('/api/hexes')
         if status!=200:
             raise RuntimeError('Live hex API validation failed')
         rows={(int(row['Q']),int(row['R'])):row for row in json.loads(body)}
+        width=math.sqrt(3)*80
+        rendered={(q,r) for r in range(math.ceil(2280/120))
+                  for q in range(math.ceil(-0.5-r/2),math.floor(3200/width+0.5-r/2)+1)}
         covered=0
+        database_covered=0
         missing=set()
         excluded=set()
         total=0
@@ -529,14 +542,18 @@ def audit_map():
                     rr=-rq-rs
                 key=(rq,rr)
                 total+=1
+                if key in rendered:
+                    covered+=1
                 if key not in rows:
                     missing.add(key)
-                elif rows[key]['Категория']=='Вне полотна':
+                elif rows[key].get('Категория')=='Вне полотна':
                     excluded.add(key)
                 else:
-                    covered+=1
-        emit('Authenticated HTTPS: login, map HTML, V5 PNG SHA256 and live hex API passed; certificate explicitly trusted from pinned SSH')
-        emit('Live grid diagnostic: '+json.dumps({'rows':len(rows),'rendered':sum(row['Категория']!='Вне полотна' for row in rows.values()),'coverage_percent':round(100*covered/total,3),'missing_cells':sorted(missing),'excluded_sampled_cells':sorted(excluded)}))
+                    database_covered+=1
+        if covered!=total:
+            raise RuntimeError('Full canvas coverage failed')
+        emit('Authenticated domain HTTPS: login, map HTML, V5 PNG SHA256, JS/CSS bytes and live hex API passed; certificate explicitly trusted from pinned SSH')
+        emit('Live grid diagnostic: '+json.dumps({'rows':len(rows),'rendered':len(rendered),'sample_count':total,'coverage_percent':round(100*covered/total,3),'legacy_database_coverage_percent':round(100*database_covered/total,3),'cells_without_database_record':sorted(missing),'legacy_outside_labels_on_canvas':sorted(excluded)}))
         identity=json.loads(request('/api/me')[1])
         emit('Edit access for synthetic admin: '+str(identity['can_edit'])+'; no hex PUT performed')
     finally:
