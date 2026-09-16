@@ -1,7 +1,8 @@
 #requires -Version 7.0
 param([string]$ResourceId = '',
-      [ValidateSet('Inspect-RhissethVpsFromRunner.py', 'Consolidate-RhissethRunnerFiles.py')]
-      [string]$ScriptName = 'Inspect-RhissethVpsFromRunner.py')
+      [ValidateSet('Inspect-RhissethVpsFromRunner.py', 'Consolidate-RhissethRunnerFiles.py', 'Deploy-RhissethFromRunner.py')]
+      [string]$ScriptName = 'Inspect-RhissethVpsFromRunner.py',
+      [ValidateSet('inspect', 'install', 'validate')][string]$Operation = 'inspect')
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../..')).Path
 $workspaceRoot = (Resolve-Path -LiteralPath (Join-Path $root '..')).Path
@@ -26,8 +27,13 @@ try {
     if ($LASTEXITCODE -ne 0) { $out | Add-Content -LiteralPath $log; throw 'Runner project directory preparation failed' }
     $out = & scp.exe @opts "$root/scripts/automation/$ScriptName" "avalon@10.210.52.128:$remote" 2>&1
     if ($LASTEXITCODE -ne 0) { $out | Add-Content -LiteralPath $log; throw 'Runner transfer failed' }
+    if ($ScriptName -eq 'Deploy-RhissethFromRunner.py') {
+        $out = & scp.exe @opts "$root/scripts/automation/Deploy-RhissethVps.py" 'avalon@10.210.52.128:/home/avalon/rhisseth.ru/scripts/automation/Deploy-RhissethVps.py' 2>&1
+        if ($LASTEXITCODE -ne 0) { $out | Add-Content -LiteralPath $log; throw 'VPS payload transfer to runner failed' }
+    }
     $command = "python3 $remote"
     if ($ResourceId) { $command += " $ResourceId" }
+    if ($ScriptName -eq 'Deploy-RhissethFromRunner.py') { $command += " $Operation" }
     $out = & ssh.exe @opts avalon@10.210.52.128 $command 2>&1
     $code = $LASTEXITCODE
     $safe = ($out | ForEach-Object { [string]$_ }) -join "`n"
@@ -38,7 +44,7 @@ try {
     "Failure: $($_.Exception.Message)" | Add-Content -LiteralPath $log
     Write-Output "Failure: $($_.Exception.Message)"
 } finally {
-    "Validation: exit_code=$code; VPS unchanged; runner project files transferred; reboot=false" | Add-Content -LiteralPath $log
+    "Validation: exit_code=$code; operation=$Operation; change/reboot status in sanitized remote output" | Add-Content -LiteralPath $log
     Write-Output "Audit log: $log"
 }
 exit $code

@@ -11,3 +11,5 @@ backups/
 *.log
 .local/
 reports/
+temp/
+secrets/

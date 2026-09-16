@@ -37,6 +37,7 @@
 характеристики можно вводить следующими миграциями.
 
 Запуск и перенос: [deploy/README.md](deploy/README.md).
+Первый тестовый VPS 1 CPU / 1 GB: [nginx + PostgreSQL 16 + systemd](deploy/native/README.md).
 Предложения: [docs/architecture.md](docs/architecture.md).
 Происхождение: [docs/migration.md](docs/migration.md).
 
