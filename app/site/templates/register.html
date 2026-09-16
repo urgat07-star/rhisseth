@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Регистрация | Стратегическая карта</title>
+
+    <!-- Подключение шрифтов -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=El+Messiri:wght@400..700&family=Reggae+One&display=swap" rel="stylesheet">
+
+    <!-- Подключение внешнего файла стилей -->
+    <link rel="stylesheet" href="/site/css/style.css">
+</head>
+<body class="register-page">
+
+    <div class="register-container">
+        <!-- Логотип -->
+        <div class="logo-wrapper">
+            <img src="/site/img/logo.webp" alt="Логотип Стратегической Карты">
+        </div>
+
+        <div class="register-header">
+            <h2>Представься!</h2>
+            <p>Расскажи о себе все.</p>
+        </div>
+
+        {% if error_message %}
+            <div class="error-message">
+                {{ error_message }}
+            </div>
+        {% endif %}
+
+        {% if success_message %}
+            <div class="success-message">
+                {{ success_message }}
+            </div>
+            <script>
+                setTimeout(() => { window.location.href = '/index.php'; }, 3000);
+            </script>
+        {% else %}
+
+        <form method="POST" action="" id="registerForm">
+<input type="hidden" name="csrf" value="{{ csrf }}">
+            <div class="form-group">
+                <label for="login">Логин</label>
+                <input type="text" id="login" name="login" required autocomplete="username" placeholder="Введите логин">
+            </div>
+
+            <div class="form-group">
+                <label for="email">Ваш e-mail</label>
+                <input type="email" id="email" name="email" required autocomplete="email" placeholder="example@mail.ru">
+            </div>
+
+            <div class="form-group">
+                <label for="password">Пароль</label>
+                <div class="input-wrapper">
+                    <input type="password" id="password" name="password" required autocomplete="new-password" placeholder="Введите пароль" class="password-field">
+                    <button type="button" class="toggle-password" data-target="password" aria-label="Показать пароль">
+                        <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="warning-block" id="passwordWarnings">
+                    <div class="warning-item" id="capsLockWarning" style="display:none;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                        </svg>
+                        <span>Включён Caps Lock</span>
+                    </div>
+                    <div class="warning-item" id="layoutWarning" style="display:none;">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                        </svg>
+                        <span>Обнаружены символы не из латинской раскладки</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="password_confirm">Подтверждение пароля</label>
+                <div class="input-wrapper">
+                    <input type="password" id="password_confirm" name="password_confirm" required autocomplete="new-password" placeholder="Повторите пароль" class="password-field">
+                    <button type="button" class="toggle-password" data-target="password_confirm" aria-label="Показать пароль">
+                        <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                            <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-submit">Рассказать</button>
+        </form>
+
+        <div class="form-footer">
+            Да чего ты прикидываешься? <a href="/index.php">Представься!</a>
+        </div>
+
+        {% endif %}
+    </div>
+
+    <script>
+        // === Переключение видимости пароля ===
+        document.querySelectorAll('.toggle-password').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const targetId = this.getAttribute('data-target');
+                const input = document.getElementById(targetId);
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    this.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+                } else {
+                    input.type = 'password';
+                    this.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+                }
+            });
+        });
+
+        // === Предупреждение о Caps Lock и раскладке ===
+        const passwordField = document.getElementById('password');
+        const capsLockWarning = document.getElementById('capsLockWarning');
+        const layoutWarning = document.getElementById('layoutWarning');
+        const warningsBlock = document.getElementById('passwordWarnings');
+
+        if (passwordField) {
+            passwordField.addEventListener('keydown', function(e) {
+                if (e.getModifierState && e.getModifierState('CapsLock')) {
+                    capsLockWarning.style.display = 'flex';
+                    warningsBlock.classList.add('active');
+                } else {
+                    capsLockWarning.style.display = 'none';
+                    checkWarningsVisibility();
+                }
+            });
+
+            passwordField.addEventListener('keyup', function(e) {
+                if (!e.getModifierState || !e.getModifierState('CapsLock')) {
+                    capsLockWarning.style.display = 'none';
+                    checkWarningsVisibility();
+                }
+            });
+
+            passwordField.addEventListener('input', function(e) {
+                const value = e.target.value;
+                const nonLatinRegex = /[^\u0000-\u024F\u1E00-\u1EFF\u2000-\u206F\u20A0-\u20CF\u2100-\u214F!@#$%^&*()_+\-=\[\]{}|;:'",.<>\/?`~\s]/;
+
+                if (value.length > 0 && nonLatinRegex.test(value)) {
+                    layoutWarning.style.display = 'flex';
+                    warningsBlock.classList.add('active');
+                } else {
+                    layoutWarning.style.display = 'none';
+                    checkWarningsVisibility();
+                }
+            });
+
+            function checkWarningsVisibility() {
+                const hasVisibleWarnings =
+                    capsLockWarning.style.display !== 'none' ||
+                    layoutWarning.style.display !== 'none';
+                if (!hasVisibleWarnings) {
+                    warningsBlock.classList.remove('active');
+                }
+            }
+        }
+    </script>
+
+</body>
+</html>

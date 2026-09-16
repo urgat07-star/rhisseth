@@ -4,6 +4,7 @@ const RADIUS = 80;
 const HEX_WIDTH = Math.sqrt(3) * RADIUS;
 const VERSION = "Rhisseth · Final V2";
 const API_BASE = "/api";
+let csrfToken = '';
 
 const overlay = document.querySelector("#hex-overlay");
 const viewport = document.querySelector("#map-viewport");
@@ -73,7 +74,7 @@ form.addEventListener("submit", async (event) => {
   try {
     const response = await fetch(`${API_BASE}/hexes/${selectedRow.Q}/${selectedRow.R}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken },
       body: JSON.stringify(payload),
     });
     const result = await response.json();
@@ -115,10 +116,29 @@ document.addEventListener("keydown", (event) => { if (event.key === "Escape") cl
 viewport.addEventListener("pointerdown", (event) => { if (!card.contains(event.target) && event.button === 0) closeCard(); });
 
 async function loadData() {
+  const identityResponse = await fetch(`${API_BASE}/me`, { cache: "no-store" });
+  if (identityResponse.status === 401) {
+    window.location.href = '/index.php';
+    throw new Error('Требуется вход');
+  }
+  if (!identityResponse.ok) throw new Error(`HTTP ${identityResponse.status}`);
+  const identity = await identityResponse.json();
+  csrfToken = identity.csrf;
+  document.querySelector('#user-status').textContent = `${identity.login} · ${identity.role}`;
+  if (!identity.can_edit) {
+    for (const element of form.elements) element.disabled = true;
+    document.querySelector('#editor-hint').textContent = 'Режим просмотра · правая кнопка — сведения о гексе';
+  }
   const response = await fetch(`${API_BASE}/hexes`, { cache: "no-store" });
   if (!response.ok) throw new Error(`PostgreSQL API: HTTP ${response.status}`);
   return { rows: await response.json(), source: "PostgreSQL" };
 }
+
+document.querySelector('#logout').addEventListener('click', async () => {
+  const body = new URLSearchParams({ csrf: csrfToken });
+  const response = await fetch('/logout', { method: 'POST', body });
+  if (response.ok) window.location.href = '/index.php';
+});
 
 loadData()
   .then(({ rows, source }) => {

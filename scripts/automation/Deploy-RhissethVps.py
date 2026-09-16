@@ -15,6 +15,8 @@ import sys
 import time
 import urllib.request
 import urllib.error
+import urllib.parse
+import http.cookiejar
 from zoneinfo import ZoneInfo
 
 ROOT = Path('/opt/rhisseth')
@@ -180,6 +182,8 @@ def install():
     validate()
 
 def validate():
+    if (ROOT/'repository/app/backend/site_auth.py').exists():
+        return validate_hosting()
     context = ssl.create_default_context(cafile=str(ROOT / 'secrets/tls.crt'))
     password = (ROOT / 'secrets/web-password.txt').read_text().strip()
     auth = 'Basic ' + base64.b64encode(('mapadmin:' + password).encode()).decode()
@@ -264,6 +268,208 @@ def validate():
     run(['systemctl', 'show', 'rhisseth', 'postgresql@16-main', 'nginx', '--property=MemoryCurrent', '--property=NRestarts', '--property=ActiveState'])
     emit('Validation: nginx TLS, auth, static assets, database API, input validation, persistence and backup passed; no reboot')
 
+def backup_database(label):
+    directory = ROOT / 'backups'
+    directory.mkdir(exist_ok=True)
+    directory.chmod(0o700)
+    target = directory / (now.strftime('%Y%m%d-%H%M%S') + '-' + label + '.dump')
+    emit('Command: pg_dump project database before/after hosting migration (secret output suppressed)')
+    with target.open('wb') as stream:
+        result = subprocess.run(['runuser','-u','postgres','--','pg_dump','-d','rhisseth','-Fc'],stdout=stream,stderr=subprocess.PIPE)
+    if result.returncode:
+        raise RuntimeError('Database backup failed')
+    emit(f'Backup: {target}; SHA256={hashlib.sha256(target.read_bytes()).hexdigest()}')
+    return target
+
+def hosting():
+    emit('Approved change: restore hosting appearance and users/roles in existing PostgreSQL; preserve hex data')
+    repo = ROOT / 'repository'
+    old_revision = run(['git','-C',str(repo),'rev-parse','HEAD'],raw=True).stdout.strip()
+    if run(['git','-C',str(repo),'status','--porcelain'],raw=True).stdout.strip():
+        raise RuntimeError('Repository has local changes; update refused')
+    backup_database('before-hosting')
+    backup = ROOT / 'backups' / (now.strftime('%Y%m%d-%H%M%S') + '-before-hosting')
+    backup.mkdir()
+    backup.chmod(0o700)
+    shutil.copytree('/etc/nginx',backup/'nginx',symlinks=True)
+    emit('Backup: nginx configuration saved; previous Git SHA=' + old_revision)
+    for name in ('hosting-bkp.zip','sql-bkp.zip'):
+        file = ROOT / 'temp' / name
+        file.chmod(0o600)
+        emit('Source archive: ' + name + '; SHA256=' + hashlib.sha256(file.read_bytes()).hexdigest())
+    env = {**os.environ,'GIT_TERMINAL_PROMPT':'0'}
+    run(['git','-C',str(repo),'fetch','origin','main'],env=env)
+    run(['git','-C',str(repo),'merge','--ff-only','origin/main'])
+    revision = run(['git','-C',str(repo),'rev-parse','HEAD']).stdout.strip()
+    venv = ROOT / 'venv'
+    run([str(venv/'bin/pip'),'install','--no-cache-dir','--disable-pip-version-check','-r',str(repo/'app/backend/requirements.lock')])
+    for tree in (repo,venv):
+        for parent,directories,files in os.walk(tree):
+            Path(parent).chmod(0o755)
+            for name in files:
+                file = Path(parent)/name
+                if not file.is_symlink():
+                    file.chmod(0o755 if file.stat().st_mode & 0o111 else 0o644)
+    app_env = {**os.environ,'DB_HOST':'127.0.0.1','DB_PASSWORD_FILE':str(ROOT/'secrets/db-password.txt')}
+    run([str(venv/'bin/python'),str(repo/'app/backend/migrate.py')],env=app_env)
+    count = run(['runuser','-u','postgres','--','psql','-X','-At','-d','rhisseth','-c','SELECT count(*) FROM users']).stdout.strip()
+    if count == '0':
+        result = run([str(venv/'bin/python'),str(repo/'app/backend/import_users.py'),str(ROOT/'temp/sql-bkp.zip')],env=app_env,raw=True)
+        counts = json.loads(result.stdout)
+        emit(f'Imported account data: {counts["users"]} users, {counts["roles"]} roles; original hashes preserved')
+    else:
+        emit('Existing users preserved; account import skipped')
+    site = Path('/etc/nginx/sites-available/rhisseth')
+    previous = site.read_bytes()
+    site.write_bytes((repo/'deploy/native/nginx.conf').read_bytes())
+    site.chmod(0o644)
+    if run(['nginx','-t'],check=False).returncode:
+        site.write_bytes(previous)
+        raise RuntimeError('New nginx configuration invalid; restored previous vhost')
+    run(['systemctl','restart','rhisseth'])
+    for attempt in range(30):
+        result = run(['curl','--max-time','2','-sS','-o','/dev/null','-w','%{http_code}','http://127.0.0.1:8080/api/me'],check=False,raw=True)
+        if result.stdout == '401':
+            break
+        time.sleep(1)
+    else:
+        site.write_bytes(previous)
+        raise RuntimeError('New application startup failed; previous nginx config restored on disk')
+    run(['systemctl','reload','nginx'])
+    release = json.loads((ROOT/'release.json').read_text())
+    release.update({'git_commit':revision,'hosting_deployed_utc':now.isoformat(),'account_source':'sql-bkp.zip'})
+    (ROOT/'release.json').write_text(json.dumps(release,indent=2))
+    validate_hosting()
+    backup_database('after-hosting')
+    emit('Validation: hosting, PostgreSQL accounts and role-controlled map deployed; no reboot')
+
+def validate_hosting():
+    repo = ROOT/'repository'
+    sys.path.insert(0,str(repo/'app/backend'))
+    from import_users import load_archive
+    from db import connect
+    import bcrypt
+    os.environ['DB_HOST']='127.0.0.1'
+    os.environ['DB_PASSWORD_FILE']=str(ROOT/'secrets/db-password.txt')
+    imported = load_archive(ROOT/'temp/sql-bkp.zip')
+    with connect() as conn:
+        for table,rows in imported.items():
+            for row in rows:
+                key = 'user_id' if table == 'users' else 'role_id'
+                columns = list(row)
+                restored = conn.execute(f'SELECT {",".join(columns)} FROM {table} WHERE {key}=%s',(row[key],)).fetchone()
+                if restored != tuple(row[c] for c in columns):
+                    raise RuntimeError('Imported account data mismatch; fields suppressed')
+    emit('Validation: all source account IDs, logins, emails, bcrypt hashes and role assignments preserved (values suppressed)')
+    context = ssl.create_default_context(cafile=str(ROOT/'secrets/tls.crt'))
+    class NoRedirect(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self,*args,**kwargs):
+            return None
+    def client():
+        jar = http.cookiejar.CookieJar()
+        opener = urllib.request.build_opener(urllib.request.HTTPSHandler(context=context),urllib.request.HTTPCookieProcessor(jar),NoRedirect())
+        def request(path, payload=None, *, method=None, csrf=None):
+            headers = {}
+            data = None
+            if payload is not None:
+                if path.startswith('/api/'):
+                    data = json.dumps(payload,ensure_ascii=False).encode()
+                    headers['Content-Type']='application/json'
+                else:
+                    data = urllib.parse.urlencode(payload).encode()
+                    headers['Content-Type']='application/x-www-form-urlencoded'
+            if csrf:
+                headers['X-CSRF-Token']=csrf
+            req = urllib.request.Request('https://62.113.109.168'+path,data=data,headers=headers,method=method or ('POST' if data else 'GET'))
+            try:
+                with opener.open(req,timeout=20) as response:
+                    return response.status,response.read(),response.headers
+            except urllib.error.HTTPError as error:
+                return error.code,error.read(),error.headers
+        return request,jar
+    anonymous,_ = client()
+    assert anonymous('/api/hexes')[0]==401
+    assert anonymous('/interactive-map/')[0]==303
+    status,body,_ = anonymous('/index.php')
+    assert status==200 and 'Как вас представить'.encode() in body
+    for path in ('/site/css/style.css','/site/img/logo.webp','/register.php'):
+        assert anonymous(path)[0]==200
+    for path in ('/conn.php','/temp/sql-bkp.zip','/map/.deploy-backups/anything','/data/import/hex-initial-parameters.csv'):
+        assert anonymous(path)[0]==404
+    assert anonymous('/index.php',{'login':'synthetic','password':'invalid','csrf':'invalid'})[0]==403
+    prefix = 'deploycheck_' + secrets.token_hex(5)
+    names = []
+    password = secrets.token_urlsafe(24)
+    stored = bcrypt.hashpw(password.encode(),bcrypt.gensalt(rounds=12)).decode()
+    try:
+        with connect() as conn:
+            for alias in ('admin','moderator','user'):
+                name = prefix+'_'+alias
+                names.append(name)
+                role = conn.execute('SELECT role_id FROM roles WHERE role_alias=%s',(alias,)).fetchone()[0]
+                conn.execute('INSERT INTO users(user_login,user_pass,user_email,role_id) VALUES (%s,%s,%s,%s)',(name,stored,name+'@invalid.test',role))
+        csrf_pattern = rb'name="csrf" value="([a-f0-9]+)"'
+        for alias,name in zip(('admin','moderator','user'),names):
+            request,jar = client()
+            csrf = re.search(csrf_pattern,request('/index.php')[1])[1].decode()
+            status,_,headers = request('/index.php',{'login':name,'password':password,'csrf':csrf})
+            assert status==303 and headers['Location']=='/interactive-map/'
+            assert all(cookie.secure and cookie.has_nonstandard_attr('HttpOnly') for cookie in jar)
+            identity = json.loads(request('/api/me')[1])
+            assert identity['role']==alias
+            csrf = identity['csrf']
+            assert request('/interactive-map/')[0]==200
+            for path in ('/interactive-map/app.js','/interactive-map/styles.css','/interactive-map/terrain-map-final-v2.png'):
+                assert request(path)[0]==200
+            rows = json.loads(request('/api/hexes')[1])
+            row = next(row for row in rows if row['Категория']!='Вне полотна')
+            endpoint = f'/api/hexes/{row["Q"]}/{row["R"]}'
+            original = row['Комментарий']
+            assert request(endpoint,{'Комментарий':'blocked'},method='PUT')[0]==403
+            if alias=='user':
+                assert request(endpoint,{'Комментарий':'blocked'},method='PUT',csrf=csrf)[0]==403
+                assert not identity['can_edit']
+            else:
+                assert request(endpoint,{'Комментарий':prefix},method='PUT',csrf=csrf)[0]==200
+                try:
+                    if alias=='admin':
+                        run(['systemctl','restart','rhisseth'])
+                        run(['systemctl','restart','postgresql@16-main'])
+                        for attempt in range(30):
+                            try:
+                                if request('/api/me')[0]==200:
+                                    break
+                            except Exception:
+                                pass
+                            time.sleep(1)
+                    updated = json.loads(request('/api/hexes')[1])
+                    assert next(r for r in updated if (r['Q'],r['R'])==(row['Q'],row['R']))['Комментарий']==prefix
+                finally:
+                    assert request(endpoint,{'Комментарий':original},method='PUT',csrf=csrf)[0]==200
+            assert request('/logout',{'csrf':csrf})[0]==303
+            assert request('/api/hexes')[0]==401
+            emit('Validation: '+alias+' login, map access, CSRF, permissions and logout passed')
+        request,_ = client()
+        csrf = re.search(csrf_pattern,request('/register.php')[1])[1].decode()
+        name = prefix+'_registered'
+        names.append(name)
+        form = {'login':name,'email':name+'@invalid.test','password':password,'password_confirm':password,'csrf':csrf,'role_id':'1'}
+        assert request('/register.php',form)[0]==200
+        assert request('/register.php',form)[0]==409
+        assert request('/index.php',{'login':name,'password':password,'csrf':csrf})[0]==303
+        assert json.loads(request('/api/me')[1])['role']=='user'
+        emit('Validation: registration, duplicate rejection and prevention of role escalation passed')
+    finally:
+        with connect() as conn:
+            conn.execute('DELETE FROM users WHERE user_login=ANY(%s)',(names,))
+        emit('Validation: synthetic accounts and their sessions removed; source users unchanged')
+    with connect() as conn:
+        emit('Final account/hex counts: '+str(conn.execute('SELECT (SELECT count(*) FROM users),(SELECT count(*) FROM roles),(SELECT count(*) FROM hexes)').fetchone()))
+    for unit in ('rhisseth','postgresql@16-main','nginx'):
+        run(['systemctl','is-active',unit])
+    run(['free','-m'])
+    run(['systemctl','show','rhisseth','postgresql@16-main','nginx','--property=MemoryCurrent','--property=NRestarts','--property=ActiveState'])
+
 code = 1
 try:
     emit('Preflight: project audit log writable; approved VPS identity required')
@@ -275,6 +481,8 @@ try:
         install()
     elif operation == 'validate':
         validate()
+    elif operation == 'hosting':
+        hosting()
     else:
         raise RuntimeError('Unknown operation')
     code = 0
