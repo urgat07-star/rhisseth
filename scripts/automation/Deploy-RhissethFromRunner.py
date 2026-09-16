@@ -67,6 +67,7 @@ try:
                 code = 1
                 raise RuntimeError('External nginx/TLS/access validation failed')
 except Exception as error:
+    code = 1
     emit(f'Failure: {type(error).__name__}: {error}')
 finally:
     emit(f'Validation: exit_code={code}; operation={operation}; reboot=false; VPS change details above')
