@@ -470,6 +470,48 @@ def validate_hosting():
     run(['free','-m'])
     run(['systemctl','show','rhisseth','postgresql@16-main','nginx','--property=MemoryCurrent','--property=NRestarts','--property=ActiveState'])
 
+def publish_map():
+    repo = ROOT / 'repository'
+    old_revision = run(['git','-C',str(repo),'rev-parse','HEAD'],raw=True).stdout.strip()
+    if run(['git','-C',str(repo),'status','--porcelain'],raw=True).stdout.strip():
+        raise RuntimeError('VPS repository has local changes; publication refused')
+    before = run(['runuser','-u','postgres','--','psql','-X','-At','-d','rhisseth','-c',
+                  "SELECT count(*),md5(string_agg(data::text,'' ORDER BY r,q)) FROM hexes"],raw=True).stdout.strip()
+    backup_database('before-map-v5')
+    env = {**os.environ,'GIT_TERMINAL_PROMPT':'0'}
+    run(['git','-C',str(repo),'fetch','origin','main'],env=env)
+    revision = run(['git','-C',str(repo),'rev-parse','origin/main'],raw=True).stdout.strip()
+    changes = run(['git','-C',str(repo),'diff','--name-only',old_revision,revision],raw=True).stdout.splitlines()
+    allowed = ('app/frontend/','docs/','scripts/automation/')
+    if any(not name.startswith(allowed) for name in changes):
+        raise RuntimeError('Release includes unrelated changes; publication refused')
+    run(['git','-C',str(repo),'merge','--ff-only','origin/main'])
+    frontend = repo / 'app/frontend'
+    asset = frontend / 'terrain-map-group3-artistic-v5.png'
+    if not asset.is_file() or 'terrain-map-group3-artistic-v5.png' not in (frontend/'index.html').read_text():
+        raise RuntimeError('V5 asset/reference missing')
+    # New files inherit controller umask; only tracked frontend public assets need read access.
+    for path in frontend.rglob('*'):
+        path.chmod(0o755 if path.is_dir() else 0o644)
+    run(['nginx','-t'])
+    for unit in ('rhisseth','postgresql@16-main','nginx'):
+        run(['systemctl','is-active',unit])
+    after = run(['runuser','-u','postgres','--','psql','-X','-At','-d','rhisseth','-c',
+                 "SELECT count(*),md5(string_agg(data::text,'' ORDER BY r,q)) FROM hexes"],raw=True).stdout.strip()
+    if before != after:
+        raise RuntimeError('Unexpected hex database change during publication')
+    emit('Published asset SHA256: '+hashlib.sha256(asset.read_bytes()).hexdigest())
+    emit('Previous release: '+old_revision+'; published release: '+revision)
+    emit('Hex database count/checksum unchanged: '+after)
+    stats = run(['runuser','-u','postgres','--','psql','-X','-At','-d','rhisseth','-c',
+                 "SELECT data->>'Категория',count(*) FROM hexes GROUP BY 1 ORDER BY 1"],raw=True).stdout.strip()
+    emit('Hex categories: '+stats)
+    release_path = ROOT/'release.json'
+    release = json.loads(release_path.read_text())
+    release.update(git_commit=revision,map_asset=asset.name,map_published_utc=now.isoformat())
+    release_path.write_text(json.dumps(release,indent=2))
+    emit('Validation: V5 static publication complete; DB unchanged; no service restart; no reboot')
+
 code = 1
 try:
     emit('Preflight: project audit log writable; approved VPS identity required')
@@ -489,6 +531,8 @@ try:
         run(['git','-C',str(ROOT/'repository'),'status','--porcelain'])
         run(['runuser','-u','postgres','--','psql','-X','-At','-d','rhisseth','-c',"SELECT count(*),md5(string_agg(data::text,'' ORDER BY r,q)) FROM hexes"])
         emit('Validation: post-migration database backup saved; existing account data and map retained')
+    elif operation == 'publish-map':
+        publish_map()
     else:
         raise RuntimeError('Unknown operation')
     code = 0

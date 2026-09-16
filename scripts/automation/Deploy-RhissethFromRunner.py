@@ -9,7 +9,7 @@ import sys
 from zoneinfo import ZoneInfo
 
 rid = 'da44a388-e458-4379-ab4c-c204696804b2'
-if len(sys.argv) != 3 or sys.argv[1] != rid or sys.argv[2] not in ('inspect', 'install', 'validate', 'hosting', 'snapshot'):
+if len(sys.argv) != 3 or sys.argv[1] != rid or sys.argv[2] not in ('inspect', 'install', 'validate', 'hosting', 'snapshot', 'publish-map'):
     raise SystemExit('Invalid approved operation')
 operation = sys.argv[2]
 now = dt.datetime.now(dt.timezone.utc)

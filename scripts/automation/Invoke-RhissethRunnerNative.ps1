@@ -2,7 +2,7 @@
 param([string]$ResourceId = '',
       [ValidateSet('Inspect-RhissethVpsFromRunner.py', 'Consolidate-RhissethRunnerFiles.py', 'Deploy-RhissethFromRunner.py')]
       [string]$ScriptName = 'Inspect-RhissethVpsFromRunner.py',
-      [ValidateSet('inspect', 'install', 'validate', 'hosting', 'snapshot')][string]$Operation = 'inspect')
+      [ValidateSet('inspect', 'install', 'validate', 'hosting', 'snapshot', 'publish-map')][string]$Operation = 'inspect')
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../..')).Path
 $workspaceRoot = (Resolve-Path -LiteralPath (Join-Path $root '..')).Path
@@ -10,7 +10,7 @@ $now = [DateTime]::UtcNow
 $dir = Join-Path $root ('reports/automation-logs/' + $now.ToString('yyyy-MM-dd'))
 New-Item -ItemType Directory -Force -Path $dir | Out-Null
 $log = Join-Path $dir ($now.ToString('yyyyMMdd-HHmmss') + '-rhisseth-runner-native.md')
-@('# Rhisseth runner control operation', '', "- UTC: $($now.ToString('o'))", "- Europe/Moscow: $([TimeZoneInfo]::ConvertTimeBySystemTimeZoneId($now,'Russian Standard Time').ToString('o'))", "- Controller: $env:COMPUTERNAME / Codex", '- Runner: STU-AUTOMATION-01 / 10.210.52.128', '- Targets: runner project artifacts; Passbolt metadata/VPS only for inspection script', "- Passbolt resource: $ResourceId", "- Script: $ScriptName", '- Action: pinned SSH control, reviewed script transfer and execution', '- Change/reboot: VPS unchanged; runner project files may be transferred/moved', '') | Set-Content -LiteralPath $log -Encoding utf8
+@('# Rhisseth runner control operation', '', "- UTC: $($now.ToString('o'))", "- Europe/Moscow: $([TimeZoneInfo]::ConvertTimeBySystemTimeZoneId($now,'Russian Standard Time').ToString('o'))", "- Controller: $env:COMPUTERNAME / Codex", '- Runner: STU-AUTOMATION-01 / 10.210.52.128', '- Targets: runner project artifacts; selected VPS 62.113.109.168; project GitHub; Passbolt resource only', "- Passbolt resource: $ResourceId", "- Script: $ScriptName", '- Action: pinned SSH control, reviewed script transfer and execution', "- Operation: $Operation", '- Change/reboot: exact VPS changes recorded by remote operation; no reboot requested', '') | Set-Content -LiteralPath $log -Encoding utf8
 $code = 1
 try {
     if ($ResourceId -and $ResourceId -notmatch '^[a-fA-F0-9-]{36}$') { throw 'Invalid resource ID' }
