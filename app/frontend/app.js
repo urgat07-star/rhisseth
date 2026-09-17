@@ -4,7 +4,7 @@ const RADIUS = 80;
 const HEX_WIDTH = Math.sqrt(3) * RADIUS;
 const MAP_WIDTH = 3200;
 const MAP_HEIGHT = 2200;
-const VERSION = "Rhisseth · Artistic V5 · интерактивная сетка";
+const VERSION = "Rhisseth · Artistic V6 · интерактивная сетка";
 const API_BASE = "/api";
 let csrfToken = '';
 
