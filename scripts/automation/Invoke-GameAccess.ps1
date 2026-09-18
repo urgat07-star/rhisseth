@@ -1,3 +1,5 @@
+# Release review 2026-09-18 (0.0.2): Transfer reviewed game-access scripts through pinned runner SSH and write sanitized audit logs.
+# Details: docs/releases/0.0.2-changes-2026-09-18.md.
 #requires -Version 7.0
 param([string]$ResourceId = '',
       [ValidateSet('Inspect-RhissethVpsFromRunner.py', 'Consolidate-RhissethRunnerFiles.py', 'Deploy-RhissethFromRunner.py', 'GameAccessRunner.py')]

@@ -1,4 +1,6 @@
 #!/usr/bin/python3
+# Release review 2026-09-18 (0.0.2): Full logical backup on source VPS. Result path only, never archive contents.
+# Details: docs/releases/0.0.2-changes-2026-09-18.md.
 """Full logical backup on source VPS. Result path only, never archive contents."""
 import datetime as dt
 import fcntl

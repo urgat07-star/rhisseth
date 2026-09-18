@@ -1,3 +1,5 @@
+# Release review 2026-09-18 (0.0.2): Read-only inventory on approved runner; never print resource secrets.
+# Details: docs/releases/0.0.2-changes-2026-09-18.md.
 """Read-only inventory on approved runner; never print resource secrets."""
 import datetime as dt
 import json

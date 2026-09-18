@@ -1,4 +1,6 @@
 #!/bin/bash
+# Release review 2026-09-18 (0.0.2): Read target memory and service usage for deployment diagnostics.
+# Details: docs/releases/0.0.2-changes-2026-09-18.md.
 set -eu
 printf 'Virtualization: '
 systemd-detect-virt || true

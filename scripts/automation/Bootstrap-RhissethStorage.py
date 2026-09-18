@@ -1,3 +1,5 @@
+# Release review 2026-09-18 (0.0.2): Reviewed root bootstrap; preserve root access and existing services.
+# Details: docs/releases/0.0.2-changes-2026-09-18.md.
 """Reviewed root bootstrap; preserve root access and existing services."""
 import datetime as dt
 import os

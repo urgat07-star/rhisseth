@@ -1,3 +1,5 @@
+# Release review 2026-09-18 (0.0.2): Local browser checks using intercepted requests and synthetic data only.
+# Details: docs/releases/0.0.2-changes-2026-09-18.md.
 """Local browser checks using intercepted requests and synthetic data only."""
 import json
 import sys

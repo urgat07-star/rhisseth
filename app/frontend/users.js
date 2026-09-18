@@ -1,3 +1,5 @@
+/* Release review 2026-09-18 (0.0.2): Administrator account search, role/password changes, and confirmed deletion.
+ * Details: docs/releases/0.0.2-changes-2026-09-18.md. */
 'use strict';
 const $ = s => document.querySelector(s);
 const labels = {admin:'Администраторы',moderator:'Модераторы',user:'Пользователи'};

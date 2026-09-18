@@ -1,3 +1,5 @@
+# Release review 2026-09-18 (0.0.2): Administrator-only account edits, password assignment, deletion, audit, and session revocation.
+# Details: docs/releases/0.0.2-changes-2026-09-18.md.
 """Account administration, protected by the application's access middleware."""
 import json
 import re

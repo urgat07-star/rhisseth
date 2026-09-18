@@ -1,3 +1,5 @@
+# Release review 2026-09-18 (0.0.2): Control reviewed recovery operations through pinned runner SSH with audit logs.
+# Details: docs/releases/0.0.2-changes-2026-09-18.md.
 #requires -Version 7.0
 param([ValidateSet('inventory','setup-storage','backup','test-access','schedule','list','diagnose-storage','preflight-test','restore-test','validate-test','reboot-test','verify-scripts','collect-evidence','run-scheduled','inspect-version','diagnose-memory','backup-summary','pin-target','finalize-test','progress-test','external-check','source-git-status','network-test','cleanup-test')][string]$Operation = 'inventory', [ValidatePattern('^(?:(?:release/)?v?\d+\.\d+\.\d+)?$')][string]$ApprovedRef = '')
 $ErrorActionPreference = 'Stop'

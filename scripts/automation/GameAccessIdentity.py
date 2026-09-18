@@ -1,4 +1,6 @@
 #!/opt/rhisseth/venv/bin/python
+# Release review 2026-09-18 (0.0.2): Root-owned identity bridge; never import project code writable by the team.
+# Details: docs/releases/0.0.2-changes-2026-09-18.md.
 """Root-owned identity bridge; never import project code writable by the team."""
 import datetime as dt
 import fcntl

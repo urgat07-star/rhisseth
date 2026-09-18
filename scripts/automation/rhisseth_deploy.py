@@ -1,4 +1,6 @@
 #!/usr/bin/python3
+# Release review 2026-09-18 (0.0.2): Native recovery on a target VM; root, stdlib Python, no Docker required.
+# Details: docs/releases/0.0.2-changes-2026-09-18.md.
 """Native recovery on a target VM; root, stdlib Python, no Docker required."""
 import argparse
 import datetime as dt

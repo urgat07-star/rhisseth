@@ -1,3 +1,5 @@
+# Release review 2026-09-18 (0.0.2): Schedule the project backup service with systemd.
+# Details: docs/releases/0.0.2-changes-2026-09-18.md.
 [Unit]
 Description=Daily Rhisseth backup at 06:00 Moscow
 

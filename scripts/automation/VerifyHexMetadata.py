@@ -1,3 +1,5 @@
+# Release review 2026-09-18 (0.0.2): Integration checks run only against a disposable restored database.
+# Details: docs/releases/0.0.2-changes-2026-09-18.md.
 """Integration checks run only against a disposable restored database."""
 import asyncio
 import json

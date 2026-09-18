@@ -1,3 +1,5 @@
+# Release review 2026-09-18 (0.0.2): Isolated safety checks: no SSH, infrastructure, real data, or credentials.
+# Details: docs/releases/0.0.2-changes-2026-09-18.md.
 """Isolated safety checks: no SSH, infrastructure, real data, or credentials."""
 import datetime as dt
 import hashlib

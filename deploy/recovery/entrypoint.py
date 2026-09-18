@@ -1,3 +1,5 @@
+# Release review 2026-09-18 (0.0.2): Translate a local Compose secret into ephemeral controller credentials.
+# Details: docs/releases/0.0.2-changes-2026-09-18.md.
 """Translate a local Compose secret into ephemeral controller credentials."""
 import ipaddress
 import json

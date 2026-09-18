@@ -1,3 +1,5 @@
+# Release review 2026-09-18 (0.0.2): Generate the management report from the matching sanitized technical report.
+# Details: docs/releases/0.0.2-changes-2026-09-18.md.
 """Generate the management report from the matching sanitized technical report."""
 from pathlib import Path
 from xml.sax.saxutils import escape

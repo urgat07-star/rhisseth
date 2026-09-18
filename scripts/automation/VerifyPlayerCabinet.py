@@ -1,3 +1,5 @@
+# Release review 2026-09-18 (0.0.2): Real PostgreSQL tests run exclusively against the disposable restored database.
+# Details: docs/releases/0.0.2-changes-2026-09-18.md.
 """Real PostgreSQL tests run exclusively against the disposable restored database."""
 import asyncio
 import json

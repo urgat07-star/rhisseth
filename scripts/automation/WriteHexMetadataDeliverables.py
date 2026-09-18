@@ -1,3 +1,5 @@
+# Release review 2026-09-18 (0.0.2): Create the spreadsheet and release reports from sanitized runner evidence.
+# Details: docs/releases/0.0.2-changes-2026-09-18.md.
 """Create the spreadsheet and release reports from sanitized runner evidence."""
 import collections
 import csv

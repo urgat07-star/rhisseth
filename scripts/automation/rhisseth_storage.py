@@ -1,4 +1,6 @@
 #!/usr/bin/python3
+# Release review 2026-09-18 (0.0.2): Forced SSH command for unencrypted archives. No shell or arbitrary paths.
+# Details: docs/releases/0.0.2-changes-2026-09-18.md.
 """Forced SSH command for unencrypted archives. No shell or arbitrary paths."""
 import datetime as dt
 import hashlib

@@ -1,3 +1,5 @@
+# Release review 2026-09-18 (0.0.2): Deploy the reviewed player-onboarding package on the approved Rhisseth VPS.
+# Details: docs/releases/0.0.2-changes-2026-09-18.md.
 """Deploy the reviewed player-onboarding package on the approved Rhisseth VPS."""
 import datetime as dt
 import hashlib

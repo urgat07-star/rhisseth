@@ -1,3 +1,5 @@
+# Release review 2026-09-18 (0.0.2): Local-only checks: no SSH, Docker daemon or infrastructure access.
+# Details: docs/releases/0.0.2-changes-2026-09-18.md.
 """Local-only checks: no SSH, Docker daemon or infrastructure access."""
 import importlib.util
 import json

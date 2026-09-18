@@ -1,3 +1,5 @@
+# Release review 2026-09-18 (0.0.2): Create a management Word report from sanitized deployment findings.
+# Details: docs/releases/0.0.2-changes-2026-09-18.md.
 """Create a management Word report from sanitized deployment findings."""
 from pathlib import Path
 from xml.sax.saxutils import escape

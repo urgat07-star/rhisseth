@@ -1,4 +1,6 @@
 #!/usr/bin/python3
+# Release review 2026-09-18 (0.0.2): Portable controller; current installation runs exclusively on pinned runner.
+# Details: docs/releases/0.0.2-changes-2026-09-18.md.
 """Portable controller; current installation runs exclusively on pinned runner."""
 import datetime as dt
 import fcntl

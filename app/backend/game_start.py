@@ -1,3 +1,5 @@
+# Release review 2026-09-18 (0.0.2): Allocate 2-3 connected free land cells atomically; random preview does not reserve land.
+# Details: docs/releases/0.0.2-changes-2026-09-18.md.
 """Single starting barony per player, allocated atomically from neutral land."""
 import secrets
 import re

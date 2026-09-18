@@ -1,3 +1,5 @@
+# Release review 2026-09-18 (0.0.2): Hex administration, owner-scoped territory naming, and cabinet access with CSRF checks.
+# Details: docs/releases/0.0.2-changes-2026-09-18.md.
 from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse, FileResponse, Response

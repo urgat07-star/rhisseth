@@ -1,3 +1,5 @@
+# Release review 2026-09-18 (0.0.2): Pinned runner to selected VPS; Passbolt credentials never leave this process.
+# Details: docs/releases/0.0.2-changes-2026-09-18.md.
 """Pinned runner to selected VPS; Passbolt credentials never leave this process."""
 import datetime as dt
 import json

@@ -10,7 +10,9 @@ backups/
 *.dump
 *.log
 .local/
-reports/
+reports/*
+!reports/project-review-2026-09-18.md
+!reports/project-review-2026-09-18.docx
 temp/
 secrets/
 handoff/

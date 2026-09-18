@@ -1,3 +1,5 @@
+# Release review 2026-09-18 (0.0.2): Build a confidential handoff archive on the mandatory runner; no secret output.
+# Details: docs/releases/0.0.2-changes-2026-09-18.md.
 """Build a confidential handoff archive on the mandatory runner; no secret output."""
 import datetime as dt
 import hashlib

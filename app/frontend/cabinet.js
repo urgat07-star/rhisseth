@@ -1,3 +1,5 @@
+/* Release review 2026-09-18 (0.0.2): Cabinet tabs, account settings, crest/color, rename, and confirmed land release.
+ * Details: docs/releases/0.0.2-changes-2026-09-18.md. */
 "use strict";
 let csrf = '', state = null, busy = false, abandoningId = null;
 const status = document.querySelector('#cabinet-status');

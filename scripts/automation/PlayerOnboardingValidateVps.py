@@ -1,3 +1,5 @@
+# Release review 2026-09-18 (0.0.2): Validate the deployed release without migration or service restart.
+# Details: docs/releases/0.0.2-changes-2026-09-18.md.
 """Validate the deployed release without migration or service restart."""
 import datetime as dt
 import os

@@ -1,3 +1,5 @@
+# Release review 2026-09-18 (0.0.2): Check administration on an isolated restored database only.
+# Details: docs/releases/0.0.2-changes-2026-09-18.md.
 """Check administration on an isolated restored database only."""
 import os
 import sys

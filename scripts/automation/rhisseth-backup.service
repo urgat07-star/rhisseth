@@ -1,3 +1,5 @@
+# Release review 2026-09-18 (0.0.2): Run the project backup worker under systemd.
+# Details: docs/releases/0.0.2-changes-2026-09-18.md.
 [Unit]
 Description=Full Rhisseth backup to SSH storage
 Wants=network-online.target
