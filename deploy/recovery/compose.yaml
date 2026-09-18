@@ -1,0 +1,25 @@
+services:
+  recovery:
+    build:
+      context: ../..
+      dockerfile: deploy/recovery/Dockerfile
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs:
+      - /tmp:mode=1777
+      - /run/controller:mode=0700
+      - /root/.ssh:mode=0700
+    secrets: [recovery_config, storage_key, known_hosts]
+    volumes:
+      - recovery_state:/app/.local/recovery
+      - ./reports:/app/reports
+secrets:
+  recovery_config:
+    file: ./recovery.local.json
+  storage_key:
+    file: ./storage-key.local
+  known_hosts:
+    file: ./known_hosts.local
+volumes:
+  recovery_state:

@@ -1,0 +1,10 @@
+{
+  "domain": "rhisseth.ru",
+  "tls_mode": "public",
+  "acme_email": "",
+  "public_ip": "",
+  "application_port": 8080,
+  "database_port": 5432,
+  "test_ip": "10.210.52.56"
+}
+

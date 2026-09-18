@@ -3,22 +3,40 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Rhisseth — интерактивная карта</title>
+  <title>Rhisseth — создание баронии</title>
   <link rel="stylesheet" href="styles.css?v=player-onboarding-2">
 </head>
 <body>
   <header class="topbar">
     <div>
       <p class="eyebrow">RHISSETH</p>
-      <h1>Оперативная карта</h1>
+      <h1>Создание баронии</h1>
     </div>
     <div class="hint" id="editor-hint">Правая кнопка — сведения о гексе</div>
     <a id="admin-link" href="/admin/users" hidden>Административная панель</a>
-    <button id="start-game" type="button">Моя барония</button>
-    <div><a id="user-status" href="cabinet.html" target="_blank" rel="noopener" title="Открыть личный кабинет"></a> <span id="user-role"></span> <button id="logout" type="button">Выйти</button></div>
+    <button hidden id="start-game" type="button">Моя барония</button> 
+    <div><span id="user-status"></span> <button id="logout" type="button">Выйти</button></div>
   </header>
 
   <main>
+    <section class="player-panel" aria-label="Создание баронии">
+      <form id="barony-form">
+        <p>Выберите на карте 2–3 смежных свободных гекса. Морские гексы недоступны; островные можно выбирать при соблюдении смежности.</p>
+        <div class="player-fields">
+          <label>Название баронии <input id="barony-name" maxlength="200" required placeholder="Название баронии"></label>
+        </div>
+        <fieldset><legend>Герб баронии</legend><div id="crest-list" class="crest-list"></div></fieldset>
+        <label class="color-choice">Цвет гексов и контура <input id="barony-color" type="color" value="#b51f24"></label>
+        <p id="chosen-cells" aria-live="polite"></p>
+        <button id="clear-selection" type="button">Снять выбор гексов</button>
+        <button id="random-barony" type="button">Случайная барония</button>
+        <p id="barony-terms">Начальный титул — барон. Барония создаётся один раз из 2–3 смежных свободных гексов; выбранное название, герб и цвет закрепляются за ней.</p>
+        <label><input id="barony-agreement" type="checkbox" required aria-describedby="barony-terms"> Согласен с условиями создания баронии и подтверждаю выбор.</label>
+        <button id="claim-choice" class="save" type="submit" disabled>Создать баронию и перейти в личный кабинет</button>
+        <p id="start-status" role="status"></p>
+      </form>
+    </section>
+
     <section id="map-viewport" class="map-viewport" aria-label="Интерактивная карта гексов">
       <div id="loading" class="loading">Загрузка данных карты…</div>
       <div id="map-stage" class="map-stage">
@@ -46,6 +64,6 @@
   </main>
 
   <footer id="data-status">Final V2 · подключение к PostgreSQL…</footer>
-  <script src="app.js?v=player-onboarding-3" defer></script>
+  <script src="app.js?v=player-onboarding-2" defer></script>
 </body>
 </html>

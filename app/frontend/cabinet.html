@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rhisseth — личный кабинет</title>
+  <link rel="stylesheet" href="styles.css?v=player-cabinet-1">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">RHISSETH</p>
+      <h1>Личный кабинет игрока</h1>
+    </div>
+    <a href="index.html" target="_blank" rel="noopener">Открыть карту мира</a>
+    <div><span id="user-status"></span> <button id="logout" type="button">Выйти</button></div>
+  </header>
+
+  <main class="cabinet-page">
+    <p id="cabinet-status" role="status" aria-live="polite">Загрузка кабинета…</p>
+    <section id="barony-summary" class="player-panel cabinet-summary" hidden>
+      <img id="cabinet-crest" alt="Герб вашей баронии">
+      <div><p id="cabinet-title"></p><h2 id="cabinet-name"></h2><p id="cabinet-cells"></p></div>
+    </section>
+    <nav class="cabinet-tabs" role="tablist" aria-label="Разделы личного кабинета">
+      <button id="tab-barony" role="tab" aria-controls="panel-barony" aria-selected="true">Барония</button>
+      <button id="tab-economy" role="tab" aria-controls="panel-economy" aria-selected="false" tabindex="-1">Экономика</button>
+      <button id="tab-diplomacy" role="tab" aria-controls="panel-diplomacy" aria-selected="false" tabindex="-1">Дипломатия</button>
+      <button id="tab-settings" role="tab" aria-controls="panel-settings" aria-selected="false" tabindex="-1">Настройки</button>
+    </nav>
+    <section id="panel-settings" class="player-panel" role="tabpanel" aria-labelledby="tab-settings" hidden>
+      <h2>Управление аккаунтом</h2>
+      <form id="account-form">
+        <div class="player-fields">
+          <label>Логин <input name="login" required minlength="3" maxlength="50" autocomplete="username"></label>
+          <label>E-mail <input name="email" type="email" required maxlength="255" autocomplete="email"></label>
+          <label>Текущий пароль <input name="current_password" type="password" required autocomplete="current-password"></label>
+        </div>
+        <fieldset><legend>Смена пароля</legend><p>Оставьте поля пустыми, чтобы сохранить текущий пароль.</p><div class="player-fields">
+          <label>Новый пароль <input name="password" type="password" minlength="8" autocomplete="new-password"></label>
+          <label>Подтверждение нового пароля <input name="password_confirm" type="password" minlength="8" autocomplete="new-password"></label>
+        </div></fieldset>
+        <p class="hint">Для сохранения нужен текущий пароль. После изменения остальные сеансы входа будут завершены.</p>
+        <button class="save" type="submit">Сохранить аккаунт</button>
+      </form>
+      <div id="no-barony" hidden><h2>У вас нет баронии</h2><p>Свободную территорию можно выбрать самостоятельно или получить случайный набор гексов.</p><a href="create-barony.html">Создать баронию</a></div>
+      <div id="barony-settings" hidden>
+        <h2>Название баронии</h2><form id="barony-name-form"><label>Название <input name="name" required maxlength="200"></label><button class="save" type="submit">Сохранить название</button></form>
+        <h2>Герб и цвет баронии</h2><form id="crest-form"><fieldset><legend>Выберите герб</legend><div id="crest-list" class="crest-list"></div></fieldset><label class="color-choice">Цвет внешних границ <input id="crest-color" type="color"></label><button class="save" type="submit">Сохранить герб и цвет</button></form>
+        <section class="barony-danger"><h2>Отказ от баронии</h2><p>Барония исчезнет с карты. Её гексы станут свободными и смогут перейти к другим игрокам. Аккаунт останется у вас.</p><button id="open-abandon" class="danger-button" type="button">Отказаться от баронии</button></section>
+      </div>
+    </section>
+    <section id="panel-economy" class="player-panel" role="tabpanel" aria-labelledby="tab-economy" hidden><h2>Экономика</h2><h3>Ресурсы земель</h3><p class="hint">Количество гексов по основному ресурсу.</p><dl id="resource-stats"></dl><h3>Торговля и налоги</h3><p>Торговля, налоги и учёт запасов ещё в разработке.</p></section>
+    <section id="panel-diplomacy" class="player-panel" role="tabpanel" aria-labelledby="tab-diplomacy" hidden><h2>Управление дипломатией</h2><p>Дипломатическая система ещё в разработке. Здесь появятся отношения с другими владениями.</p></section>
+    <section id="panel-barony" class="player-panel" role="tabpanel" aria-labelledby="tab-barony">
+      <div id="barony-content" hidden>
+        <h2>Статистика баронии</h2><button id="refresh-cabinet" type="button">Обновить статистику</button>
+        <div id="barony-totals" class="stat-grid"></div>
+        <div class="stat-grid"><section><h3>Категории гексов</h3><dl id="category-stats"></dl></section><section><h3>Ландшафты</h3><dl id="landscape-stats"></dl></section></div>
+        <h3>Население и армии</h3><p>Учёт населения и управление армиями ещё в разработке.</p>
+        <h3>Параметры гексов</h3><p class="hint">Средние и диапазоны рассчитаны по известным оценкам. Неописанные параметры в расчёт не входят.</p><div id="rating-stats" class="stat-grid"></div>
+        <h3>Полные сведения по каждому гексу</h3><div id="barony-hexes" class="stat-grid"></div>
+      </div>
+    </section>
+    <dialog id="abandon-dialog" aria-labelledby="abandon-title">
+      <h2 id="abandon-title">Подтвердите отказ от баронии</h2><p>Вы отказываетесь от <strong id="abandon-name"></strong>. Все её гексы, принадлежащие вам, станут свободными для других игроков.</p>
+      <form id="abandon-form"><label>Введите название баронии <input id="abandon-confirmation" required maxlength="200" autocomplete="off"></label><label><input id="abandon-confirmed" type="checkbox" required> Подтверждаю отказ и освобождение территории.</label><p id="abandon-status" role="status"></p><div class="dialog-actions"><button id="cancel-abandon" type="button">Отмена</button><button id="confirm-abandon" class="danger-button" type="submit" disabled>Подтвердить отказ</button></div></form>
+    </dialog>
+  </main>
+
+  <script src="cabinet.js?v=player-cabinet-2" defer></script>
+</body>
+</html>

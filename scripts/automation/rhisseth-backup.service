@@ -1,0 +1,15 @@
+[Unit]
+Description=Full Rhisseth backup to SSH storage
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=avalon
+UMask=0077
+WorkingDirectory=/home/avalon/rhisseth.ru
+ExecStart=/usr/bin/python3 /home/avalon/rhisseth.ru/scripts/automation/Run-RhissethRecovery.py backup
+TimeoutStartSec=45min
+NoNewPrivileges=true
+PrivateTmp=true
+

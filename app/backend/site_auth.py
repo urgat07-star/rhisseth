@@ -75,7 +75,7 @@ def page(request, name, session=None, *, error='', success='', login='', status=
 def login_page(request: Request):
     session = get_session(request)
     if session and session['user_id']:
-        return RedirectResponse('/interactive-map/',status_code=303)
+        return RedirectResponse('/interactive-map/cabinet.html',status_code=303,headers={'Cache-Control':'no-store'})
     return page(request,'login.html',session)
 
 @router.post('/index.php')
@@ -89,13 +89,13 @@ async def login(request: Request):
         raise HTTPException(400,'Неверный формат данных')
     name = name.strip()
     with connect() as conn:
-        row = conn.execute('SELECT user_id,user_pass FROM users WHERE lower(user_login)=lower(%s)',(name,)).fetchone()
+        row = conn.execute('SELECT u.user_id,u.user_pass,r.role_alias FROM users u JOIN roles r USING(role_id) WHERE lower(user_login)=lower(%s)',(name,)).fetchone()
     valid = verify_password(password, row[1] if row else DUMMY_HASH.decode())
     if row is None or not valid:
         return page(request,'login.html',session,error='Неверный логин или пароль',login=name,status=401)
     clear_session(request)
     token, _ = new_session(row[0])
-    response = RedirectResponse('/interactive-map/',status_code=303)
+    response = RedirectResponse('/interactive-map/cabinet.html',status_code=303,headers={'Cache-Control':'no-store'})
     set_cookie(response,token)
     return response
 
@@ -128,10 +128,14 @@ async def register(request: Request):
             role = conn.execute("SELECT role_id FROM roles WHERE role_alias='user'").fetchone()
             if role is None:
                 raise HTTPException(503,'Роли сайта ещё не настроены')
-            conn.execute('INSERT INTO users(user_login,user_pass,user_email,role_id) VALUES (%s,%s,%s,%s)',(name,stored,email,role[0]))
+            user_id = conn.execute('INSERT INTO users(user_login,user_pass,user_email,role_id) VALUES (%s,%s,%s,%s) RETURNING user_id',(name,stored,email,role[0])).fetchone()[0]
     except UniqueViolation:
         return page(request,'register.html',session,error='Логин или e-mail уже используется',login=name,status=409)
-    return page(request,'register.html',session,success='Регистрация прошла успешно. Теперь можно войти.')
+    clear_session(request)
+    token, _ = new_session(user_id)
+    response = RedirectResponse('/interactive-map/cabinet.html',status_code=303)
+    set_cookie(response,token)
+    return response
 
 @router.post('/logout')
 async def logout(request: Request):

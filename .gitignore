@@ -13,3 +13,5 @@ backups/
 reports/
 temp/
 secrets/
+handoff/
+ion 0.0.1*

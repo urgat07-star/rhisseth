@@ -1,0 +1,17 @@
+{
+  "enforce_runner": true,
+  "targets": {
+    "source": {"host": "62.113.109.168", "resource_id": "da44a388-e458-4379-ab4c-c204696804b2"},
+    "storage": {"host": "185.216.87.44", "resource_id": "eebbe246-89db-4227-8618-89ff4fefcec5"},
+    "test": {"host": "10.210.52.56", "username": "avalon", "resource_id": "34b8e391-f4e8-4dbc-9304-6fcc22e942ab"}
+  },
+  "instance": {
+    "domain": "rhisseth.ru",
+    "tls_mode": "test",
+    "test_ip": "10.210.52.56",
+    "acme_email": "",
+    "public_ip": "",
+    "application_port": 8080,
+    "database_port": 5432
+  }
+}

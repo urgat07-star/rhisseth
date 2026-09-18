@@ -1,0 +1,17 @@
+{
+  "target": {
+    "ip": "PUBLIC_VM_IP",
+    "port": 22,
+    "username": "root",
+    "password": "FILL_LOCALLY"
+  },
+  "backup": {"ip": "185.216.87.44", "port": 22},
+  "instance": {
+    "domain": "rhisseth.ru",
+    "tls_mode": "test",
+    "acme_email": "",
+    "public_ip": "",
+    "application_port": 8080,
+    "database_port": 5432
+  }
+}
