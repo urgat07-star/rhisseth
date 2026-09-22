@@ -329,7 +329,8 @@ async function setupPlayerPage() {
     const label = document.createElement('label'), input = document.createElement('input'), img = document.createElement('img');
     input.type = 'radio'; input.name = 'crest'; input.value = crest; input.required = true; input.checked = index === 0;
     input.addEventListener('change',()=>{
-      document.querySelector('#barony-color').value = ['#b51f24','#2355aa','#257346','#50545b','#dec78a'][index];
+      const defaults = ['#b51f24','#2355aa','#257346','#50545b','#dec78a'];
+      document.querySelector('#barony-color').value = defaults[index % defaults.length];
       document.querySelector('#start-status').textContent = '';
       paintSelection();
     });

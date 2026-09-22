@@ -94,7 +94,7 @@ function renderCabinet() {
     const label=document.createElement('label'), input=document.createElement('input'), img=document.createElement('img');
     input.type='radio'; input.name='crest'; input.value=crest; input.required=true; input.checked=crest===barony.crest;
     img.src=`crests/${crest}`; img.alt=`Герб ${index+1}`; label.append(input,img); list.append(label);
-    input.addEventListener('change',()=>document.querySelector('#crest-color').value=defaults[index]);
+    input.addEventListener('change',()=>document.querySelector('#crest-color').value=defaults[index % defaults.length]);
   });
 }
 async function loadCabinet() { state=await api('/api/cabinet'); renderCabinet(); }
