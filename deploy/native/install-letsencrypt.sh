@@ -26,6 +26,7 @@ nginx -t
 install -d -m 700 "$config" "$work" "$logs" "$base/backups"
 cp -p "$site" "$backup"
 echo "Nginx backup: $backup"
+export DEBIAN_FRONTEND=noninteractive
 apt-get update
 apt-get install -y certbot python3-certbot-nginx
 args=(--config-dir "$config" --work-dir "$work" --logs-dir "$logs")
@@ -52,7 +53,7 @@ install -m 644 /opt/rhisseth/repository/deploy/native/rhisseth-certbot.service /
 install -m 644 /opt/rhisseth/repository/deploy/native/rhisseth-certbot.timer /etc/systemd/system/rhisseth-certbot.timer
 systemctl daemon-reload
 systemctl enable --now rhisseth-certbot.timer
-certbot renew "${args[@]}" --cert-name rhisseth.ru --dry-run --run-deploy-hooks
+certbot renew "${args[@]}" --cert-name rhisseth.ru --dry-run --run-deploy-hooks --no-random-sleep-on-renew
 curl --fail --silent --show-error --max-time 20 https://rhisseth.ru/index.php -o /dev/null
 systemctl list-timers rhisseth-certbot.timer --no-pager
 openssl x509 -in "$config/live/rhisseth.ru/fullchain.pem" -noout -issuer -dates -ext subjectAltName

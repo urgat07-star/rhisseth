@@ -62,6 +62,13 @@ def inspect():
 def sql(statement, *, secret=False):
     return run(['runuser', '-u', 'postgres', '--', 'psql', '-X', '-v', 'ON_ERROR_STOP=1', '-At'], input=statement, raw=secret).stdout.strip()
 
+def write_nginx_template(site, template):
+    # Certbot adds challenge/renewal settings: keep the installed public TLS vhost.
+    if site.exists() and b'/letsencrypt/live/' in site.read_bytes():
+        emit("Existing Let's Encrypt nginx configuration preserved")
+        return
+    site.write_bytes(template.read_bytes())
+
 def install():
     emit('Change: package installation, isolated database, systemd API, nginx test virtual host; no reboot')
     if shutil.disk_usage('/').free < 2 * 1024**3:
@@ -165,7 +172,7 @@ def install():
     site = Path('/etc/nginx/sites-available/rhisseth')
     old_site = site.read_bytes() if site.exists() else None
     enabled = Path('/etc/nginx/sites-enabled/rhisseth')
-    site.write_bytes((native / 'nginx.conf').read_bytes())
+    write_nginx_template(site, native / 'nginx.conf')
     if not enabled.exists():
         enabled.symlink_to(site)
     test = run(['nginx', '-t'], check=False)
@@ -321,7 +328,7 @@ def hosting():
         emit('Existing users preserved; account import skipped')
     site = Path('/etc/nginx/sites-available/rhisseth')
     previous = site.read_bytes()
-    site.write_bytes((repo/'deploy/native/nginx.conf').read_bytes())
+    write_nginx_template(site, repo/'deploy/native/nginx.conf')
     site.chmod(0o644)
     if run(['nginx','-t'],check=False).returncode:
         site.write_bytes(previous)
