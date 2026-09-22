@@ -83,7 +83,7 @@ class PlayerCabinetTests(unittest.TestCase):
             conn=MagicMock();conn.execute.return_value.fetchone.return_value=row
             with patch('main.current_user',return_value=self.user),patch('player_cabinet.connect') as connect:
                 connect.return_value.__enter__.return_value=conn
-                response=self.client.patch('/api/cabinet/barony/crest',json={'barony_id':7,'crest':'gerb_2.png','color':'#2355aa'},headers=self.headers)
+                response=self.client.patch('/api/cabinet/barony/crest',json={'barony_id':7,'crest':'gerb_2.webp','color':'#2355aa'},headers=self.headers)
             self.assertEqual(response.status_code,expected)
             if expected==200:
                 call=next(c for c in conn.execute.call_args_list if c.args[0].startswith('UPDATE hexes'))

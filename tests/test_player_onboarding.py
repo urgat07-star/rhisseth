@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'app/backend'))
 from fastapi.testclient import TestClient
 from main import app
-from game_start import free_cells, candidates
+from game_start import CRESTS, free_cells, candidates
 from hex_rules import connected
 
 
@@ -15,8 +15,13 @@ class PlayerOnboardingTests(unittest.TestCase):
     def setUp(self):
         self.client = TestClient(app)
         self.user = {'user_id': 2, 'user_login': 'player', 'role_alias': 'user', 'csrf': 'test'}
-        self.payload = {'name': 'Барония', 'crest': 'gerb_1.png',
+        self.payload = {'name': 'Барония', 'crest': 'gerb_1.webp',
                         'color': '#b51f24', 'agreement': True, 'cells': [[0,0],[1,0],[2,0]]}
+
+    def test_only_available_webp_crests_are_offered(self):
+        self.assertGreater(len(CRESTS), 5)
+        self.assertTrue(all(crest.endswith('.webp') for crest in CRESTS))
+        self.assertNotIn('gerb_1.png', CRESTS)
 
     def test_land_sea_island_and_occupied_filter(self):
         conn = MagicMock()

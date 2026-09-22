@@ -74,7 +74,10 @@ function renderCabinet() {
   document.querySelector('#barony-name-form').elements.name.value=barony.name;
   document.querySelector('#cabinet-name').textContent=barony.name;
   document.querySelector('#cabinet-title').textContent=barony.title;
-  document.querySelector('#cabinet-crest').src=`crests/${barony.crest}`;
+  const currentCrest=state.crests.includes(barony.crest)
+    ? barony.crest
+    : barony.crest.replace(/\.png$/i,'.webp');
+  document.querySelector('#cabinet-crest').src=`crests/${currentCrest}`;
   document.querySelector('#cabinet-cells').textContent=barony.hexes.map(row=>`Q${row.Q} R${row.R}`).join(' · ') || 'Нет принадлежащих вам гексов';
   const stats=barony.statistics;
   document.querySelector('#barony-totals').replaceChildren(statCard('Владение',[['Гексов',stats.hex_count],['Островных гексов',stats.islands],['Гексов с объектами',stats.objects]]));
@@ -92,10 +95,11 @@ function renderCabinet() {
   const list=document.querySelector('#crest-list'); list.replaceChildren();
   state.crests.forEach((crest,index)=>{
     const label=document.createElement('label'), input=document.createElement('input'), img=document.createElement('img');
-    input.type='radio'; input.name='crest'; input.value=crest; input.required=true; input.checked=crest===barony.crest;
+    input.type='radio'; input.name='crest'; input.value=crest; input.required=true; input.checked=crest===currentCrest;
     img.src=`crests/${crest}`; img.alt=`Герб ${index+1}`; label.append(input,img); list.append(label);
     input.addEventListener('change',()=>document.querySelector('#crest-color').value=defaults[index % defaults.length]);
   });
+  if (!list.querySelector('input:checked')) list.querySelector('input')?.click();
 }
 async function loadCabinet() { state=await api('/api/cabinet'); renderCabinet(); }
 async function action(form,handler) {

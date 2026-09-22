@@ -17,7 +17,7 @@
 
     <!-- ▼ Выпадающее меню пользователя (CSS-only) ▼ -->
     <details class="user-menu">
-        <summary id="user-status" class="user-menu__trigger" title="Меню пользователя"></summary>
+        <summary class="user-menu__trigger" title="Меню пользователя"><a id="user-status" href="cabinet.html" title="Перейти в личный кабинет"></a></summary>
         <span id="user-role" class="user-menu__role"></span>
         <div class="user-menu__dropdown">
             <ul class="user-menu__list">
@@ -67,8 +67,7 @@
 	</main>
 	
 	<footer id="data-status">Final V2 · подключение к PostgreSQL…</footer>
-	<script src="app.js?v=player-onboarding-3" defer></script>
-	<script>
+	<script src="app.js?v=crests-webp-2" defer></script>
 	<script>
     // Проброс клика с кнопки "Выход" в меню на оригинальную #logout
     document.getElementById('logout-btn')?.addEventListener('click', () => {
@@ -81,8 +80,6 @@
     if (adminLink && adminMenuItem) {
         adminMenuItem.hidden = adminLink.hidden;
     }
-</script>
-
 	</script>
 
 </body>

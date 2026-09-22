@@ -1,6 +1,7 @@
 """Run reviewed SQL migrations transactionally; never on application startup."""
 from pathlib import Path
 from db import connect
+from crest_catalog import sync_crests
 
 def main():
     with connect() as conn:
@@ -11,6 +12,8 @@ def main():
                 conn.execute(file.read_text(encoding='utf-8'))
                 conn.execute('INSERT INTO schema_migrations(name) VALUES (%s)', (file.name,))
                 print('Applied:', file.name)
+        report = sync_crests(conn, apply=True)
+        print('Crests:', report)
 
 if __name__ == '__main__':
     main()

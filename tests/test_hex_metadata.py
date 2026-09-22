@@ -64,7 +64,7 @@ class HexMetadataTests(unittest.TestCase):
         conn=MagicMock();conn.execute.return_value.fetchone.return_value=(1,)
         with patch('main.current_user',return_value=self.player),patch('game_start.connect') as connect:
             connect.return_value.__enter__.return_value=conn
-            self.assertEqual(self.client.post('/api/start',json={'name':'Барония','crest':'gerb_1.png','color':'#b51f24','agreement':True},headers=self.headers).status_code,409)
+            self.assertEqual(self.client.post('/api/start',json={'name':'Барония','crest':'gerb_1.webp','color':'#b51f24','agreement':True},headers=self.headers).status_code,409)
             self.assertEqual(self.client.post('/api/start',json={}).status_code,403)
 
     def test_landscape_and_names_are_independent(self):

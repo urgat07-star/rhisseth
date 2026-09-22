@@ -1,24 +1,16 @@
 """Single starting barony per player, allocated atomically from neutral land."""
 import secrets
 import re
-from pathlib import Path
 from itertools import combinations
 from fastapi import APIRouter, HTTPException, Request
 from psycopg.types.json import Jsonb
 from db import connect
+from crest_catalog import discover_crests
 from hex_rules import coordinates, connected
 
 router = APIRouter()
 NEIGHBORS = ((1,0),(-1,0),(0,1),(0,-1),(1,-1),(-1,1))
-CRESTS_DIR = Path(__file__).resolve().parents[1] / 'frontend' / 'crests'
-CRESTS = tuple(
-    path.name
-    for path in sorted(
-        (path for path in CRESTS_DIR.glob('*.webp')
-         if path.stem.removeprefix('gerb_').isdigit()),
-        key=lambda path: int(path.stem.removeprefix('gerb_'))
-    )
-)
+CRESTS = tuple(discover_crests())
 
 def free_cells(conn):
     allowed=set(coordinates())
