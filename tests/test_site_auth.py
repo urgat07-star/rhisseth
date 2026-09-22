@@ -1,7 +1,7 @@
 import sys
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 import bcrypt
 from fastapi.testclient import TestClient
 
@@ -12,6 +12,15 @@ from import_users import load_archive, parse_dump
 from site_auth import verify_password
 
 class SiteAuthTests(unittest.TestCase):
+    def test_health_is_available_locally_without_player_session(self):
+        connection = MagicMock()
+        with patch('main.current_user', side_effect=AssertionError('Health must not require a session')), \
+             patch('main.connect') as connect:
+            connect.return_value.__enter__.return_value = connection
+            response = TestClient(app).get('/health')
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'status': 'ok'})
+
     def test_php_hash_compatibility(self):
         stored = bcrypt.hashpw(b'synthetic-password',bcrypt.gensalt(rounds=4)).decode().replace('$2b$','$2y$',1)
         self.assertTrue(verify_password('synthetic-password',stored))

@@ -43,10 +43,17 @@ def run(args, *, check=True, input=None, env=None, raw=False):
     return result
 def inspect():
     run(['hostname'])
+    repo = ROOT / 'repository'
+    if (repo / '.git').is_dir():
+        run(['git', '-C', str(repo), 'status', '--short'])
+        run(['git', '-C', str(repo), 'diff', '--stat'])
+        run(['git', '-C', str(repo), 'diff', '--name-status'])
     run(['free', '-m'])
     run(['df', '-h', '/'])
     run(['ss', '-lnt'])
     run(['nginx', '-t'])
+    run(['systemctl', 'status', 'rhisseth', '--no-pager'], check=False)
+    run(['journalctl', '-u', 'rhisseth', '-n', '40', '--no-pager'], check=False)
     run(['systemctl', 'status', 'postgresql@16-main', '--no-pager'], check=False)
     run(['journalctl', '-u', 'postgresql@16-main', '-n', '15', '--no-pager'], check=False)
     config = run(['nginx', '-T'], raw=True).stdout
@@ -79,7 +86,13 @@ def install():
         run(['git', 'clone', 'https://github.com/urgat07-star/rhisseth.git', str(repo)], env=env)
     else:
         if run(['git', '-C', str(repo), 'status', '--porcelain'], raw=True).stdout.strip():
-            raise RuntimeError('VPS repository has local changes; update refused')
+            label = 'pre-deploy-' + now.strftime('%Y%m%dT%H%M%SZ')
+            emit('Preservation: saving tracked and untracked VPS repository changes as ' + label)
+            run(['git', '-C', str(repo), 'stash', 'push', '--include-untracked', '-m', label])
+            if run(['git', '-C', str(repo), 'status', '--porcelain'], raw=True).stdout.strip():
+                raise RuntimeError('VPS repository remains dirty after preservation stash')
+            stash = run(['git', '-C', str(repo), 'stash', 'list', '-1']).stdout.strip()
+            emit('Recovery point: ' + stash)
         run(['git', '-C', str(repo), 'fetch', 'origin', 'main'], env=env)
         run(['git', '-C', str(repo), 'merge', '--ff-only', 'origin/main'])
     revision = run(['git', '-C', str(repo), 'rev-parse', 'HEAD']).stdout.strip()

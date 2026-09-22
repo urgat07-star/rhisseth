@@ -20,7 +20,7 @@ app.include_router(cabinet_router)
 @app.middleware('http')
 async def access_control(request: Request, call_next):
     path = request.url.path
-    if path.startswith(('/api/', '/interactive-map', '/admin')) or path == '/health':
+    if path.startswith(('/api/', '/interactive-map', '/admin')):
         try:
             user = current_user(request)
         except psycopg.Error:
