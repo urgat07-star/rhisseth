@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Rhisseth — интерактивная карта</title>
-  <link rel="stylesheet" href="styles.css?v=crests-webp-2">
+  <link rel="stylesheet" href="styles.css?v=crests-webp-3">
 </head>
 <body>
 	<header class="topbar">
@@ -44,14 +44,14 @@
 			<div id="loading" class="loading">Загрузка данных карты…</div>
 			<div id="map-stage" class="map-stage">
 				<img id="terrain-map" src="terrain-map-group3-artistic-v6-no-grid.png" alt="Художественная карта местности Rhisseth V6 с горами, лесами, реками и островами" draggable="false">
-				<svg id="hex-overlay" viewBox="0 0 3200 2200" preserveAspectRatio="none" aria-label="Интерактивная гекс-сетка"><g id="barony-boundaries"></g></svg>
+				<svg id="hex-overlay" viewBox="0 0 3200 2200" preserveAspectRatio="none" aria-label="Интерактивная гекс-сетка"><g id="barony-boundaries"></g><g id="barony-emblems"></g></svg>
 
 			</div>
 
 			<aside id="hex-card" class="hex-card" hidden role="dialog" aria-labelledby="card-title">
 				<button id="close-card" class="close" type="button" aria-label="Закрыть">×</button>
 				<p class="card-kicker">СВЕДЕНИЯ О ГЕКСЕ</p>
-				<h2 id="card-title">Q0 · R0</h2>
+				<div class="hex-card-heading"><img id="card-crest" class="card-crest" alt="" hidden><h2 id="card-title">Q0 · R0</h2></div>
 				<p id="card-coordinates" class="coordinates"></p>
 				<dl id="hex-details"></dl>
 				<label class="hint"><input id="show-percentages" type="checkbox" checked> Показывать проценты</label>
@@ -68,7 +68,7 @@
 	</main>
 	
 	<footer id="data-status">Final V2 · подключение к PostgreSQL…</footer>
-	<script src="app.js?v=map-runtime-fix-1" defer></script>
+	<script src="app.js?v=map-runtime-fix-2" defer></script>
 	<script>
     // Проброс клика с кнопки "Выход" в меню на оригинальную #logout
     document.getElementById('logout-btn')?.addEventListener('click', () => {

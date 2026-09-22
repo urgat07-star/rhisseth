@@ -51,6 +51,7 @@ function chooseHex(row) {
 
 const overlay = document.querySelector("#hex-overlay");
 const baronyBoundaries = document.querySelector("#barony-boundaries");
+const baronyEmblems = document.querySelector("#barony-emblems");
 const viewport = document.querySelector("#map-viewport");
 const loading = document.querySelector("#loading");
 const card = document.querySelector("#hex-card");
@@ -108,6 +109,55 @@ function redrawBaronyBoundaries() {
       baronyBoundaries.append(line);
     });
   });
+  redrawBaronyEmblems();
+}
+
+function crestAsset(crest) {
+  if (!crest) return '';
+  return `crests/${crest.replace(/\.png$/i, '.webp')}`;
+}
+
+function redrawBaronyEmblems() {
+  if (!baronyEmblems) return;
+  const groups = new Map();
+  const add = (id, crest, key) => {
+    if (!crest) return;
+    if (!groups.has(id)) groups.set(id, { crest, cells: [] });
+    groups.get(id).cells.push(key);
+  };
+  mapRows.forEach(row => {
+    if (row['ID территории'] && row['Герб баронии']) {
+      add(`owned:${row['ID территории']}`, row['Герб баронии'], cellKey(row.Q, row.R));
+    }
+  });
+  if (chosenCells.size) {
+    const crest = document.querySelector('input[name="crest"]:checked')?.value;
+    if (crest) add('chosen', crest, [...chosenCells][0]);
+    if (groups.has('chosen')) groups.get('chosen').cells = [...chosenCells];
+  }
+  // Keep the emblem above the hit polygons so it remains visible and does not
+  // interfere with clicking the map.
+  overlay.appendChild(baronyEmblems);
+  baronyEmblems.replaceChildren();
+  groups.forEach(({ crest, cells }) => {
+    const points = cells.map(key => {
+      const [q, r] = key.split(',').map(Number);
+      return [HEX_WIDTH * (q + r / 2), RADIUS * 1.5 * r];
+    });
+    if (!points.length) return;
+    const x = points.reduce((sum, point) => sum + point[0], 0) / points.length;
+    const y = points.reduce((sum, point) => sum + point[1], 0) / points.length;
+    const image = document.createElementNS('http://www.w3.org/2000/svg', 'image');
+    image.setAttribute('x', (x - 34).toFixed(2));
+    image.setAttribute('y', (y - 50).toFixed(2));
+    image.setAttribute('width', '68');
+    image.setAttribute('height', '68');
+    image.setAttribute('href', crestAsset(crest));
+    image.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    image.setAttribute('class', 'barony-emblem');
+    image.setAttribute('aria-label', 'Герб баронии');
+    baronyEmblems.append(image);
+  });
 }
 
 function rating(value, maximum) {
@@ -131,6 +181,13 @@ function showCard(row, event, polygon) {
   selectedHex = polygon;
   selectedRow = row;
   selectedHex.classList.add("selected");
+  const cardCrest = document.querySelector('#card-crest');
+  const crest = row['Герб баронии'];
+  cardCrest.hidden = !crest;
+  if (crest) {
+    cardCrest.src = crestAsset(crest);
+    cardCrest.alt = `Герб ${row['Название баронии'] || row['Название территории'] || 'баронии'}`;
+  }
   document.querySelector("#card-title").textContent = row['Название'] || `Q${row.Q} · R${row.R}`;
   document.querySelector("#card-coordinates").textContent = `Q = ${row.Q}, R = ${row.R}`;
   form.elements[0].name = 'Название';
