@@ -16,4 +16,5 @@ reports/*
 temp/
 secrets/
 handoff/
+tools/
 ion 0.0.1*
