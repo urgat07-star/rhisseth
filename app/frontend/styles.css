@@ -270,3 +270,17 @@ input, select, textarea, button { font: inherit; }
 .user-menu__item + .user-menu__item {
     border-top: 1px solid #75806a22;
 }
+/* Единое окно для кабинета и служебных экранов, не уводит игрока с карты. */
+.page-modal {
+  width: min(1180px, calc(100vw - 32px));
+  height: min(860px, calc(100vh - 32px));
+  padding: 0;
+  border: 0;
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--panel, #fff);
+  box-shadow: 0 24px 80px rgba(0,0,0,.45);
+}
+.page-modal::backdrop { background: rgba(9, 13, 24, .72); backdrop-filter: blur(3px); }
+.page-modal iframe { display: block; width: 100%; height: 100%; border: 0; background: #111827; }
+.page-modal__close { position: absolute; z-index: 2; top: 10px; right: 14px; font-size: 2rem; }

@@ -23,7 +23,7 @@
         <div class="user-menu__dropdown">
             <ul class="user-menu__list">
                 <li class="user-menu__item">
-                    <a class="user-menu__link" href="cabinet.html" target="_blank" rel="noopener">Профиль</a>
+                    <a class="user-menu__link js-modal-page" href="cabinet.html">Профиль</a>
                 </li>
                 <li class="user-menu__item" id="admin-menu-item" hidden>
                     <a class="user-menu__link" href="/map">Управление</a>
@@ -66,10 +66,38 @@
 			</aside>
 		</section>
 	</main>
+
+    <dialog id="page-modal" class="page-modal" aria-label="Окно Rhisseth">
+        <button id="close-page-modal" class="close page-modal__close" type="button" aria-label="Закрыть">×</button>
+        <iframe id="page-modal-frame" title="Содержимое Rhisseth" loading="lazy"></iframe>
+    </dialog>
 	
 	<footer id="data-status">Final V2 · подключение к PostgreSQL…</footer>
 	<script src="app.js?v=map-runtime-fix-2" defer></script>
 	<script>
+    const pageModal = document.getElementById('page-modal');
+    const pageModalFrame = document.getElementById('page-modal-frame');
+    window.openPageModal = function openPageModal(url) {
+        pageModalFrame.src = url;
+        pageModal.showModal();
+    }
+    function closePageModal() {
+        pageModal.close();
+        pageModalFrame.src = 'about:blank';
+    }
+    document.querySelectorAll('.js-modal-page').forEach((link) => link.addEventListener('click', (event) => {
+        event.preventDefault();
+        document.querySelector('.user-menu')?.removeAttribute('open');
+        openPageModal(link.href);
+    }));
+    document.getElementById('user-status')?.addEventListener('click', (event) => {
+        event.preventDefault();
+        openPageModal(event.currentTarget.href);
+    });
+    document.getElementById('close-page-modal').addEventListener('click', closePageModal);
+    pageModal.addEventListener('cancel', closePageModal);
+    pageModal.addEventListener('click', (event) => { if (event.target === pageModal) closePageModal(); });
+
     // Проброс клика с кнопки "Выход" в меню на оригинальную #logout
     document.getElementById('logout-btn')?.addEventListener('click', () => {
         document.getElementById('logout')?.click();

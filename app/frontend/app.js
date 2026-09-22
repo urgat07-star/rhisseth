@@ -373,7 +373,11 @@ document.querySelector('#logout').addEventListener('click', async () => {
 });
 let claiming = false;
 document.querySelector('#start-game').addEventListener('click', () => {
-  window.location.href = 'create-barony.html';
+  if (window.parent !== window && typeof window.parent.openPageModal === 'function') {
+    window.parent.openPageModal(new URL('create-barony.html', window.location.href).href);
+  } else {
+    window.location.href = 'create-barony.html';
+  }
 });
 async function setupPlayerPage() {
   if (!creatingBarony) return;

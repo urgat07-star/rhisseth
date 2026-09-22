@@ -54,9 +54,14 @@
         </form>
 
         <div class="form-footer">
-           Ты ту впервые? Или контузия?<br /> <a href="/register.php">Ну расскажы о себе!</a>
+           Ты ту впервые? Или контузия?<br /> <a id="open-register" href="/register.php">Ну расскажы о себе!</a>
         </div>
     </div>
+
+    <dialog id="register-dialog" style="width:min(560px,calc(100vw - 32px));height:min(780px,calc(100vh - 32px));padding:0;border:0;border-radius:16px;overflow:hidden">
+        <button id="close-register" type="button" aria-label="Закрыть" style="position:absolute;z-index:2;right:12px;top:8px;font-size:2rem">×</button>
+        <iframe title="Регистрация" style="width:100%;height:100%;border:0" loading="lazy"></iframe>
+    </dialog>
 
     <script>
         const toggleBtn = document.querySelector('.toggle-password');
@@ -72,6 +77,14 @@
                     : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
             });
         }
+        const registerDialog = document.getElementById('register-dialog');
+        document.getElementById('open-register').addEventListener('click', (event) => {
+            event.preventDefault();
+            registerDialog.querySelector('iframe').src = event.currentTarget.href;
+            registerDialog.showModal();
+        });
+        document.getElementById('close-register').addEventListener('click', () => registerDialog.close());
+        registerDialog.addEventListener('click', (event) => { if (event.target === registerDialog) registerDialog.close(); });
     </script>
 
 </body>
