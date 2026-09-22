@@ -12,6 +12,7 @@
         <p class="eyebrow">RHISSETH</p>
         <h1>Оперативная карта</h1>
     </div>
+    <div class="hint" id="editor-hint">Правая кнопка — сведения о гексе</div>
     <a id="admin-link" href="/map" hidden>Управление островами</a>
     <button id="start-game" type="button">Моя барония</button>
 
@@ -67,7 +68,7 @@
 	</main>
 	
 	<footer id="data-status">Final V2 · подключение к PostgreSQL…</footer>
-	<script src="app.js?v=crests-webp-2" defer></script>
+	<script src="app.js?v=map-runtime-fix-1" defer></script>
 	<script>
     // Проброс клика с кнопки "Выход" в меню на оригинальную #logout
     document.getElementById('logout-btn')?.addEventListener('click', () => {

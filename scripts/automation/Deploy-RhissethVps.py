@@ -199,7 +199,7 @@ def install():
     run(['systemctl', 'reload', 'nginx'])
     (ROOT / 'release.json').write_text(json.dumps({'git_commit': revision, 'postgresql': version, 'deployed_utc': now.isoformat()}, indent=2))
     emit('Web access: HTTPS IP, username mapadmin; password retained in root-only /opt/rhisseth/secrets/web-password.txt (not logged)')
-    validate()
+    run([str(venv / 'bin/python'), str(Path(__file__)), 'validate'])
 
 def validate():
     if (ROOT/'repository/app/backend/site_auth.py').exists():

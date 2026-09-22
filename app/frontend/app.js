@@ -301,7 +301,8 @@ async function loadData() {
   if (userRole) userRole.textContent = `· ${identity.role}`;
   if (!canEdit) {
     for (const element of form.elements) element.disabled = true;
-    document.querySelector('#editor-hint').textContent = creatingBarony ? 'Нажатие — выбрать гекс · правая кнопка — сведения' : 'Режим просмотра · правая кнопка — сведения о гексе';
+    const editorHint = document.querySelector('#editor-hint');
+    if (editorHint) editorHint.textContent = creatingBarony ? 'Нажатие — выбрать гекс · правая кнопка — сведения' : 'Режим просмотра · правая кнопка — сведения о гексе';
   }
   const response = await fetch(`${API_BASE}/hexes`, { cache: "no-store" });
   if (!response.ok) throw new Error(`PostgreSQL API: HTTP ${response.status}`);

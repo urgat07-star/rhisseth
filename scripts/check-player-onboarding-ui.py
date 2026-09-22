@@ -30,13 +30,13 @@ with sync_playwright() as p:
         elif path == '/api/hexes': route.fulfill(json=rows)
         elif path == '/api/cabinet':
             owned=[row for row in rows if row.get('Владелец')=='2']
-            route.fulfill(json={'account':{'login':'Тестовый игрок','email':'test@example.invalid'},'crests':[f'gerb_{i}.png' for i in range(1,6)],'hex_fields':FIELDS,'barony':{**barony,'id':1,'hexes':owned,'statistics':statistics(owned)}})
+            route.fulfill(json={'account':{'login':'Тестовый игрок','email':'test@example.invalid'},'crests':[f'gerb_{i}.webp' for i in range(1,6)],'hex_fields':FIELDS,'barony':{**barony,'id':1,'hexes':owned,'statistics':statistics(owned)}})
         elif path == '/api/start/options':
             random_cells=[]
             if 'random=true' in route.request.url:
                 random_requests += 1
                 random_cells=[[q,2] for q in range(2 if random_requests == 1 else 3)]
-            route.fulfill(json=barony or {'started':False,'available_cells':[[q,2] for q in range(3)],'random_cells':random_cells,'crests':[f'gerb_{i}.png' for i in range(1,6)],'options':[]})
+            route.fulfill(json=barony or {'started':False,'available_cells':[[q,2] for q in range(3)],'random_cells':random_cells,'crests':[f'gerb_{i}.webp' for i in range(1,6)],'options':[]})
         elif path == '/api/start':
             data = json.loads(route.request.post_data)
             submissions.append(data)
@@ -48,7 +48,8 @@ with sync_playwright() as p:
                     row.update({'Тип владельца':'Игрок','Владелец':'2','ID территории':'1','Название баронии':data['name'],'Цвет баронии':data['color']})
             route.fulfill(json=barony)
         else:
-            route.fulfill(path=str(ROOT/'app/frontend'/path.removeprefix('/interactive-map/')))
+            relative = path.removeprefix('/interactive-map/') or 'index.html'
+            route.fulfill(path=str(ROOT/'app/frontend'/relative))
     page.route('https://rhisseth.test/**',handle)
     page.goto('https://rhisseth.test/interactive-map/create-barony.html')
     page.wait_for_selector('#crest-list img')
@@ -79,7 +80,7 @@ with sync_playwright() as p:
     page.locator('#random-barony').click()
     page.wait_for_function("document.querySelectorAll('.barony-chosen').length===3")
     page.locator('#barony-name').fill('Тестовая барония')
-    page.locator('input[name=crest][value="gerb_2.png"]').check()
+    page.locator('input[name=crest][value="gerb_2.webp"]').check()
     page.locator('#barony-color').evaluate("el => { el.value='#2355aa'; el.dispatchEvent(new Event('input')); }")
     assert page.locator('.barony-boundary-preview').count() == 14
     assert page.locator('.barony-chosen').first.evaluate("el=>getComputedStyle(el).stroke") == 'none'
@@ -96,8 +97,11 @@ with sync_playwright() as p:
     page.wait_for_function("document.querySelector('#cabinet-name').textContent==='Тестовая барония'")
     assert page.locator('#map-viewport').count()==0
     assert page.locator('#barony-hexes details').count()==3
-    assert submissions[0]['crest'] == 'gerb_2.png'
+    assert submissions[0]['crest'] == 'gerb_2.webp'
     assert submissions[0]['color'] == '#2355aa'
+    page.goto('https://rhisseth.test/interactive-map/')
+    page.wait_for_selector('#loading', state='detached')
+    assert page.locator('#editor-hint').inner_text() == 'Режим просмотра · правая кнопка — сведения о гексе'
     assert not errors, errors
     browser.close()
 print('PASS: connected selection, sea rejection, limited details, crest, color, agreement, save, cabinet, mobile, no JavaScript errors')
