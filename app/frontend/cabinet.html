@@ -12,7 +12,7 @@
       <p class="eyebrow">RHISSETH</p>
       <h1>Личный кабинет игрока</h1>
     </div>
-    <a href="index.html" target="_blank" rel="noopener">Открыть карту мира</a>
+    <a id="open-world-map" href="index.html">Открыть карту мира</a>
     <div><span id="user-status"></span> <button id="logout" type="button">Выйти</button></div>
   </header>
 
@@ -43,7 +43,7 @@
         <p class="hint">Для сохранения нужен текущий пароль. После изменения остальные сеансы входа будут завершены.</p>
         <button class="save" type="submit">Сохранить аккаунт</button>
       </form>
-      <div id="no-barony" hidden><h2>У вас нет баронии</h2><p>Свободную территорию можно выбрать самостоятельно или получить случайный набор гексов.</p><a href="create-barony.html">Создать баронию</a></div>
+      <div id="no-barony" hidden><h2>У вас нет баронии</h2><p>Свободную территорию можно выбрать самостоятельно или получить случайный набор гексов.</p><a id="create-barony-link" href="create-barony.html">Создать баронию</a></div>
       <div id="barony-settings" hidden>
         <h2>Название баронии</h2><form id="barony-name-form"><label>Название <input name="name" required maxlength="200"></label><button class="save" type="submit">Сохранить название</button></form>
         <h2>Герб и цвет баронии</h2><form id="crest-form"><fieldset><legend>Выберите герб</legend><div id="crest-list" class="crest-list"></div></fieldset><label class="color-choice">Цвет внешних границ <input id="crest-color" type="color"></label><button class="save" type="submit">Сохранить герб и цвет</button></form>
@@ -68,6 +68,6 @@
     </dialog>
   </main>
 
-  <script src="cabinet.js?v=crests-webp-2" defer></script>
+  <script src="cabinet.js?v=modal-navigation-2" defer></script>
 </body>
 </html>
