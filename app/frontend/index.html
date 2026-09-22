@@ -1,6 +1,4 @@
 <!doctype html>
-<!-- Release review 2026-09-18 (0.0.2): V6 interactive map and navigation for cabinet, barony creation, and administration.
-     Details: docs/releases/0.0.2-changes-2026-09-18.md. -->
 <html lang="ru">
 <head>
   <meta charset="utf-8">
@@ -9,45 +7,83 @@
   <link rel="stylesheet" href="styles.css?v=player-onboarding-2">
 </head>
 <body>
-  <header class="topbar">
+	<header class="topbar">
     <div>
-      <p class="eyebrow">RHISSETH</p>
-      <h1>Оперативная карта</h1>
+        <p class="eyebrow">RHISSETH</p>
+        <h1>Оперативная карта</h1>
     </div>
-    <div class="hint" id="editor-hint">Правая кнопка — сведения о гексе</div>
-    <a id="admin-link" href="/admin/users" hidden>Административная панель</a>
+    <a id="admin-link" href="/map" hidden>Управление островами</a>
     <button id="start-game" type="button">Моя барония</button>
-    <div><a id="user-status" href="cabinet.html" target="_blank" rel="noopener" title="Открыть личный кабинет"></a> <span id="user-role"></span> <button id="logout" type="button">Выйти</button></div>
-  </header>
 
-  <main>
-    <section id="map-viewport" class="map-viewport" aria-label="Интерактивная карта гексов">
-      <div id="loading" class="loading">Загрузка данных карты…</div>
-      <div id="map-stage" class="map-stage">
-        <img id="terrain-map" src="terrain-map-group3-artistic-v6-no-grid.png" alt="Художественная карта местности Rhisseth V6 с горами, лесами, реками и островами" draggable="false">
-        <svg id="hex-overlay" viewBox="0 0 3200 2200" preserveAspectRatio="none" aria-label="Интерактивная гекс-сетка"><g id="barony-boundaries"></g></svg>
-      </div>
+    <!-- ▼ Выпадающее меню пользователя (CSS-only) ▼ -->
+    <details class="user-menu">
+        <summary id="user-status" class="user-menu__trigger" title="Меню пользователя"></summary>
+        <span id="user-role" class="user-menu__role"></span>
+        <div class="user-menu__dropdown">
+            <ul class="user-menu__list">
+                <li class="user-menu__item">
+                    <a class="user-menu__link" href="cabinet.html" target="_blank" rel="noopener">Профиль</a>
+                </li>
+                <li class="user-menu__item" id="admin-menu-item" hidden>
+                    <a class="user-menu__link" href="/map">Управление</a>
+                </li>
+                <li class="user-menu__item">
+                    <button class="user-menu__button" id="logout-btn" type="button">Выход</button>
+                </li>
+            </ul>
+        </div>
+    </details>
+    <!-- ▲ /user-menu ▲ -->
 
-      <aside id="hex-card" class="hex-card" hidden role="dialog" aria-labelledby="card-title">
-        <button id="close-card" class="close" type="button" aria-label="Закрыть">×</button>
-        <p class="card-kicker">СВЕДЕНИЯ О ГЕКСЕ</p>
-        <h2 id="card-title">Q0 · R0</h2>
-        <p id="card-coordinates" class="coordinates"></p>
-        <dl id="hex-details"></dl>
-        <label class="hint"><input id="show-percentages" type="checkbox" checked> Показывать проценты</label>
-        <button id="edit-name" class="save" type="button" hidden>Редактировать название</button>
-        <button id="edit-territory-name" class="save" type="button" hidden>Название территории</button>
-        <form id="hex-form" hidden>
-          <label><span id="name-label">Географическое название</span><input name="Название" maxlength="200"></label>
-          <button class="save" type="submit">Подтвердить изменение</button>
-          <button id="cancel-name" type="button">Отмена</button>
-        </form>
-        <p id="save-status" class="save-status" aria-live="polite"></p>
-      </aside>
-    </section>
-  </main>
+    <button id="logout" type="button" hidden>Выйти</button>
+</header>
 
-  <footer id="data-status">Final V2 · подключение к PostgreSQL…</footer>
-  <script src="app.js?v=player-onboarding-3" defer></script>
+	<main>
+		<section id="map-viewport" class="map-viewport" aria-label="Интерактивная карта гексов">
+			<div id="loading" class="loading">Загрузка данных карты…</div>
+			<div id="map-stage" class="map-stage">
+				<img id="terrain-map" src="terrain-map-group3-artistic-v6-no-grid.png" alt="Художественная карта местности Rhisseth V6 с горами, лесами, реками и островами" draggable="false">
+				<svg id="hex-overlay" viewBox="0 0 3200 2200" preserveAspectRatio="none" aria-label="Интерактивная гекс-сетка"><g id="barony-boundaries"></g></svg>
+
+			</div>
+
+			<aside id="hex-card" class="hex-card" hidden role="dialog" aria-labelledby="card-title">
+				<button id="close-card" class="close" type="button" aria-label="Закрыть">×</button>
+				<p class="card-kicker">СВЕДЕНИЯ О ГЕКСЕ</p>
+				<h2 id="card-title">Q0 · R0</h2>
+				<p id="card-coordinates" class="coordinates"></p>
+				<dl id="hex-details"></dl>
+				<label class="hint"><input id="show-percentages" type="checkbox" checked> Показывать проценты</label>
+				<button id="edit-name" class="save" type="button" hidden>Редактировать название</button>
+				<button id="edit-territory-name" class="save" type="button" hidden>Название территории</button>
+				<form id="hex-form" hidden>
+				  <label><span id="name-label">Географическое название</span><input name="Название" maxlength="200"></label>
+				  <button class="save" type="submit">Подтвердить изменение</button>
+				  <button id="cancel-name" type="button">Отмена</button>
+				</form>
+				<p id="save-status" class="save-status" aria-live="polite"></p>
+			</aside>
+		</section>
+	</main>
+	
+	<footer id="data-status">Final V2 · подключение к PostgreSQL…</footer>
+	<script src="app.js?v=player-onboarding-3" defer></script>
+	<script>
+	<script>
+    // Проброс клика с кнопки "Выход" в меню на оригинальную #logout
+    document.getElementById('logout-btn')?.addEventListener('click', () => {
+        document.getElementById('logout')?.click();
+    });
+    
+    // Синхронизация видимости пункта "Управление" с верхней ссылкой
+    const adminLink = document.getElementById('admin-link');
+    const adminMenuItem = document.getElementById('admin-menu-item');
+    if (adminLink && adminMenuItem) {
+        adminMenuItem.hidden = adminLink.hidden;
+    }
+</script>
+
+	</script>
+
 </body>
 </html>

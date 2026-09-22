@@ -1,5 +1,3 @@
-# Release review 2026-09-18 (0.0.2): Owner-scoped profile, barony statistics, crest, rename, and confirmed abandonment.
-# Details: docs/releases/0.0.2-changes-2026-09-18.md.
 """Player-owned account and barony management; never accepts another player's ID."""
 from collections import Counter
 import json

@@ -1,5 +1,3 @@
-# Release review 2026-09-18 (0.0.2): Login and registration send every role to the cabinet; login redirects disable caching.
-# Details: docs/releases/0.0.2-changes-2026-09-18.md.
 """Archive-compatible bcrypt accounts and opaque PostgreSQL-backed sessions."""
 import hashlib
 import re

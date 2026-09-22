@@ -1,0 +1,9 @@
+[Unit]
+Description=Renew Rhisseth Let's Encrypt certificate
+Wants=network-online.target
+After=network-online.target nginx.service
+
+[Service]
+Type=oneshot
+UMask=0077
+ExecStart=/usr/bin/certbot renew --quiet --config-dir /opt/rhisseth/secrets/letsencrypt --work-dir /opt/rhisseth/.local/certbot --logs-dir /opt/rhisseth/reports/certbot

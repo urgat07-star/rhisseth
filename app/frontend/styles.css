@@ -1,5 +1,3 @@
-/* Release review 2026-09-18 (0.0.2): Styles for hex administration, barony selection, and player cabinet layouts.
- * Details: docs/releases/0.0.2-changes-2026-09-18.md. */
 :root {
   color-scheme: dark;
   font-family: "Segoe UI", system-ui, sans-serif;
@@ -147,4 +145,118 @@ input, select, textarea, button { font: inherit; }
   main { padding: 8px; }
   .hex-card { position: fixed; left: 12px !important; right: 12px; bottom: 12px; top: auto !important; width: auto; }
   .hint { font-size: 12px; }
+}
+
+/* ===============================================
+   ДОПОЛНЕНИЯ: /* ===== User Menu (CSS-only, BEM) 
+   =============================================== */
+.user-menu {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.user-menu__trigger {
+    display: inline-grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: #223022;
+    border: 1px solid #75806a88;
+    color: #d9c795;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    list-style: none;
+    transition: border-color .15s ease, background .15s ease;
+}
+.user-menu__trigger::-webkit-details-marker { display: none; }
+
+.user-menu__trigger:hover,
+.user-menu[open] .user-menu__trigger {
+    border-color: #b8c092;
+    background: #2a3a2a;
+}
+
+.user-menu__trigger:empty::before {
+    content: "☗";
+    font-size: 18px;
+    color: #b8c092;
+}
+
+.user-menu__role {
+    color: #b8c092;
+    font-size: 12px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.user-menu__dropdown {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    min-width: 200px;
+    padding: 6px 0;
+    background: #171d18;
+    border: 1px solid #75806a55;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+    z-index: 50;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-6px);
+    transition: opacity .15s ease, transform .15s ease, visibility .15s;
+}
+
+.user-menu[open] .user-menu__dropdown {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.user-menu__dropdown::before {
+    content: "";
+    position: absolute;
+    top: -6px;
+    right: 14px;
+    width: 12px;
+    height: 12px;
+    background: #171d18;
+    border-left: 1px solid #75806a55;
+    border-top: 1px solid #75806a55;
+    transform: rotate(45deg);
+}
+
+.user-menu__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.user-menu__link,
+.user-menu__button {
+    display: block;
+    width: 100%;
+    padding: 10px 16px;
+    font: inherit;
+    font-size: 14px;
+    color: #e9ecdf;
+    text-align: left;
+    text-decoration: none;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: background .15s ease, color .15s ease;
+}
+
+.user-menu__link:hover,
+.user-menu__button:hover {
+    background: #223022;
+    color: #d9c795;
+}
+
+.user-menu__item + .user-menu__item {
+    border-top: 1px solid #75806a22;
 }

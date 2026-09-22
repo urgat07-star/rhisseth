@@ -10,11 +10,6 @@ backups/
 *.dump
 *.log
 .local/
-reports/*
-!reports/project-review-2026-09-18.md
-!reports/project-review-2026-09-18.docx
+reports/
 temp/
 secrets/
-handoff/
-tools/
-ion 0.0.1*

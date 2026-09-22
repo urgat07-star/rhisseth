@@ -9,7 +9,7 @@ import sys
 from zoneinfo import ZoneInfo
 
 rid = 'da44a388-e458-4379-ab4c-c204696804b2'
-if len(sys.argv) != 3 or sys.argv[1] != rid or sys.argv[2] not in ('inspect', 'install', 'validate', 'hosting', 'snapshot', 'publish-map', 'audit-map', 'publish-preview'):
+if len(sys.argv) != 3 or sys.argv[1] != rid or sys.argv[2] not in ('inspect', 'install', 'validate', 'hosting', 'snapshot', 'publish-map', 'audit-map'):
     raise SystemExit('Invalid approved operation')
 operation = sys.argv[2]
 now = dt.datetime.now(dt.timezone.utc)
@@ -51,8 +51,7 @@ try:
     result = ssh(['ssh', *options, 'root@62.113.109.168', 'mkdir -p /opt/rhisseth/scripts/automation /opt/rhisseth/reports/automation-logs'])
     if result.returncode:
         raise RuntimeError('VPS project directory preparation failed')
-    payload_name = 'Publish-Hex70PreviewVps.py' if operation == 'publish-preview' else 'Deploy-RhissethVps.py'
-    result = ssh(['scp', *options, str(Path(__file__).with_name(payload_name)), 'root@62.113.109.168:/opt/rhisseth/scripts/automation/' + payload_name])
+    result = ssh(['scp', *options, str(Path(__file__).with_name('Deploy-RhissethVps.py')), 'root@62.113.109.168:/opt/rhisseth/scripts/automation/Deploy-RhissethVps.py'])
     if result.returncode:
         raise RuntimeError('Reviewed VPS script transfer failed')
     if operation == 'hosting':
@@ -65,8 +64,8 @@ try:
         result = ssh(['scp', *options, str(root / 'temp/hosting-bkp.zip'),str(root / 'temp/sql-bkp.zip'),'root@62.113.109.168:/opt/rhisseth/temp/'])
         if result.returncode:
             raise RuntimeError('Reviewed hosting archives transfer failed')
-    interpreter = '/opt/rhisseth/venv/bin/python' if operation in ('hosting','validate','audit-map','publish-preview') else 'python3'
-    process = subprocess.Popen(['sshpass', '-e', 'ssh', *options, 'root@62.113.109.168', f'{interpreter} /opt/rhisseth/scripts/automation/{payload_name} {operation}'], env=ssh_env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    interpreter = '/opt/rhisseth/venv/bin/python' if operation in ('hosting','validate','audit-map') else 'python3'
+    process = subprocess.Popen(['sshpass', '-e', 'ssh', *options, 'root@62.113.109.168', f'{interpreter} /opt/rhisseth/scripts/automation/Deploy-RhissethVps.py {operation}'], env=ssh_env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     for line in process.stdout:
         emit(line.rstrip().replace(password, '<redacted>'))
     code = process.wait()
