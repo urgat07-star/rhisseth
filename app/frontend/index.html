@@ -64,8 +64,31 @@
 				</form>
 				<p id="save-status" class="save-status" aria-live="polite"></p>
 			</aside>
+			<section id="game-panel" class="game-panel" aria-live="polite">
+				<strong id="turn-label">Ход игрока</strong>
+				<span id="game-message">Выберите воина, затем соседний гекс.</span>
+				<div id="hex-actions" class="hex-actions" hidden>
+					<button id="claim-hex" type="button">Захватить ячейку</button>
+					<button id="hold-hex" type="button">Ничего не делать</button>
+					<button id="raid-hex" type="button">Ограбить население</button>
+				</div>
+			</section>
+			<button id="end-turn" class="end-turn" type="button" hidden>Конец хода</button>
 		</section>
 	</main>
+
+	<dialog id="battle-modal" class="battle-modal" aria-labelledby="battle-title">
+		<div class="battle-arena">
+			<h2 id="battle-title">Бой</h2>
+			<p id="battle-status">Ход нападающего: выберите своего юнита.</p>
+			<div class="battle-lines">
+				<section><h3>Нападающие</h3><div id="attackers" class="unit-column"></div></section>
+				<div class="battle-mark" aria-hidden="true">⚔</div>
+				<section><h3>Защитники</h3><div id="defenders" class="unit-column"></div></section>
+			</div>
+			<button id="finish-battle" class="finish-battle" type="button">Закончить бой</button>
+		</div>
+	</dialog>
 
     <dialog id="page-modal" class="page-modal" aria-label="Окно Rhisseth">
         <button id="close-page-modal" class="close page-modal__close" type="button" aria-label="Закрыть">×</button>
@@ -73,7 +96,7 @@
     </dialog>
 	
 	<footer id="data-status">Final V2 · подключение к PostgreSQL…</footer>
-	<script src="app.js?v=map-runtime-fix-2" defer></script>
+	<script src="app.js?v=game-prototype-1" defer></script>
 	<script>
     const pageModal = document.getElementById('page-modal');
     const pageModalFrame = document.getElementById('page-modal-frame');
