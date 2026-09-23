@@ -10,12 +10,14 @@ from site_auth import router, current_user
 from game_start import router as game_router
 from admin_users import router as admin_router
 from player_cabinet import router as cabinet_router
+from army import router as army_router
 
 app = FastAPI(title='Rhisseth', docs_url=None, redoc_url=None)
 app.include_router(router)
 app.include_router(game_router)
 app.include_router(admin_router)
 app.include_router(cabinet_router)
+app.include_router(army_router)
 
 @app.middleware('http')
 async def access_control(request: Request, call_next):
@@ -32,7 +34,7 @@ async def access_control(request: Request, call_next):
         request.state.user = user
         if (path in ('/admin','/admin/') or path.startswith(('/admin/users','/api/admin/users'))) and user['role_alias'] != 'admin':
             return JSONResponse({'error':'Доступ только для администраторов'},status_code=403)
-        if path.startswith(('/admin/hexes','/api/admin/')) and user['role_alias'] not in ('admin','moderator'):
+        if path.startswith(('/admin/hexes','/admin/units','/api/admin/')) and user['role_alias'] not in ('admin','moderator'):
             return JSONResponse({'error':'Доступ только для администрации'},status_code=403)
         if request.method not in ('GET','HEAD'):
             import secrets
@@ -42,11 +44,12 @@ async def access_control(request: Request, call_next):
             territory_name_action = request.method == 'PATCH' and path.endswith('/territory-name') and path.startswith('/api/hexes/')
             start_action = path == '/api/start' and request.method == 'POST'
             cabinet_action = (request.method,path) in {('PATCH','/api/cabinet/account'),('PATCH','/api/cabinet/barony/crest'),('PATCH','/api/cabinet/barony/name'),('DELETE','/api/cabinet/barony')}
+            army_action = request.method in ('POST','DELETE') and path.startswith('/api/cabinet/army/')
             game_action = request.method == 'POST' and path.startswith('/api/game/hexes/') and path.endswith('/capture')
-            if user['role_alias'] not in ('admin','moderator') and not territory_name_action and not start_action and not cabinet_action and not game_action:
+            if user['role_alias'] not in ('admin','moderator') and not territory_name_action and not start_action and not cabinet_action and not army_action and not game_action:
                 return JSONResponse({'error':'Недостаточно прав для редактирования'},status_code=403)
     response = await call_next(request)
-    if path.startswith(('/api/', '/admin')):
+    if path.startswith(('/api/', '/admin', '/interactive-map')):
         response.headers['Cache-Control'] = 'no-store'
     return response
 EDITABLE = set(FIELDS)

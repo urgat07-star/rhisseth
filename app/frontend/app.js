@@ -309,7 +309,7 @@ function render(rows) {
 
 // Lightweight playtest: captures are persisted; armies and unit statistics
 // remain client-side until the dedicated game schema is introduced.
-const game = { player: 1, moved: false, selected: false, unitKey: '', ownerId: '', pendingRow: null, battleSide: 'attacker', selectedUnit: null, battlePurpose: '', battleWon: false };
+const game = { player: 1, moved: false, selected: false, unitKey: '', ownerId: '', pendingRow: null, battleSide: 'attacker', selectedUnit: null, battlePurpose: '', battleWon: false, general: null, armyUnits: [], armies: [] };
 const gamePanel = document.querySelector('#game-panel');
 const gameMessage = document.querySelector('#game-message');
 const turnLabel = document.querySelector('#turn-label');
@@ -329,24 +329,31 @@ function unitPosition(key) {
   const [q,r] = key.split(',').map(Number);
   return {x:HEX_WIDTH*(q+r/2), y:RADIUS*1.5*r};
 }
-function createMapUnit() {
+async function createMapUnit() {
   const owned = mapRows.find(row=>row['Тип владельца']==='Игрок' && row['Владелец']===userId);
   const fallback = mapRows.find(row=>row['Категория'] && row['Категория']!=='Море') || mapRows[0];
   const start = owned || fallback;
   if (!start) return;
+  const response=await fetch(`${API_BASE}/game/armies`,{cache:'no-store'});
+  if (!response.ok) throw new Error(`Армии: HTTP ${response.status}`);
+  game.armies=(await response.json()).generals.filter(item=>item.units.length);
+  game.general=game.armies[0] || null;
+  if (!game.general) { setGameMessage('Создайте генерала и добавьте ему солдат в разделе «Армия» личного кабинета.'); return; }
+  game.armyUnits=game.general.units;
   game.unitKey = cellKey(start.Q,start.R);
   game.ownerId = start['ID территории'] || '';
-  const layer = document.createElementNS('http://www.w3.org/2000/svg','g');
-  layer.setAttribute('class','map-unit-layer');
-  const image = document.createElementNS('http://www.w3.org/2000/svg','image');
-  image.id = 'player-unit'; image.setAttribute('class','map-unit');
-  image.setAttribute('href','units/unit-003.webp'); image.setAttribute('width','82'); image.setAttribute('height','82');
-  image.setAttribute('aria-label','Воин игрока'); image.setAttribute('tabindex','0');
-  image.addEventListener('click',event=>{ event.stopPropagation(); if (game.player!==1 || game.moved) return; game.selected=!game.selected; image.classList.toggle('selected',game.selected); paintMoveTargets(); setGameMessage(game.selected?'Выберите подсвеченный соседний гекс.':'Выберите воина.'); });
-  layer.append(image); overlay.append(layer); moveUnitImage(game.unitKey,false);
+  const layer = document.createElementNS('http://www.w3.org/2000/svg','g'); layer.setAttribute('class','map-unit-layer'); overlay.append(layer);
+  game.armies.forEach((general,index)=>{
+    general.unitKey=game.unitKey;
+    const image=document.createElementNS('http://www.w3.org/2000/svg','image'); image.id=`player-unit-${general.id}`; image.setAttribute('class','map-unit');
+    image.setAttribute('href',general.icon); image.setAttribute('width','82'); image.setAttribute('height','82'); image.setAttribute('aria-label',`Генерал ${general.name}, юнитов: ${general.units.length}`); image.setAttribute('tabindex','0');
+    image.addEventListener('click',event=>{event.stopPropagation();if(game.player!==1||game.moved)return;document.querySelectorAll('.map-unit').forEach(item=>item.classList.remove('selected'));game.general=general;game.armyUnits=general.units;game.unitKey=general.unitKey;game.selected=true;image.classList.add('selected');paintMoveTargets();setGameMessage(`Армия «${general.name}»: выберите соседний гекс.`);});
+    layer.append(image); positionGeneralImage(general,index,false);
+  });
 }
+function positionGeneralImage(general,index,animate=true) { const image=document.querySelector(`#player-unit-${general.id}`) || document.getElementById(`player-unit-${general.id}`); if(!image)return; const {x,y}=unitPosition(general.unitKey);if(!animate)image.style.transition='none';image.setAttribute('x',(x-41+index*24).toFixed(2));image.setAttribute('y',(y-55).toFixed(2));if(!animate)requestAnimationFrame(()=>image.style.removeProperty('transition')); }
 function moveUnitImage(key,animate=true) {
-  const image=document.querySelector('#player-unit'); if (!image) return;
+  const image=document.querySelector(`#player-unit-${game.general?.id}`); if (!image) return;
   const {x,y}=unitPosition(key); if (!animate) image.style.transition='none';
   image.setAttribute('x',(x-41).toFixed(2)); image.setAttribute('y',(y-55).toFixed(2));
   if (!animate) requestAnimationFrame(()=>image.style.removeProperty('transition'));
@@ -356,7 +363,7 @@ function handleGameHexClick(row) {
   if (game.player!==1 || !game.selected || game.moved || !adjacentKeys(game.unitKey).includes(target)) return;
   if (row['Категория']==='Море') { setGameMessage('Морские гексы недоступны: по ним смогут двигаться только корабли.'); return; }
   game.unitKey=target; game.moved=true; game.selected=false; game.pendingRow=row;
-  document.querySelector('#player-unit')?.classList.remove('selected'); paintMoveTargets(); closeCard(); moveUnitImage(target);
+  if(game.general)game.general.unitKey=target; document.querySelectorAll('.map-unit').forEach(item=>item.classList.remove('selected')); paintMoveTargets(); closeCard(); moveUnitImage(target);
   window.setTimeout(resolveTravelEvent,480);
 }
 function resolveTravelEvent() {
@@ -389,10 +396,12 @@ function openBattle(enemy, purpose='raid') {
   hexActions.hidden=true; endTurnButton.hidden=true; game.battleSide='attacker'; game.selectedUnit=null; game.battlePurpose=purpose; game.battleWon=false;
   const attackers=document.querySelector('#attackers'), defenders=document.querySelector('#defenders'); attackers.replaceChildren(); defenders.replaceChildren();
   document.querySelector('#battle-log').replaceChildren();
-  const attackerCount=1+Math.floor(Math.random()*5);
+  const attackerUnits=game.armyUnits.slice(0,5);
+  const attackerCount=Math.max(1,attackerUnits.length);
   const defence=Number.parseInt(game.pendingRow?.['Защита'],10);
   const defenderCount=Number.isFinite(defence) ? Math.max(1,Math.min(5,defence)) : 1;
-  Array.from({length:attackerCount},(_,i)=>attackers.append(unitCard(randomUnitAsset(),`Воин ${i+1}`,'attacker',i)));
+  if (attackerUnits.length) attackerUnits.forEach((unit,i)=>attackers.append(unitCard(unit.image_path,unit.name,'attacker',i)));
+  else attackers.append(unitCard(randomUnitAsset(),'Воин 1','attacker',0));
   Array.from({length:defenderCount},(_,i)=>defenders.append(unitCard(randomUnitAsset(),`${enemy} ${i+1}`,'defender',i)));
   battleLog(`Бой начался: ${attackerCount} нападающих против ${defenderCount} защитников.`);
   document.querySelector('#battle-status').textContent='Ход нападающего: выберите своего юнита.'; battleModal.showModal();
@@ -594,7 +603,7 @@ async function claimBarony(event) {
 loadData()
   .then(async ({ rows, source }) => {
     render(rows);
-    if (!creatingBarony) createMapUnit();
+    if (!creatingBarony) await createMapUnit();
     await setupPlayerPage();
     document.querySelector("#data-status").textContent = `${VERSION} · источник: ${source}`;
     loading.remove();

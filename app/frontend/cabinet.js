@@ -1,5 +1,5 @@
 "use strict";
-let csrf = '', state = null, busy = false, abandoningId = null;
+let csrf = '', state = null, armyState = {generals:[],catalogue:[]}, busy = false, abandoningId = null, selectedGeneralId = null;
 const status = document.querySelector('#cabinet-status');
 const dialog = document.querySelector('#abandon-dialog');
 const defaults = ['#b51f24','#2355aa','#257346','#50545b','#dec78a'];
@@ -102,6 +102,40 @@ function renderCabinet() {
   if (!list.querySelector('input:checked')) list.querySelector('input')?.click();
 }
 async function loadCabinet() { state=await api('/api/cabinet'); renderCabinet(); }
+async function loadArmy() { armyState=await api('/api/cabinet/army'); renderArmy(); }
+function renderArmy() {
+  const list=document.querySelector('#generals-list'); list.replaceChildren();
+  if (!armyState.generals.length) { const empty=document.createElement('p'); empty.textContent='Генералы пока не наняты.'; list.append(empty); return; }
+  armyState.generals.forEach(general=>{
+    const card=document.createElement('article'); card.className='general-card'; card.tabIndex=0;
+    const img=document.createElement('img'); img.src=general.icon; img.alt=`Генерал ${general.name}`;
+    const info=document.createElement('div'), title=document.createElement('h3'), count=document.createElement('p');
+    title.textContent=general.name; count.textContent=`Юнитов: ${general.units.length} из 5`; info.append(title,count);
+    const fire=document.createElement('button'); fire.type='button'; fire.className='danger-button'; fire.textContent='Уволить';
+    fire.addEventListener('click',async event=>{event.stopPropagation();if(!confirm(`Уволить генерала ${general.name} и расформировать его отряд?`))return;await api(`/api/cabinet/army/generals/${general.id}`,'DELETE',{});await loadArmy();});
+    const open=()=>openGeneral(general.id); card.addEventListener('click',open); card.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();open();}});
+    card.append(img,info,fire); list.append(card);
+  });
+}
+function openGeneral(id) {
+  const general=armyState.generals.find(item=>item.id===id); if(!general)return; selectedGeneralId=id;
+  document.querySelector('#general-title').textContent=`Армия: ${general.name}`;
+  document.querySelector('#general-count').textContent=`Состав: ${general.units.length} из 5`;
+  const units=document.querySelector('#general-units'); units.replaceChildren();
+  general.units.forEach(unit=>{
+    const card=document.createElement('article'), img=document.createElement('img'), info=document.createElement('div'), remove=document.createElement('button');
+    img.src=unit.image_path; img.alt=unit.name; const strong=document.createElement('strong'),small=document.createElement('small');strong.textContent=unit.name;small.textContent=`${unit.troop_type} · атака ${unit.attack} · защита ${unit.defense}`;info.append(strong,small);
+    remove.type='button'; remove.textContent='Удалить'; remove.addEventListener('click',async()=>{await api(`/api/cabinet/army/generals/${id}/units/${unit.assignment_id}`,'DELETE',{});await loadArmy();openGeneral(id);});
+    card.append(img,info,remove); units.append(card);
+  });
+  const select=document.querySelector('#unit-catalogue'); select.replaceChildren(new Option('Выберите юнита',''));
+  armyState.catalogue.forEach(unit=>select.append(new Option(`${unit.name} · атака ${unit.attack} · защита ${unit.defense}`,unit.id)));
+  document.querySelector('#hire-unit-form').hidden=general.units.length>=5;
+  const generalDialog=document.querySelector('#general-dialog'); if(!generalDialog.open)generalDialog.showModal();
+}
+document.querySelector('#hire-general').addEventListener('click',async()=>{if(busy)return;busy=true;try{await api('/api/cabinet/army/generals','POST',{});await loadArmy();status.textContent='Генерал нанят.';}catch(error){status.textContent=error.message;}finally{busy=false;}});
+document.querySelector('#close-general').addEventListener('click',()=>document.querySelector('#general-dialog').close());
+document.querySelector('#hire-unit-form').addEventListener('submit',async event=>{event.preventDefault();const unitId=Number(document.querySelector('#unit-catalogue').value);if(!unitId)return;await api(`/api/cabinet/army/generals/${selectedGeneralId}/units`,'POST',{unit_id:unitId});await loadArmy();openGeneral(selectedGeneralId);});
 async function action(form,handler) {
   if (busy) return;
   busy=true; const button=form.querySelector('[type=submit]'); button.disabled=true; status.textContent='Сохранение…';
@@ -167,6 +201,6 @@ document.querySelector('#logout').addEventListener('click',async()=>{
   if (response.ok) location.href='/index.php'; else status.textContent='Не удалось выйти. Обновите страницу и повторите попытку.';
 });
 (async()=>{
-  try { const identity=await api('/api/me'); csrf=identity.csrf; await loadCabinet(); status.textContent=''; }
+  try { const identity=await api('/api/me'); csrf=identity.csrf; await Promise.all([loadCabinet(),loadArmy()]); status.textContent=''; }
   catch(error) { status.textContent=error.message; }
 })();

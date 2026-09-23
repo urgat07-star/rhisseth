@@ -24,6 +24,7 @@
     </section>
     <nav class="cabinet-tabs" role="tablist" aria-label="Разделы личного кабинета">
       <button id="tab-barony" role="tab" aria-controls="panel-barony" aria-selected="true">Барония</button>
+      <button id="tab-army" role="tab" aria-controls="panel-army" aria-selected="false" tabindex="-1">Армия</button>
       <button id="tab-economy" role="tab" aria-controls="panel-economy" aria-selected="false" tabindex="-1">Экономика</button>
       <button id="tab-diplomacy" role="tab" aria-controls="panel-diplomacy" aria-selected="false" tabindex="-1">Дипломатия</button>
       <button id="tab-settings" role="tab" aria-controls="panel-settings" aria-selected="false" tabindex="-1">Настройки</button>
@@ -50,6 +51,10 @@
         <section class="barony-danger"><h2>Отказ от баронии</h2><p>Барония исчезнет с карты. Её гексы станут свободными и смогут перейти к другим игрокам. Аккаунт останется у вас.</p><button id="open-abandon" class="danger-button" type="button">Отказаться от баронии</button></section>
       </div>
     </section>
+    <section id="panel-army" class="player-panel" role="tabpanel" aria-labelledby="tab-army" hidden>
+      <div class="army-heading"><div><h2>Армии</h2><p>Генерал представляет армию на глобальной карте и может командовать отрядом из 1–5 юнитов.</p></div><button id="hire-general" class="save" type="button">Нанять генерала</button></div>
+      <div id="generals-list" class="generals-list"></div>
+    </section>
     <section id="panel-economy" class="player-panel" role="tabpanel" aria-labelledby="tab-economy" hidden><h2>Экономика</h2><h3>Ресурсы земель</h3><p class="hint">Количество гексов по основному ресурсу.</p><dl id="resource-stats"></dl><h3>Торговля и налоги</h3><p>Торговля, налоги и учёт запасов ещё в разработке.</p></section>
     <section id="panel-diplomacy" class="player-panel" role="tabpanel" aria-labelledby="tab-diplomacy" hidden><h2>Управление дипломатией</h2><p>Дипломатическая система ещё в разработке. Здесь появятся отношения с другими владениями.</p></section>
     <section id="panel-barony" class="player-panel" role="tabpanel" aria-labelledby="tab-barony">
@@ -66,8 +71,14 @@
       <h2 id="abandon-title">Подтвердите отказ от баронии</h2><p>Вы отказываетесь от <strong id="abandon-name"></strong>. Все её гексы, принадлежащие вам, станут свободными для других игроков.</p>
       <form id="abandon-form"><label>Введите название баронии <input id="abandon-confirmation" required maxlength="200" autocomplete="off"></label><label><input id="abandon-confirmed" type="checkbox" required> Подтверждаю отказ и освобождение территории.</label><p id="abandon-status" role="status"></p><div class="dialog-actions"><button id="cancel-abandon" type="button">Отмена</button><button id="confirm-abandon" class="danger-button" type="submit" disabled>Подтвердить отказ</button></div></form>
     </dialog>
+    <dialog id="general-dialog" class="general-dialog" aria-labelledby="general-title">
+      <button id="close-general" class="close" type="button" aria-label="Закрыть">×</button>
+      <h2 id="general-title">Армия генерала</h2><p id="general-count"></p>
+      <div id="general-units" class="general-units"></div>
+      <form id="hire-unit-form"><label>Добавить солдата<select id="unit-catalogue" name="unit_id" required></select></label><button class="save" type="submit">Нанять юнита</button></form>
+    </dialog>
   </main>
 
-  <script src="cabinet.js?v=crests-webp-2" defer></script>
+  <script src="cabinet.js?v=army-1" defer></script>
 </body>
 </html>
