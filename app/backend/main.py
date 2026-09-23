@@ -1,7 +1,8 @@
 from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse, FileResponse, Response
-from hex_rules import FIELDS, CATEGORIES, coordinates, public_row, category_from_share, connected
+from hex_rules import (FIELDS, CATEGORIES, HEX_BUILDINGS, coordinates, public_row,
+                       category_from_share, connected, validate_terrain_category)
 from fastapi.staticfiles import StaticFiles
 from psycopg.types.json import Jsonb
 import psycopg
@@ -54,7 +55,7 @@ async def access_control(request: Request, call_next):
     return response
 EDITABLE = set(FIELDS)
 LIMITS = {'Проходимость': 5, 'Защита': 4, 'Плодородие': 5,
-          'Опасность': 5, 'Богатство ресурса': 5}
+          'Опасность': 5, 'Богатство ресурса': 5, 'Уровень гекса': 7}
 
 @app.exception_handler(HTTPException)
 async def http_error(request, error):
@@ -239,6 +240,18 @@ async def update(q: int, r: int, request: Request):
             raise HTTPException(400, 'Состав ландшафта: названия и доли с суммой 100%')
     elif 'Тип местности' in payload:
         payload['Состав ландшафта']=''
+    effective_category = payload.get('Категория')
+    effective_terrain = payload.get('Тип местности')
+    if effective_category and effective_terrain:
+        validate_terrain_category(effective_category, effective_terrain)
+    if payload.get('Дорога') == 'Да' and effective_category and effective_category != 'Суша':
+        raise HTTPException(400, 'Дорога разрешена только на суше')
+    if payload.get('Водная переправа') in ('Мост','Переправа') and effective_terrain and 'Река' not in (payload.get('Дополнительный объект','') + ' ' + effective_terrain) and 'Озеро' not in effective_terrain:
+        raise HTTPException(400, 'Мост или переправа требуют реки либо озера')
+    if (payload.get('Уровень гекса','').isascii() and payload.get('Уровень гекса','').isdigit()
+            and int(payload['Уровень гекса']) in HEX_BUILDINGS and payload.get('Постройка')
+            and payload['Постройка'] != HEX_BUILDINGS[int(payload['Уровень гекса'])]):
+        raise HTTPException(400, 'Постройка не соответствует уровню гекса')
     owner_type = payload.get('Тип владельца')
     if owner_type is not None:
         if owner_type not in ('Игрок','Компьютерное владение','Ничейная территория') or 'Владелец' not in payload:
@@ -272,6 +285,25 @@ async def update(q: int, r: int, request: Request):
         if previous and 'Категория' in payload and 'Доля суши, %' not in payload and previous[0].get('Доля суши, %') and payload.get('Остров',previous[0].get('Остров'))!='Да':
             if category_from_share(previous[0]['Доля суши, %']) != payload['Категория']:
                 raise HTTPException(400, 'Измените долю суши вместе с категорией')
+        effective_category = effective_category or (previous[0].get('Категория') if previous else '') or ''
+        effective_terrain = effective_terrain or (previous[0].get('Тип местности') if previous else '') or ''
+        validate_terrain_category(effective_category, effective_terrain)
+        for field in ('Дорога',):
+            if field in payload and payload[field] not in ('', 'Да', 'Нет'):
+                raise HTTPException(400, f'{field}: Да или Нет')
+        if payload.get('Дорога') == 'Да' and effective_category != 'Суша':
+            raise HTTPException(400, 'Дорога разрешена только на суше')
+        if 'Водная переправа' in payload and payload['Водная переправа'] not in ('', 'Нет', 'Мост', 'Переправа'):
+            raise HTTPException(400, 'Водная переправа: Нет, Мост или Переправа')
+        water_feature = 'Река' in ((payload.get('Дополнительный объект') or (previous[0].get('Дополнительный объект','') if previous else '')) + ' ' + effective_terrain) or 'Озеро' in effective_terrain
+        if payload.get('Водная переправа') in ('Мост','Переправа') and not water_feature:
+            raise HTTPException(400, 'Мост или переправа требуют реки либо озера')
+        level_text = payload.get('Уровень гекса')
+        if level_text:
+            expected_building = HEX_BUILDINGS[int(level_text)]
+            if payload.get('Постройка') not in (None, '', expected_building):
+                raise HTTPException(400, 'Постройка не соответствует уровню гекса')
+            payload['Постройка'] = expected_building
         if payload.get('Категория') in CATEGORIES and (payload.get('Тип местности') or previous and previous[0].get('Тип местности')):
             payload['Статус данных']='Описание заполнено'
         row = conn.execute('''INSERT INTO hexes(q,r,data) VALUES (%s,%s,%s)

@@ -1,5 +1,7 @@
 "use strict";
 const fields = ['Название','Название территории','Категория','Остров','Доля суши, %','Тип местности','Состав ландшафта','Дополнительный объект','Проходимость','Защита','Плодородие','Опасность','Основной ресурс','Богатство ресурса','Глубина','Течение','Комментарий','Тип владельца','Владелец'];
+const hiddenObjectFields = ['Уровень гекса','Постройка','Дорога','Водная переправа','Объекты гекса'];
+const editorFields = [...fields,...hiddenObjectFields];
 let rows = [], ownerOptions = {}, csrf = '', editing = null, busy = false;
 const selected = new Set(), status = document.querySelector('#admin-status'), form = document.querySelector('#admin-form');
 const key = row => `${row.Q},${row.R}`;
@@ -29,10 +31,10 @@ function render() {
 }
 function openEditor(row) {
   editing=row;form.replaceChildren();document.querySelector('#editor-title').textContent=`Гекс Q${row.Q} · R${row.R}`;
-  for(const field of fields) {
+  for(const field of editorFields) {
     const label=document.createElement('label');label.textContent=field;
     let input;
-    if (['Категория','Тип владельца','Владелец','Остров'].includes(field)) input=document.createElement('select');
+    if (['Категория','Тип владельца','Владелец','Остров','Уровень гекса','Постройка','Дорога','Водная переправа'].includes(field)) input=document.createElement('select');
     else input=document.createElement(field==='Комментарий'?'textarea':'input');
     input.name=field;input.value=row[field]||'';input.maxLength=field==='Название'?200:4000;
     if(field==='Категория'||field==='Тип владельца'||field==='Остров') {
@@ -40,6 +42,10 @@ function openEditor(row) {
       const empty=new Option('Выберите','');input.append(empty);
       options.forEach(v=>input.append(new Option(v,v)));input.value=row[field]||'';
     }
+    if(field==='Уровень гекса'){input.append(new Option('Выберите',''));['0 — нет','1 — Лагерь','2 — Поселение','3 — Деревня','4 — Форпост','5 — Крепость','6 — Город','7 — Столица'].forEach((v,i)=>input.append(new Option(v,String(i))));input.value=row[field]||'';}
+    if(field==='Постройка'){['','- нет -','Лагерь','Поселение','Деревня','Форпост','Крепость','Город','Столица'].forEach(v=>input.append(new Option(v||'Выберите',v)));input.value=row[field]||'';}
+    if(field==='Дорога'){['','Нет','Да'].forEach(v=>input.append(new Option(v||'Выберите',v)));input.value=row[field]||'';}
+    if(field==='Водная переправа'){['','Нет','Мост','Переправа'].forEach(v=>input.append(new Option(v||'Выберите',v)));input.value=row[field]||'';}
     label.append(input);
     if(field==='Состав ландшафта') {
       input.type='hidden';

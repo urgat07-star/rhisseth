@@ -16,6 +16,10 @@ class BaselineTests(unittest.TestCase):
         for row in rows:
             self.assertEqual(row['Q'], str(int(row['Q'])))
             self.assertEqual(row['R'], str(int(row['R'])))
+        visible={(q,r) for r in range(19) for q in range(__import__('math').ceil(-.5-r/2),__import__('math').floor(3200/(__import__('math').sqrt(3)*80)+.5-r/2)+1)}
+        by_coord={(int(row['Q']),int(row['R'])):row for row in rows}
+        self.assertTrue(all(by_coord[c]['Категория'] in ('Суша','Побережье','Море') for c in visible))
+        self.assertTrue(all(field in rows[0] for field in ('Уровень гекса','Постройка','Дорога','Водная переправа','Объекты гекса')))
 
     def test_interface_and_invalid_updates(self):
         client = TestClient(app)
