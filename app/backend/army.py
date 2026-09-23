@@ -9,7 +9,8 @@ from db import connect
 router = APIRouter()
 FIRST_NAMES = ('Альрик','Борислав','Велемир','Годвин','Драгомир','Казимир','Ратмир','Святозар')
 SURNAMES = ('Северный','Железная Рука','Храбрый','Серый Волк','из Речной Долины','Непреклонный')
-UNIT_FIELDS = ('name','troop_type','defense','attack','attack_range','speed','description','image_path','price','building','note','active')
+UNIT_FIELDS = ('name','troop_type','health','armor','defense','attack','attack_range','speed','initiative','morale','description','image_path','price','building','note','active')
+GENERAL_FIELDS = ('name','description','image_path','health','attack','defense','initiative','speed','logistics','skills','active')
 
 async def body(request):
     raw=await request.body()
@@ -43,8 +44,9 @@ def hire_general(request: Request):
     with connect() as conn:
         if conn.execute('SELECT count(*) FROM player_generals WHERE user_id=%s',(user_id,)).fetchone()[0]>=10: raise HTTPException(409,'Допускается не более 10 генералов')
         name=f'{random.choice(FIRST_NAMES)} {random.choice(SURNAMES)}'
-        icon=f'general/gen-0{1+random.randrange(2)}.webp'
-        row=conn.execute('INSERT INTO player_generals(user_id,name,icon) VALUES (%s,%s,%s) RETURNING id,name,icon',(user_id,name,icon)).fetchone()
+        template=conn.execute('SELECT id,name,image_path FROM general_catalog WHERE active ORDER BY random() LIMIT 1').fetchone()
+        if not template: raise HTTPException(409,'Нет доступных шаблонов генералов')
+        row=conn.execute('INSERT INTO player_generals(user_id,name,icon,catalog_id) VALUES (%s,%s,%s,%s) RETURNING id,name,icon',(user_id,name or template[1],template[2],template[0])).fetchone()
     return {'hired':True,'general':dict(zip(('id','name','icon'),row))}
 
 @router.delete('/api/cabinet/army/generals/{general_id}')
@@ -83,6 +85,52 @@ def game_armies(request: Request):
 @router.get('/admin/units')
 def units_page(): return FileResponse(Path(__file__).resolve().parents[1]/'frontend/units-admin.html')
 
+@router.get('/admin/generals')
+def generals_page(): return FileResponse(Path(__file__).resolve().parents[1]/'frontend/generals-admin.html')
+
+@router.get('/api/admin/generals')
+def admin_generals():
+    with connect() as conn:
+        rows=conn.execute(f'SELECT id,{",".join(GENERAL_FIELDS)} FROM general_catalog ORDER BY id').fetchall()
+        return {'generals':[dict(zip(('id',*GENERAL_FIELDS),row)) for row in rows]}
+
+@router.post('/api/admin/generals')
+async def create_general(request: Request):
+    data=await body(request)
+    if set(data)!=set(GENERAL_FIELDS): raise HTTPException(400,'Передайте все поля генерала')
+    _validate_general(data)
+    with connect() as conn:
+        row=conn.execute(f'''INSERT INTO general_catalog ({','.join(GENERAL_FIELDS)}) VALUES ({','.join('%s' for _ in GENERAL_FIELDS)}) RETURNING id''',[data[field].strip() if isinstance(data[field],str) else data[field] for field in GENERAL_FIELDS]).fetchone()
+    return {'created':True,'id':row[0]}
+
+def _validate_general(data):
+    for key in ('name','description','image_path','skills'):
+        if not isinstance(data[key],str) or len(data[key])>4000: raise HTTPException(400,f'Некорректное поле: {key}')
+    for key in ('health','attack','defense','initiative','speed','logistics'):
+        if type(data[key]) is not int or not 0<=data[key]<=10000: raise HTTPException(400,f'{key}: некорректное число')
+    if type(data['active']) is not bool or not data['name'].strip(): raise HTTPException(400,'Заполните имя и доступность')
+    if not data['image_path'].startswith('general/gen-') or not data['image_path'].endswith('.webp'): raise HTTPException(400,'Изображение должно находиться в general/*.webp')
+
+@router.patch('/api/admin/generals/{general_id}')
+async def edit_general(general_id: int, request: Request):
+    data=await body(request)
+    if set(data)!=set(GENERAL_FIELDS): raise HTTPException(400,'Передайте все поля генерала')
+    _validate_general(data)
+    values=[data[field].strip() if isinstance(data[field],str) else data[field] for field in GENERAL_FIELDS]
+    with connect() as conn:
+        if not conn.execute(f'''UPDATE general_catalog SET {','.join(f'{field}=%s' for field in GENERAL_FIELDS)},updated_at=now() WHERE id=%s RETURNING id''',(*values,general_id)).fetchone(): raise HTTPException(404,'Генерал не найден')
+    return {'saved':True}
+
+@router.delete('/api/admin/generals/{general_id}')
+def delete_general(general_id: int):
+    with connect() as conn:
+        try:
+            if not conn.execute('DELETE FROM general_catalog WHERE id=%s RETURNING id',(general_id,)).fetchone(): raise HTTPException(404,'Генерал не найден')
+        except Exception as error:
+            if 'foreign key' in str(error).lower(): raise HTTPException(409,'Нельзя удалить генерала, который уже используется в армии')
+            raise
+    return {'deleted':True}
+
 @router.get('/api/admin/units')
 def admin_units():
     with connect() as conn: return {'units':catalogue(conn,False)}
@@ -90,15 +138,33 @@ def admin_units():
 @router.patch('/api/admin/units/{unit_id}')
 async def edit_unit(unit_id: int, request: Request):
     data=await body(request)
-    if set(data)!=set(UNIT_FIELDS): raise HTTPException(400,'Передайте все поля юнита')
+    editable_fields=tuple(field for field in UNIT_FIELDS if field!='health')
+    if set(data)!=set(editable_fields): raise HTTPException(400,'Передайте все редактируемые поля юнита')
     for key in ('name','troop_type','description','image_path','price','building','note'):
         if not isinstance(data[key],str) or len(data[key])>4000: raise HTTPException(400,f'Некорректное поле: {key}')
-    for key in ('defense','attack','attack_range','speed'):
+    for key in ('armor','defense','attack','attack_range','speed','initiative','morale'):
         if type(data[key]) is not int or not 0<=data[key]<=100: raise HTTPException(400,f'{key}: число 0–100')
     if type(data['active']) is not bool or not data['name'].strip() or not data['troop_type'].strip(): raise HTTPException(400,'Заполните название, тип и активность')
     if not data['image_path'].startswith('units/') or not data['image_path'].endswith('.webp'): raise HTTPException(400,'Изображение должно находиться в units/*.webp')
-    values=[data[field].strip() if isinstance(data[field],str) else data[field] for field in UNIT_FIELDS]
+    values=[data[field].strip() if isinstance(data[field],str) else data[field] for field in editable_fields]
     with connect() as conn:
-        row=conn.execute(f'''UPDATE unit_catalog SET {','.join(f'{field}=%s' for field in UNIT_FIELDS)},updated_at=now() WHERE id=%s RETURNING id''',(*values,unit_id)).fetchone()
+        row=conn.execute(f'''UPDATE unit_catalog SET {','.join(f'{field}=%s' for field in editable_fields)},updated_at=now() WHERE id=%s RETURNING id''',(*values,unit_id)).fetchone()
         if not row: raise HTTPException(404,'Юнит не найден')
     return {'saved':True}
+
+@router.post('/api/admin/units')
+async def create_unit(request: Request):
+    data=await body(request)
+    fields=UNIT_FIELDS
+    if set(data)!=set(fields): raise HTTPException(400,'Передайте все поля нового юнита')
+    for key in ('name','troop_type','description','image_path','price','building','note'):
+        if not isinstance(data[key],str) or len(data[key])>4000: raise HTTPException(400,f'Некорректное поле: {key}')
+    if type(data['health']) is not int or not 1<=data['health']<=10000: raise HTTPException(400,'health: число 1–10000')
+    for key in ('armor','defense','attack','attack_range','speed','initiative','morale'):
+        if type(data[key]) is not int or not 0<=data[key]<=100: raise HTTPException(400,f'{key}: число 0–100')
+    if type(data['active']) is not bool or not data['name'].strip() or not data['troop_type'].strip(): raise HTTPException(400,'Заполните название, тип и активность')
+    if not data['image_path'].startswith('units/') or not data['image_path'].endswith('.webp'): raise HTTPException(400,'Изображение должно находиться в units/*.webp')
+    values=[data[field].strip() if isinstance(data[field],str) else data[field] for field in fields]
+    with connect() as conn:
+        row=conn.execute(f'''INSERT INTO unit_catalog ({','.join(fields)}) VALUES ({','.join('%s' for _ in fields)}) RETURNING id''',values).fetchone()
+    return {'created':True,'id':row[0]}

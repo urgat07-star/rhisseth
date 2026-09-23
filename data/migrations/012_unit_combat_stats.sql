@@ -1,0 +1,5 @@
+ALTER TABLE unit_catalog
+    ADD COLUMN health integer NOT NULL DEFAULT 10 CHECK (health BETWEEN 1 AND 10000),
+    ADD COLUMN armor integer NOT NULL DEFAULT 0 CHECK (armor BETWEEN 0 AND 100),
+    ADD COLUMN initiative integer NOT NULL DEFAULT 1 CHECK (initiative BETWEEN 0 AND 100),
+    ADD COLUMN morale integer NOT NULL DEFAULT 100 CHECK (morale BETWEEN 0 AND 100);
