@@ -2,7 +2,7 @@
 param([string]$ResourceId = '',
       [ValidateSet('Inspect-RhissethVpsFromRunner.py', 'Consolidate-RhissethRunnerFiles.py', 'Deploy-RhissethFromRunner.py')]
       [string]$ScriptName = 'Inspect-RhissethVpsFromRunner.py',
-      [ValidateSet('inspect', 'install', 'validate', 'hosting', 'snapshot', 'publish-map', 'audit-map')][string]$Operation = 'inspect')
+      [ValidateSet('inspect', 'install', 'validate', 'hosting', 'snapshot', 'publish-map', 'audit-map', 'deploy-hexes')][string]$Operation = 'inspect')
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../..')).Path
 $workspaceRoot = (Resolve-Path -LiteralPath (Join-Path $root '..')).Path

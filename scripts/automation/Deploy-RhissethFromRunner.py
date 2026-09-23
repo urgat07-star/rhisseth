@@ -9,7 +9,7 @@ import sys
 from zoneinfo import ZoneInfo
 
 rid = 'da44a388-e458-4379-ab4c-c204696804b2'
-if len(sys.argv) != 3 or sys.argv[1] != rid or sys.argv[2] not in ('inspect', 'install', 'validate', 'hosting', 'snapshot', 'publish-map', 'audit-map'):
+if len(sys.argv) != 3 or sys.argv[1] != rid or sys.argv[2] not in ('inspect', 'install', 'validate', 'hosting', 'snapshot', 'publish-map', 'audit-map', 'deploy-hexes'):
     raise SystemExit('Invalid approved operation')
 operation = sys.argv[2]
 now = dt.datetime.now(dt.timezone.utc)
@@ -64,12 +64,12 @@ try:
         result = ssh(['scp', *options, str(root / 'temp/hosting-bkp.zip'),str(root / 'temp/sql-bkp.zip'),'root@62.113.109.168:/opt/rhisseth/temp/'])
         if result.returncode:
             raise RuntimeError('Reviewed hosting archives transfer failed')
-    interpreter = '/opt/rhisseth/venv/bin/python' if operation in ('hosting','validate','audit-map') else 'python3'
+    interpreter = '/opt/rhisseth/venv/bin/python' if operation in ('hosting','validate','audit-map','deploy-hexes') else 'python3'
     process = subprocess.Popen(['sshpass', '-e', 'ssh', *options, 'root@62.113.109.168', f'{interpreter} /opt/rhisseth/scripts/automation/Deploy-RhissethVps.py {operation}'], env=ssh_env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     for line in process.stdout:
         emit(line.rstrip().replace(password, '<redacted>'))
     code = process.wait()
-    if code == 0 and operation in ('install', 'validate', 'hosting', 'snapshot'):
+    if code == 0 and operation in ('install', 'validate', 'hosting', 'snapshot', 'deploy-hexes'):
         certificate = root / '.local/vps-test-tls.crt'
         certificate.parent.mkdir(parents=True, exist_ok=True)
         result = ssh(['scp', *options, 'root@62.113.109.168:/opt/rhisseth/secrets/tls.crt', str(certificate)])
@@ -77,7 +77,7 @@ try:
             raise RuntimeError('Public certificate retrieval failed')
         emit('External validation: TLS certificate trusted from pinned SSH transport')
         endpoints = [('http://62.113.109.168/', '301'), ('https://62.113.109.168/health', '401')]
-        if operation in ('hosting','snapshot'):
+        if operation in ('hosting','snapshot','deploy-hexes'):
             endpoints.append(('https://62.113.109.168/index.php','200'))
         for url, expected in endpoints:
             result = subprocess.run(['curl', '--max-time', '20', '--cacert', str(certificate), '-sS', '-o', '/dev/null', '-w', '%{http_code}', url], capture_output=True, text=True)
