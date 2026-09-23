@@ -20,6 +20,17 @@ class BaselineTests(unittest.TestCase):
         by_coord={(int(row['Q']),int(row['R'])):row for row in rows}
         self.assertTrue(all(by_coord[c]['Категория'] in ('Суша','Побережье','Море') for c in visible))
         self.assertTrue(all(field in rows[0] for field in ('Уровень гекса','Постройка','Дорога','Водная переправа','Объекты гекса')))
+        self.assertEqual(by_coord[(-4,16)]['Категория'], 'Побережье')
+        self.assertEqual(by_coord[(7,16)]['Категория'], 'Море')
+        self.assertEqual(by_coord[(7,16)]['Тип местности'], 'Мелководье')
+        self.assertEqual(by_coord[(7,16)]['Плодородие'], '')
+
+    def test_v6_migration_preserves_ownership_fields(self):
+        migration=(ROOT/'data/migrations/016_v6_hex_metadata.sql').read_text(encoding='utf-8')
+        self.assertIn("data=(hexes.data - ARRAY[",migration)
+        self.assertNotIn("'Тип владельца'",migration)
+        self.assertNotIn("'Владелец'",migration)
+        self.assertNotIn("'ID территории'",migration)
 
     def test_interface_and_invalid_updates(self):
         client = TestClient(app)
