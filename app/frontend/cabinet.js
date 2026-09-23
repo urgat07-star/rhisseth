@@ -4,19 +4,6 @@ const status = document.querySelector('#cabinet-status');
 const dialog = document.querySelector('#abandon-dialog');
 const defaults = ['#b51f24','#2355aa','#257346','#50545b','#dec78a'];
 
-document.querySelector('#open-world-map').addEventListener('click', event => {
-  if (window.parent !== window && typeof window.parent.closePageModal === 'function') {
-    event.preventDefault();
-    window.parent.closePageModal();
-  }
-});
-document.querySelector('#create-barony-link').addEventListener('click', event => {
-  if (window.parent !== window && typeof window.parent.openPageModal === 'function') {
-    event.preventDefault();
-    window.parent.openPageModal(event.currentTarget.href);
-  }
-});
-
 async function api(path, method='GET', body) {
   const response = await fetch(path,{method,cache:'no-store',headers:body ? {'Content-Type':'application/json','X-CSRF-Token':csrf} : {},body:body ? JSON.stringify(body) : undefined});
   if (response.status === 401) { location.href='/index.php'; throw new Error('Требуется вход'); }
