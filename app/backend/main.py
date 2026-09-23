@@ -34,7 +34,7 @@ async def access_control(request: Request, call_next):
         request.state.user = user
         if (path in ('/admin','/admin/') or path.startswith(('/admin/users','/api/admin/users'))) and user['role_alias'] != 'admin':
             return JSONResponse({'error':'Доступ только для администраторов'},status_code=403)
-        if path.startswith(('/admin/hexes','/admin/units','/api/admin/')) and user['role_alias'] not in ('admin','moderator'):
+        if path.startswith(('/admin/hexes','/admin/units','/admin/generals','/api/admin/')) and user['role_alias'] not in ('admin','moderator'):
             return JSONResponse({'error':'Доступ только для администрации'},status_code=403)
         if request.method not in ('GET','HEAD'):
             import secrets
