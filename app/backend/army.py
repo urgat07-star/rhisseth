@@ -10,7 +10,7 @@ router = APIRouter()
 FIRST_NAMES = ('Альрик','Борислав','Велемир','Годвин','Драгомир','Казимир','Ратмир','Святозар')
 SURNAMES = ('Северный','Железная Рука','Храбрый','Серый Волк','из Речной Долины','Непреклонный')
 UNIT_FIELDS = ('name','troop_type','health','armor','defense','attack','attack_range','speed','initiative','morale','description','image_path','price','building','note','active')
-GENERAL_FIELDS = ('name','description','image_path','health','attack','defense','initiative','speed','logistics','skills','active')
+GENERAL_FIELDS = ('name','description','image_path','health','attack','defense','initiative','speed','logistics','skills','experience_per_level','max_level','max_attack_bonus','max_defense_bonus','active')
 
 async def body(request):
     raw=await request.body()
@@ -27,11 +27,20 @@ def catalogue(conn, active_only=True):
 
 def armies(conn,user_id):
     generals=[]
-    for row in conn.execute('SELECT id,name,icon FROM player_generals WHERE user_id=%s ORDER BY id',(user_id,)).fetchall():
+    for row in conn.execute('''SELECT pg.id,pg.name,pg.icon,pg.experience,pg.level,pg.attack_bonus,pg.defense_bonus,
+            gc.attack+pg.attack_bonus,gc.defense+pg.defense_bonus
+            FROM player_generals pg LEFT JOIN general_catalog gc ON gc.id=pg.catalog_id
+            WHERE pg.user_id=%s ORDER BY pg.id''',(user_id,)).fetchall():
         units=conn.execute('''SELECT pgu.id,uc.id,uc.name,uc.troop_type,uc.defense,uc.attack,uc.attack_range,uc.speed,uc.image_path,pgu.slot
             FROM player_general_units pgu JOIN unit_catalog uc ON uc.id=pgu.unit_id
             WHERE pgu.general_id=%s ORDER BY pgu.slot''',(row[0],)).fetchall()
-        generals.append({'id':row[0],'name':row[1],'icon':row[2],'units':[dict(zip(('assignment_id','id','name','troop_type','defense','attack','attack_range','speed','image_path','slot'),unit)) for unit in units]})
+        skills=conn.execute('''SELECT gsc.code,gsc.name,gsc.description,gsc.is_positive,pgs.acquired_level
+            FROM player_general_skills pgs JOIN general_skill_catalog gsc ON gsc.id=pgs.skill_id
+            WHERE pgs.general_id=%s ORDER BY pgs.acquired_level,gsc.id''',(row[0],)).fetchall()
+        generals.append({'id':row[0],'name':row[1],'icon':row[2],'experience':row[3],'level':row[4],
+            'attack_bonus':row[5],'defense_bonus':row[6],'attack':row[7],'defense':row[8],
+            'skills':[dict(zip(('code','name','description','is_positive','acquired_level'),skill)) for skill in skills],
+            'units':[dict(zip(('assignment_id','id','name','troop_type','defense','attack','attack_range','speed','image_path','slot'),unit)) for unit in units]})
     return generals
 
 @router.get('/api/cabinet/army')
@@ -48,6 +57,23 @@ def hire_general(request: Request):
         if not template: raise HTTPException(409,'Нет доступных шаблонов генералов')
         row=conn.execute('INSERT INTO player_generals(user_id,name,icon,catalog_id) VALUES (%s,%s,%s,%s) RETURNING id,name,icon',(user_id,name or template[1],template[2],template[0])).fetchone()
     return {'hired':True,'general':dict(zip(('id','name','icon'),row))}
+
+def award_general_victory(conn, general_id, experience_gain=100):
+    """Начислить опыт за победу; вызывается транзакцией завершения боя."""
+    row=conn.execute('''SELECT pg.experience,pg.level,gc.experience_per_level,gc.max_level,
+        gc.max_attack_bonus,gc.max_defense_bonus FROM player_generals pg
+        JOIN general_catalog gc ON gc.id=pg.catalog_id WHERE pg.id=%s FOR UPDATE''',(general_id,)).fetchone()
+    if not row: raise HTTPException(404,'Генерал не найден')
+    experience=row[0]+experience_gain
+    level=min(row[3],1+experience//row[2])
+    attack_bonus=min(row[4],level-1)
+    defense_bonus=min(row[5],level-1)
+    conn.execute('UPDATE player_generals SET experience=%s,level=%s,attack_bonus=%s,defense_bonus=%s WHERE id=%s',(experience,level,attack_bonus,defense_bonus,general_id))
+    for acquired_level in range(row[1]+1,level+1):
+        skill=conn.execute('''SELECT id FROM general_skill_catalog WHERE active AND id NOT IN
+            (SELECT skill_id FROM player_general_skills WHERE general_id=%s) ORDER BY random() LIMIT 1''',(general_id,)).fetchone()
+        if skill: conn.execute('INSERT INTO player_general_skills(general_id,skill_id,acquired_level) VALUES (%s,%s,%s)',(general_id,skill[0],acquired_level))
+    return {'experience':experience,'level':level,'attack_bonus':attack_bonus,'defense_bonus':defense_bonus}
 
 @router.delete('/api/cabinet/army/generals/{general_id}')
 def dismiss_general(general_id: int, request: Request):
@@ -106,7 +132,7 @@ async def create_general(request: Request):
 def _validate_general(data):
     for key in ('name','description','image_path','skills'):
         if not isinstance(data[key],str) or len(data[key])>4000: raise HTTPException(400,f'Некорректное поле: {key}')
-    for key in ('health','attack','defense','initiative','speed','logistics'):
+    for key in ('health','attack','defense','initiative','speed','logistics','experience_per_level','max_level','max_attack_bonus','max_defense_bonus'):
         if type(data[key]) is not int or not 0<=data[key]<=10000: raise HTTPException(400,f'{key}: некорректное число')
     if type(data['active']) is not bool or not data['name'].strip(): raise HTTPException(400,'Заполните имя и доступность')
     if not data['image_path'].startswith('general/gen-') or not data['image_path'].endswith('.webp'): raise HTTPException(400,'Изображение должно находиться в general/*.webp')

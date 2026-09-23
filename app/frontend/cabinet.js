@@ -110,7 +110,7 @@ function renderArmy() {
     const card=document.createElement('article'); card.className='general-card'; card.tabIndex=0;
     const img=document.createElement('img'); img.src=general.icon; img.alt=`Генерал ${general.name}`;
     const info=document.createElement('div'), title=document.createElement('h3'), count=document.createElement('p');
-    title.textContent=general.name; count.textContent=`Юнитов: ${general.units.length} из 5`; info.append(title,count);
+    title.textContent=general.name; count.textContent=`Уровень ${general.level} · опыт ${general.experience} · атака ${general.attack} · защита ${general.defense} · юнитов ${general.units.length} из 5`; info.append(title,count);
     const fire=document.createElement('button'); fire.type='button'; fire.className='danger-button'; fire.textContent='Уволить';
     fire.addEventListener('click',async event=>{event.stopPropagation();if(!confirm(`Уволить генерала ${general.name} и расформировать его отряд?`))return;await api(`/api/cabinet/army/generals/${general.id}`,'DELETE',{});await loadArmy();});
     const open=()=>openGeneral(general.id); card.addEventListener('click',open); card.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();open();}});
