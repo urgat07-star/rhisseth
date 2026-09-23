@@ -42,7 +42,8 @@ async def access_control(request: Request, call_next):
             territory_name_action = request.method == 'PATCH' and path.endswith('/territory-name') and path.startswith('/api/hexes/')
             start_action = path == '/api/start' and request.method == 'POST'
             cabinet_action = (request.method,path) in {('PATCH','/api/cabinet/account'),('PATCH','/api/cabinet/barony/crest'),('PATCH','/api/cabinet/barony/name'),('DELETE','/api/cabinet/barony')}
-            if user['role_alias'] not in ('admin','moderator') and not territory_name_action and not start_action and not cabinet_action:
+            game_action = request.method == 'POST' and path.startswith('/api/game/hexes/') and path.endswith('/capture')
+            if user['role_alias'] not in ('admin','moderator') and not territory_name_action and not start_action and not cabinet_action and not game_action:
                 return JSONResponse({'error':'Недостаточно прав для редактирования'},status_code=403)
     response = await call_next(request)
     if path.startswith(('/api/', '/admin')):
@@ -108,6 +109,39 @@ def me(request: Request):
     user = request.state.user
     return {'login':user['user_login'],'role':user['role_alias'],
             'id':str(user['user_id']), 'can_edit':user['role_alias'] in ('admin','moderator'),'csrf':user['csrf']}
+
+@app.post('/api/game/hexes/{q}/{r}/capture')
+def capture_hex(q: int, r: int, request: Request):
+    """Atomically transfer a land hex to the current player's adjacent barony."""
+    if (q, r) not in coordinates():
+        raise HTTPException(404, 'Гекс вне полотна')
+    owner_id = str(request.state.user['user_id'])
+    with connect() as conn:
+        conn.execute('SELECT pg_advisory_xact_lock(%s,%s)', (q, r))
+        target = conn.execute('SELECT data FROM hexes WHERE q=%s AND r=%s FOR UPDATE', (q, r)).fetchone()
+        if not target:
+            raise HTTPException(404, 'Гекс не найден')
+        if target[0].get('Категория') == 'Море':
+            raise HTTPException(400, 'Морские гексы нельзя захватывать')
+        if target[0].get('Владелец') == owner_id and target[0].get('Тип владельца') == 'Игрок':
+            raise HTTPException(409, 'Гекс уже принадлежит вам')
+        adjacent = [(q+dq, r+dr) for dq,dr in ((1,0),(-1,0),(0,1),(0,-1),(1,-1),(-1,1))]
+        source = None
+        for nq, nr in adjacent:
+            candidate = conn.execute('SELECT data FROM hexes WHERE q=%s AND r=%s', (nq, nr)).fetchone()
+            if candidate and candidate[0].get('Тип владельца') == 'Игрок' and candidate[0].get('Владелец') == owner_id:
+                source = candidate[0]
+                break
+        if source is None:
+            raise HTTPException(409, 'Захватываемый гекс должен соприкасаться с вашим владением')
+        ownership = {'Тип владельца':'Игрок', 'Владелец':owner_id}
+        for field in ('ID территории','Название территории','Название баронии','Цвет баронии','Герб баронии'):
+            ownership[field] = source.get(field, '')
+        result = conn.execute('UPDATE hexes SET data=data || %s,updated_at=now() WHERE q=%s AND r=%s RETURNING data',
+                              (Jsonb(ownership), q, r)).fetchone()
+    row = public_row(result[0])
+    row['Имя владельца'] = request.state.user['user_login']
+    return {'captured': True, 'row': row}
 
 @app.patch('/api/hexes/{q}/{r}/territory-name')
 async def rename_owned_territory(q: int, r: int, request: Request):

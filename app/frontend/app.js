@@ -307,9 +307,9 @@ function render(rows) {
   redrawBaronyBoundaries();
 }
 
-// Lightweight client-side playtest. Persistent armies and unit statistics will
-// move to the game database once that schema is introduced.
-const game = { player: 1, moved: false, selected: false, unitKey: '', ownerId: '', pendingRow: null, battleSide: 'attacker', selectedUnit: null };
+// Lightweight playtest: captures are persisted; armies and unit statistics
+// remain client-side until the dedicated game schema is introduced.
+const game = { player: 1, moved: false, selected: false, unitKey: '', ownerId: '', pendingRow: null, battleSide: 'attacker', selectedUnit: null, battlePurpose: '', battleWon: false };
 const gamePanel = document.querySelector('#game-panel');
 const gameMessage = document.querySelector('#game-message');
 const turnLabel = document.querySelector('#turn-label');
@@ -323,7 +323,7 @@ function adjacentKeys(key) {
 }
 function setGameMessage(message) { gameMessage.textContent = message; }
 function paintMoveTargets() {
-  polygons.forEach((polygon,key)=>polygon.classList.toggle('move-target',game.selected && !game.moved && adjacentKeys(game.unitKey).includes(key)));
+  polygons.forEach((polygon,key)=>polygon.classList.toggle('move-target',game.selected && !game.moved && adjacentKeys(game.unitKey).includes(key) && rowsByKey.get(key)?.['Категория']!=='Море'));
 }
 function unitPosition(key) {
   const [q,r] = key.split(',').map(Number);
@@ -340,7 +340,7 @@ function createMapUnit() {
   layer.setAttribute('class','map-unit-layer');
   const image = document.createElementNS('http://www.w3.org/2000/svg','image');
   image.id = 'player-unit'; image.setAttribute('class','map-unit');
-  image.setAttribute('href','units/units-003.webp'); image.setAttribute('width','82'); image.setAttribute('height','82');
+  image.setAttribute('href','units/unit-003.webp'); image.setAttribute('width','82'); image.setAttribute('height','82');
   image.setAttribute('aria-label','Воин игрока'); image.setAttribute('tabindex','0');
   image.addEventListener('click',event=>{ event.stopPropagation(); if (game.player!==1 || game.moved) return; game.selected=!game.selected; image.classList.toggle('selected',game.selected); paintMoveTargets(); setGameMessage(game.selected?'Выберите подсвеченный соседний гекс.':'Выберите воина.'); });
   layer.append(image); overlay.append(layer); moveUnitImage(game.unitKey,false);
@@ -354,6 +354,7 @@ function moveUnitImage(key,animate=true) {
 function handleGameHexClick(row) {
   const target=cellKey(row.Q,row.R);
   if (game.player!==1 || !game.selected || game.moved || !adjacentKeys(game.unitKey).includes(target)) return;
+  if (row['Категория']==='Море') { setGameMessage('Морские гексы недоступны: по ним смогут двигаться только корабли.'); return; }
   game.unitKey=target; game.moved=true; game.selected=false; game.pendingRow=row;
   document.querySelector('#player-unit')?.classList.remove('selected'); paintMoveTargets(); closeCard(); moveUnitImage(target);
   window.setTimeout(resolveTravelEvent,480);
@@ -366,13 +367,13 @@ function resolveTravelEvent() {
 }
 function showHexActions() {
   const row=game.pendingRow; if (!row) return;
-  const canClaim=row['Владелец']!==userId && adjacentKeys(game.unitKey).some(key=>rowsByKey.get(key)?.['Владелец']===userId);
+  const canClaim=row['Категория']!=='Море' && row['Владелец']!==userId && adjacentKeys(game.unitKey).some(key=>rowsByKey.get(key)?.['Владелец']===userId);
   document.querySelector('#claim-hex').disabled=!canClaim;
   document.querySelector('#claim-hex').title=canClaim?'':'Гекс должен соприкасаться с вашим владением';
   hexActions.hidden=false;
 }
 function finishHexAction(message) { hexActions.hidden=true; endTurnButton.hidden=false; setGameMessage(message); }
-document.querySelector('#claim-hex')?.addEventListener('click',()=>{ const row=game.pendingRow; const neighbor=adjacentKeys(game.unitKey).map(key=>rowsByKey.get(key)).find(cell=>cell?.['Владелец']===userId); row['Владелец']=userId; row['Тип владельца']='Игрок'; row['Цвет баронии']=neighbor?.['Цвет баронии'] || '#b51f24'; if (game.ownerId) row['ID территории']=game.ownerId; polygons.get(game.unitKey)?.classList.add('barony-owned'); redrawBaronyBoundaries(); finishHexAction('Ячейка захвачена. Можно закончить ход.'); });
+document.querySelector('#claim-hex')?.addEventListener('click',()=>openBattle('Защитник', 'capture'));
 document.querySelector('#hold-hex')?.addEventListener('click',()=>finishHexAction('Воин остаётся на гексе. Можно закончить ход.'));
 document.querySelector('#raid-hex')?.addEventListener('click',()=>openBattle('Местное население'));
 endTurnButton?.addEventListener('click',()=>{ hexActions.hidden=true; endTurnButton.hidden=true; if (game.player===1) { game.player=2; turnLabel.textContent='Ход игрока 2'; setGameMessage('Тестовый соперник: нажмите «Пропустить ход».'); endTurnButton.textContent='Пропустить ход'; endTurnButton.hidden=false; } else { game.player=1; game.moved=false; game.pendingRow=null; turnLabel.textContent='Ваш ход'; endTurnButton.textContent='Конец хода'; setGameMessage('Выберите воина, затем соседний гекс.'); } });
@@ -382,29 +383,52 @@ function unitCard(src,name,side,index) {
   const img=document.createElement('img'); img.src=src; img.alt=name; const label=document.createElement('span'); label.textContent=name;
   button.append(img,label); button.addEventListener('click',()=>battleUnitClick(button)); return button;
 }
-function openBattle(enemy) {
-  hexActions.hidden=true; endTurnButton.hidden=true; game.battleSide='attacker'; game.selectedUnit=null;
+function randomUnitAsset() { return `units/unit-${String(1+Math.floor(Math.random()*17)).padStart(3,'0')}.webp`; }
+function battleLog(message) { const line=document.createElement('li'); line.textContent=message; document.querySelector('#battle-log').append(line); line.scrollIntoView({block:'nearest'}); }
+function openBattle(enemy, purpose='raid') {
+  hexActions.hidden=true; endTurnButton.hidden=true; game.battleSide='attacker'; game.selectedUnit=null; game.battlePurpose=purpose; game.battleWon=false;
   const attackers=document.querySelector('#attackers'), defenders=document.querySelector('#defenders'); attackers.replaceChildren(); defenders.replaceChildren();
-  ['003','004'].forEach((id,i)=>attackers.append(unitCard(`units/units-${id}.webp`,`Воин ${i+1}`,'attacker',i)));
-  ['001','002'].forEach((id,i)=>defenders.append(unitCard(`units/units-${id}.webp`,`${enemy} ${i+1}`,'defender',i)));
+  document.querySelector('#battle-log').replaceChildren();
+  const attackerCount=1+Math.floor(Math.random()*5);
+  const defence=Number.parseInt(game.pendingRow?.['Защита'],10);
+  const defenderCount=Number.isFinite(defence) ? Math.max(1,Math.min(5,defence)) : 1;
+  Array.from({length:attackerCount},(_,i)=>attackers.append(unitCard(randomUnitAsset(),`Воин ${i+1}`,'attacker',i)));
+  Array.from({length:defenderCount},(_,i)=>defenders.append(unitCard(randomUnitAsset(),`${enemy} ${i+1}`,'defender',i)));
+  battleLog(`Бой начался: ${attackerCount} нападающих против ${defenderCount} защитников.`);
   document.querySelector('#battle-status').textContent='Ход нападающего: выберите своего юнита.'; battleModal.showModal();
 }
 function battleUnitClick(button) {
   if (button.classList.contains('defeated') || game.battleSide!=='attacker') return;
   if (!game.selectedUnit) { if (button.dataset.side!=='attacker') return; game.selectedUnit=button; button.classList.add('selected'); document.querySelector('#battle-status').textContent='Теперь выберите юнита противника.'; return; }
   if (button.dataset.side!=='defender') return;
+  battleLog(`${game.selectedUnit.querySelector('span').textContent} напал на ${button.querySelector('span').textContent}.`);
   button.classList.add('defeated'); game.selectedUnit.classList.remove('selected'); game.selectedUnit=null;
   if (![...document.querySelectorAll('#defenders .battle-unit')].some(unit=>!unit.classList.contains('defeated'))) return endBattle('Победа нападающих.');
   game.battleSide='defender'; document.querySelector('#battle-status').textContent='Противник отвечает…'; window.setTimeout(computerAttack,650);
 }
 function computerAttack() {
   const target=[...document.querySelectorAll('#attackers .battle-unit')].find(unit=>!unit.classList.contains('defeated'));
-  if (target) target.classList.add('defeated');
+  if (target) { const enemy=[...document.querySelectorAll('#defenders .battle-unit')].find(unit=>!unit.classList.contains('defeated')); battleLog(`${enemy?.querySelector('span').textContent || 'Защитник'} напал на ${target.querySelector('span').textContent}.`); target.classList.add('defeated'); }
   if (![...document.querySelectorAll('#attackers .battle-unit')].some(unit=>!unit.classList.contains('defeated'))) return endBattle('Нападающие проиграли.');
   game.battleSide='attacker'; document.querySelector('#battle-status').textContent='Ваш ход: выберите своего юнита.';
 }
-function endBattle(message) { game.battleSide='finished'; document.querySelector('#battle-status').textContent=message; }
-document.querySelector('#finish-battle')?.addEventListener('click',()=>{ battleModal.close(); showHexActions(); });
+function endBattle(message) { game.battleSide='finished'; game.battleWon=message.startsWith('Победа'); document.querySelector('#battle-status').textContent=message; battleLog(message); }
+async function persistCapture() {
+  const row=game.pendingRow;
+  const response=await fetch(`${API_BASE}/game/hexes/${row.Q}/${row.R}/capture`,{method:'POST',headers:{'X-CSRF-Token':csrfToken}});
+  const result=await response.json();
+  if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+  Object.assign(row,result.row); polygons.get(game.unitKey)?.classList.add('barony-owned'); redrawBaronyBoundaries();
+}
+document.querySelector('#finish-battle')?.addEventListener('click',async()=>{
+  if (game.battleSide!=='finished') { document.querySelector('#battle-status').textContent='Сначала завершите бой.'; return; }
+  battleModal.close();
+  if (game.battlePurpose==='capture' && game.battleWon) {
+    try { await persistCapture(); finishHexAction('Гекс захвачен и сохранён в базе. Можно закончить ход.'); }
+    catch(error) { finishHexAction(`Захват не сохранён: ${error.message}`); }
+  } else if (game.battlePurpose==='capture') finishHexAction('Захват не состоялся: защитники победили.');
+  else showHexActions();
+});
 
 document.querySelector("#close-card").addEventListener("click", closeCard);
 document.querySelector('#show-percentages').checked = localStorage.getItem('rhisseth-show-percentages') !== 'false';

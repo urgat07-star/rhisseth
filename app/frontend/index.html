@@ -81,6 +81,7 @@
 		<div class="battle-arena">
 			<h2 id="battle-title">Бой</h2>
 			<p id="battle-status">Ход нападающего: выберите своего юнита.</p>
+			<ol id="battle-log" class="battle-log" aria-live="polite"></ol>
 			<div class="battle-lines">
 				<section><h3>Нападающие</h3><div id="attackers" class="unit-column"></div></section>
 				<div class="battle-mark" aria-hidden="true">⚔</div>
@@ -96,7 +97,7 @@
     </dialog>
 	
 	<footer id="data-status">Final V2 · подключение к PostgreSQL…</footer>
-	<script src="app.js?v=game-prototype-1" defer></script>
+	<script src="app.js?v=battle-system-0.2" defer></script>
 	<script>
     const pageModal = document.getElementById('page-modal');
     const pageModalFrame = document.getElementById('page-modal-frame');
