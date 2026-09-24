@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'app/backend'))
 from fastapi.testclient import TestClient
 from main import app
-from hex_rules import coordinates, connected, category_from_share
+from hex_rules import coordinates, connected, category_from_share, validate_terrain_category
 
 class HexMetadataTests(unittest.TestCase):
     def setUp(self):
@@ -22,6 +22,13 @@ class HexMetadataTests(unittest.TestCase):
         self.assertTrue(connected([(0,0),(1,0),(0,1)]))
         self.assertFalse(connected([(0,0),(2,2)]))
 
+    def test_sea_and_land_terrain_are_mutually_exclusive(self):
+        validate_terrain_category('Море','Открытое море')
+        validate_terrain_category('Суша','Густой лес')
+        for category, terrain in (('Море','Горы'),('Суша','Шельф'),('Побережье','Открытое море')):
+            with self.subTest(category=category, terrain=terrain), self.assertRaises(Exception):
+                validate_terrain_category(category,terrain)
+
     def test_admin_interface_is_restricted_on_server(self):
         with patch('main.current_user',return_value=self.player),patch('main.connect',side_effect=AssertionError('Forbidden read')):
             for url in ('/admin/hexes','/api/admin/owners','/api/admin/hexes/export'):
@@ -32,6 +39,11 @@ class HexMetadataTests(unittest.TestCase):
                  {'Доля суши, %':'50','Категория':'Море'},
                  {'Состав ландшафта':'[{"name":"Лес","percent":70}]'},
                  {'Состав ландшафта':'[{"name":"Лес","percent":true}]'},
+                 {'Категория':'Море','Тип местности':'Горы'},
+                 {'Категория':'Суша','Тип местности':'Открытое море'},
+                 {'Категория':'Суша','Тип местности':'Равнина','Водная переправа':'Мост'},
+                 {'Категория':'Побережье','Тип местности':'Побережье / Равнина','Дорога':'Да'},
+                 {'Уровень гекса':'3','Постройка':'Город'},
                  {'Тип владельца':'Игрок'}, {'Владелец':'2'}, {'Название территории':'x'*201}]
         with patch('main.current_user',return_value=self.admin),patch('main.connect',side_effect=AssertionError('Invalid update')):
             for data in invalid:

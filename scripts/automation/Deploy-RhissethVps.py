@@ -301,6 +301,53 @@ def backup_database(label):
     emit(f'Backup: {target}; SHA256={hashlib.sha256(target.read_bytes()).hexdigest()}')
     return target
 
+def deploy_hexes():
+    emit('Approved change: deploy V6 hex metadata and rules; preserve users, ownership and baronies')
+    repo = ROOT/'repository'
+    if run(['git','-C',str(repo),'status','--porcelain'],raw=True).stdout.strip():
+        raise RuntimeError('VPS repository has local changes; deployment refused')
+    old_revision = run(['git','-C',str(repo),'rev-parse','HEAD'],raw=True).stdout.strip()
+    backup_database('before-hex-v6')
+    env={**os.environ,'GIT_TERMINAL_PROMPT':'0'}
+    run(['git','-C',str(repo),'fetch','origin','main'],env=env)
+    run(['git','-C',str(repo),'merge','--ff-only','origin/main'])
+    revision=run(['git','-C',str(repo),'rev-parse','HEAD'],raw=True).stdout.strip()
+    venv=ROOT/'venv'
+    run([str(venv/'bin/pip'),'install','--no-cache-dir','--disable-pip-version-check','-r',str(repo/'app/backend/requirements.lock')])
+    for tree in (repo,venv):
+        for parent,directories,files in os.walk(tree):
+            Path(parent).chmod(0o755)
+            for name in files:
+                file=Path(parent)/name
+                if not file.is_symlink():
+                    file.chmod(0o755 if file.stat().st_mode & 0o111 else 0o644)
+    app_env={**os.environ,'DB_HOST':'127.0.0.1','DB_PASSWORD_FILE':str(ROOT/'secrets/db-password.txt')}
+    run([str(venv/'bin/python'),str(repo/'app/backend/migrate.py')],env=app_env)
+    check=run(['runuser','-u','postgres','--','psql','-X','-At','-d','rhisseth','-c',
+        """WITH visible AS (SELECT q,r,data FROM hexes WHERE r BETWEEN 0 AND 18 AND q BETWEEN ceil(-0.5-r/2.0) AND floor(3200/(sqrt(3.0)*80)+0.5-r/2.0)) SELECT count(*),count(*) FILTER (WHERE data->>'Категория' IN ('Море','Побережье','Суша') AND coalesce(data->>'Тип местности','')<>''),count(*) FILTER (WHERE data->>'Категория'='Море' AND (data->>'Тип местности' NOT IN ('Мелководье','Шельф','Открытое море','Глубоководье','Подводная впадина','Рифы','Ледовые воды','Штормовой район','Промысловая зона') OR data ? 'Плодородие')),count(*) FILTER (WHERE data->>'Категория'='Суша' AND data ? 'Глубина') FROM visible;"""],raw=True).stdout.strip()
+    emit('Hex validation visible|described|invalid_sea|invalid_land: '+check)
+    if check!='465|465|0|0':
+        raise RuntimeError('V6 hex metadata validation failed before restart')
+    sample=run(['runuser','-u','postgres','--','psql','-X','-At','-d','rhisseth','-c',
+        "SELECT q||'|'||r||'|'||data->>'Категория'||'|'||data->>'Тип местности' FROM hexes WHERE (q,r) IN ((-4,16),(7,16)) ORDER BY q;"],raw=True).stdout.strip()
+    emit('Reviewed samples: '+sample.replace('\n','; '))
+    run(['systemctl','restart','rhisseth'])
+    for attempt in range(30):
+        result=run(['curl','--max-time','2','-sS','-o','/dev/null','-w','%{http_code}','http://127.0.0.1:8080/health'],check=False,raw=True)
+        if result.stdout=='200': break
+        time.sleep(1)
+    else:
+        raise RuntimeError('Application health failed after restart')
+    run(['nginx','-t'])
+    for unit in ('rhisseth','postgresql@16-main','nginx'):
+        run(['systemctl','is-active',unit])
+    release_path=ROOT/'release.json'
+    release=json.loads(release_path.read_text())
+    release.update(git_commit=revision,hex_v6_deployed_utc=now.isoformat(),previous_git_commit=old_revision)
+    release_path.write_text(json.dumps(release,indent=2))
+    backup_database('after-hex-v6')
+    emit('Validation: V6 hex deployment complete; no reboot')
+
 def hosting():
     emit('Approved change: restore hosting appearance and users/roles in existing PostgreSQL; preserve hex data')
     repo = ROOT / 'repository'
@@ -650,6 +697,8 @@ try:
         publish_map()
     elif operation == 'audit-map':
         audit_map()
+    elif operation == 'deploy-hexes':
+        deploy_hexes()
     else:
         raise RuntimeError('Unknown operation')
     code = 0

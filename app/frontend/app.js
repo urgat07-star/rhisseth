@@ -321,9 +321,19 @@ function adjacentKeys(key) {
   const [q,r] = key.split(',').map(Number);
   return neighbors.map(([dq,dr])=>cellKey(q+dq,r+dr)).filter(next=>rowsByKey.has(next));
 }
+function hasRiver(row) { return row && (`${row['Дополнительный объект']||''} ${row['Тип местности']||''}`).includes('Река'); }
+function movementTargets(key) {
+  const result = new Set(adjacentKeys(key));
+  if (hasRiver(rowsByKey.get(key))) {
+    adjacentKeys(key).filter(next=>hasRiver(rowsByKey.get(next))).forEach(mid=>{
+      adjacentKeys(mid).filter(next=>hasRiver(rowsByKey.get(next))).forEach(next=>result.add(next));
+    });
+  }
+  result.delete(key); return [...result];
+}
 function setGameMessage(message) { gameMessage.textContent = message; }
 function paintMoveTargets() {
-  polygons.forEach((polygon,key)=>polygon.classList.toggle('move-target',game.selected && !game.moved && adjacentKeys(game.unitKey).includes(key) && rowsByKey.get(key)?.['Категория']!=='Море'));
+  polygons.forEach((polygon,key)=>polygon.classList.toggle('move-target',game.selected && !game.moved && movementTargets(game.unitKey).includes(key) && rowsByKey.get(key)?.['Категория']!=='Море'));
 }
 function unitPosition(key) {
   const [q,r] = key.split(',').map(Number);
@@ -360,7 +370,7 @@ function moveUnitImage(key,animate=true) {
 }
 function handleGameHexClick(row) {
   const target=cellKey(row.Q,row.R);
-  if (game.player!==1 || !game.selected || game.moved || !adjacentKeys(game.unitKey).includes(target)) return;
+  if (game.player!==1 || !game.selected || game.moved || !movementTargets(game.unitKey).includes(target)) return;
   if (row['Категория']==='Море') { setGameMessage('Морские гексы недоступны: по ним смогут двигаться только корабли.'); return; }
   game.unitKey=target; game.moved=true; game.selected=false; game.pendingRow=row;
   if(game.general)game.general.unitKey=target; document.querySelectorAll('.map-unit').forEach(item=>item.classList.remove('selected')); paintMoveTargets(); closeCard(); moveUnitImage(target);
