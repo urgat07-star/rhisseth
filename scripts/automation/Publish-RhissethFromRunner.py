@@ -4,7 +4,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 RID = 'da44a388-e458-4379-ab4c-c204696804b2'
-if len(sys.argv) != 2 or sys.argv[1] != 'publish': raise SystemExit('Invalid operation')
+if len(sys.argv) != 3 or sys.argv[1] != RID or sys.argv[2] != 'publish': raise SystemExit('Invalid operation')
 now = dt.datetime.now(dt.timezone.utc)
 root = Path.home() / 'rhisseth.ru'
 archive = root / 'temp/rhisseth-publish.tgz'
