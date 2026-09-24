@@ -18,7 +18,13 @@ for i,line in enumerate(lines):
         lines[i]='ignoreip = '+' '.join(values); break
 else: lines.append('ignoreip = '+ip)
 path.write_text('\n'.join(lines)+'\n'); path.chmod(0o640)
+blacklist=pathlib.Path('/etc/rhisseth-blacklist')
+if blacklist.exists():
+    remaining=[item for item in blacklist.read_text().split() if item != ip]
+    blacklist.write_text(('\n'.join(sorted(set(remaining)))+'\n') if remaining else '')
+    blacklist.chmod(0o600)
 print(f'whitelist_saved={ip}')
 PY
+fail2ban-client set rhisseth-auth unbanip "$ip" >/dev/null 2>&1 || true
 systemctl reload fail2ban 2>/dev/null || systemctl restart fail2ban
 fail2ban-client status rhisseth-auth

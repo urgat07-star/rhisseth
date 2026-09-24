@@ -32,7 +32,7 @@ def main():
     if staging.exists(): shutil.rmtree(staging)
     staging.mkdir()
     with tarfile.open(archive, 'r:gz') as tar: tar.extractall(staging)
-    for name in ('rhisseth-ip-whitelist-add.sh', 'rhisseth-ip-blacklist-add.sh', 'rhisseth-ip-bans-list.sh'):
+    for name in ('rhisseth-ip-whitelist-add.sh', 'rhisseth-ip-whitelist-list.sh', 'rhisseth-ip-blacklist-add.sh', 'rhisseth-ip-bans-list.sh'):
         script = staging / 'deploy/native' / name
         if script.exists(): script.chmod(0o755)
     old_backup = backup / 'repository-before'; shutil.copytree(repo, old_backup, symlinks=True)
