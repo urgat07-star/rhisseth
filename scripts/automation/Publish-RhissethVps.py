@@ -23,6 +23,7 @@ def main():
     with dump.open('wb') as stream:
         result = subprocess.run(['runuser', '-u', 'postgres', '--', 'pg_dump', '-Fc', '-d', 'rhisseth'], stdout=stream, stderr=subprocess.PIPE)
     if result.returncode: raise RuntimeError('database backup failed')
+    shutil.chown(dump, user='postgres', group='postgres'); dump.chmod(0o600)
     run(['runuser', '-u', 'postgres', '--', 'pg_restore', '--list', str(dump)])
     staging = ROOT / 'repository.publish-staging'
     if staging.exists(): shutil.rmtree(staging)
