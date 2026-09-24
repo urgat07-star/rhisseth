@@ -38,6 +38,10 @@ try {
         }
     }
     if ($ScriptName -eq 'Publish-RhissethFromRunner.py') {
+        $out = & scp.exe @opts "$root/scripts/automation/Publish-RhissethVps.py" 'avalon@10.210.52.128:/home/avalon/rhisseth.ru/scripts/automation/Publish-RhissethVps.py' 2>&1
+        if ($LASTEXITCODE -ne 0) { $out | Add-Content -LiteralPath $log; throw 'VPS publication payload transfer failed' }
+    }
+    if ($ScriptName -eq 'Publish-RhissethFromRunner.py') {
         $archive = Join-Path $env:TEMP ('rhisseth-publish-' + $now.ToString('yyyyMMdd-HHmmss') + '.tgz')
         git -C $root archive --format=tar.gz --output=$archive HEAD
         if ($LASTEXITCODE -ne 0) { throw 'Local Git archive creation failed' }
