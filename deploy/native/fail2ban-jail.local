@@ -1,6 +1,7 @@
 [DEFAULT]
 banaction = nftables-multiport
 backend = auto
+ignoreip = 127.0.0.1/8 ::1 185.216.87.44 89.17.57.22 77.87.202.186
 findtime = 10m
 maxretry = 3
 bantime = 1d
