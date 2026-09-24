@@ -11,5 +11,7 @@ for jail in $(fail2ban-client status 2>/dev/null | sed -n 's/.*Jail list:\s*//p'
 done
 echo '=== persistent blacklist ==='
 if [[ -f /etc/rhisseth-blacklist ]]; then sort -u /etc/rhisseth-blacklist; else echo '(empty)'; fi
+echo '=== nginx blacklist ==='
+cat /etc/nginx/conf.d/rhisseth-blacklist.conf 2>/dev/null || echo '(empty)'
 echo '=== manual whitelist ==='
 grep -E '^ignoreip\s*=' /etc/fail2ban/jail.d/rhisseth-manual.local 2>/dev/null || echo '(empty)'
