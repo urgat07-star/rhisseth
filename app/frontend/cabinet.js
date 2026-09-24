@@ -59,6 +59,7 @@ window.addEventListener('hashchange',()=>selectTab(location.hash.slice(1)));
 selectTab(location.hash.slice(1));
 
 function renderCabinet() {
+  document.querySelector('#account-form input[name="login"]')?.setAttribute('minlength','2');
   document.querySelector('#user-status').textContent=state.account.login;
   const account=document.querySelector('#account-form');
   account.elements.login.value=state.account.login; account.elements.email.value=state.account.email;

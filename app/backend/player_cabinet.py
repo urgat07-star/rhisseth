@@ -71,15 +71,18 @@ async def account(request: Request):
     if not all(isinstance(value,str) for value in (login,email,current,new,confirmation)):
         raise HTTPException(400,'Неверный формат данных')
     login,email=login.strip(),email.strip()
-    if not 3<=len(login)<=50 or len(email)>255 or not re.fullmatch(r'[^\s@]+@[^\s@]+\.[^\s@]+',email) or len(current)>4096:
-        raise HTTPException(400,'Проверьте логин (3–50 символов), e-mail и пароль')
+    if not 2<=len(login)<=50 or len(email)>255 or not re.fullmatch(r'[^\s@]+@[^\s@]+\.[^\s@]+',email) or len(current)>4096:
+        raise HTTPException(400,'Проверьте логин (2–50 символов), e-mail и пароль')
     if (new or confirmation) and (new!=confirmation or len(new)<8 or not 8<=len(new.encode())<=72):
         raise HTTPException(400,'Новые пароли должны совпадать: от 8 символов, до 72 байт')
     try:
         with connect() as conn:
             user_id=request.state.user['user_id']
-            old=conn.execute('SELECT user_login,user_email,user_pass FROM users WHERE user_id=%s FOR UPDATE',(user_id,)).fetchone()
+            old=conn.execute('''SELECT user_login,user_email,user_pass,r.role_alias
+                FROM users JOIN roles r USING(role_id) WHERE user_id=%s FOR UPDATE''',(user_id,)).fetchone()
             if not old: raise HTTPException(401,'Требуется вход')
+            if old[3] != 'admin' and len(login) < 3:
+                raise HTTPException(400,'Логин пользователя должен содержать минимум 3 символа')
             if not verify_password(current,old[2]): raise HTTPException(403,'Неверный текущий пароль')
             if data['expected']!={'login':old[0],'email':old[1]}:
                 raise HTTPException(409,'Данные аккаунта изменились. Обновите кабинет')
