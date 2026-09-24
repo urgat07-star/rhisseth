@@ -25,6 +25,22 @@ if blacklist.exists():
     blacklist.chmod(0o600)
 print(f'whitelist_saved={ip}')
 PY
+install -d -m 755 /etc/nginx/conf.d
+python3 - "$ip" <<'PY'
+import ipaddress, pathlib, sys
+ip=str(ipaddress.ip_address(sys.argv[1]))
+path=pathlib.Path('/etc/nginx/conf.d/rhisseth-whitelist.conf')
+items=[]
+if path.exists():
+    for line in path.read_text().splitlines():
+        value=line.strip().split()[0] if line.strip() and not line.strip().startswith(('geo','default','}')) else ''
+        try: ipaddress.ip_address(value); items.append(value)
+        except ValueError: pass
+if ip not in items: items.append(ip)
+path.write_text('geo $rhisseth_whitelisted {\n    default 0;\n' + ''.join(f'    {value} 1;\n' for value in sorted(set(items), key=lambda x: (ipaddress.ip_address(x).version, int(ipaddress.ip_address(x)))) ) + '}\n')
+path.chmod(0o644)
+PY
 fail2ban-client set rhisseth-auth unbanip "$ip" >/dev/null 2>&1 || true
 systemctl reload fail2ban 2>/dev/null || systemctl restart fail2ban
+nginx -t && systemctl reload nginx
 fail2ban-client status rhisseth-auth
