@@ -1,8 +1,8 @@
 #requires -Version 7.0
 param([string]$ResourceId = '',
-      [ValidateSet('Inspect-RhissethVpsFromRunner.py', 'Consolidate-RhissethRunnerFiles.py', 'Deploy-RhissethFromRunner.py')]
+      [ValidateSet('Inspect-RhissethVpsFromRunner.py', 'Consolidate-RhissethRunnerFiles.py', 'Deploy-RhissethFromRunner.py', 'Publish-RhissethFromRunner.py')]
       [string]$ScriptName = 'Inspect-RhissethVpsFromRunner.py',
-      [ValidateSet('inspect', 'install', 'validate', 'hosting', 'snapshot', 'publish-map', 'audit-map', 'deploy-hexes')][string]$Operation = 'inspect')
+      [ValidateSet('inspect', 'install', 'validate', 'hosting', 'snapshot', 'publish-map', 'audit-map', 'deploy-hexes', 'publish')][string]$Operation = 'inspect')
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../..')).Path
 $workspaceRoot = (Resolve-Path -LiteralPath (Join-Path $root '..')).Path
@@ -37,9 +37,17 @@ try {
             if ($LASTEXITCODE -ne 0) { $out | Add-Content -LiteralPath $log; throw 'Archive transfer to runner failed' }
         }
     }
+    if ($ScriptName -eq 'Publish-RhissethFromRunner.py') {
+        $archive = Join-Path $env:TEMP ('rhisseth-publish-' + $now.ToString('yyyyMMdd-HHmmss') + '.tgz')
+        git -C $root archive --format=tar.gz --output=$archive HEAD
+        if ($LASTEXITCODE -ne 0) { throw 'Local Git archive creation failed' }
+        $out = & scp.exe @opts $archive 'avalon@10.210.52.128:/home/avalon/rhisseth.ru/temp/rhisseth-publish.tgz' 2>&1
+        Remove-Item -LiteralPath $archive -Force -ErrorAction SilentlyContinue
+        if ($LASTEXITCODE -ne 0) { $out | Add-Content -LiteralPath $log; throw 'Publication archive transfer failed' }
+    }
     $command = "python3 $remote"
     if ($ResourceId) { $command += " $ResourceId" }
-    if ($ScriptName -eq 'Deploy-RhissethFromRunner.py') { $command += " $Operation" }
+    if ($ScriptName -eq 'Deploy-RhissethFromRunner.py' -or $ScriptName -eq 'Publish-RhissethFromRunner.py') { $command += " $Operation" }
     $out = & ssh.exe @opts avalon@10.210.52.128 $command 2>&1
     $code = $LASTEXITCODE
     $safe = ($out | ForEach-Object { [string]$_ }) -join "`n"

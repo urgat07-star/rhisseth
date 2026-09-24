@@ -1,0 +1,45 @@
+# Правило публикации Rhisseth
+
+Статус: дополнительное репозиторное правило.
+
+## Назначение
+
+Канонический способ публикации Rhisseth — из текущего Git-репозитория через
+reviewed runner-сценарий с использованием Passbolt. Это правило хранится в Git
+вместе с проектом и доступно на всех копиях репозитория.
+
+Правило не является обязательным требованием для других компьютеров: если на
+рабочем месте нет доступа к runner, Passbolt или требуемым SSH-инструментам,
+можно использовать другой согласованный способ публикации, соблюдая backup,
+проверку и журналирование.
+
+## Основной workflow
+
+1. Работать из `rhisseth.ru` и публиковать выбранный проверенный Git-коммит.
+2. Передавать архив проекта на `STU-AUTOMATION-01`.
+3. Получать SSH-доступ к VDS через Passbolt; секреты не выводить и не писать в
+   журналы.
+4. Перед заменой файлов создавать и проверять PostgreSQL backup на VDS.
+5. Выполнять staged-публикацию reviewed-скриптом:
+   `scripts/automation/Publish-RhissethFromRunner.py` и
+   `scripts/automation/Publish-RhissethVps.py`.
+6. После публикации проверять `rhisseth`, `nginx -t` и внешний HTTP/HTTPS
+   endpoint.
+7. Сохранять sanitized Markdown-лог в
+   `reports/automation-logs/YYYY-MM-DD/`.
+
+## Запуск
+
+Из PowerShell, находясь в `rhisseth.ru`:
+
+```powershell
+pwsh -NoProfile -File scripts/automation/Invoke-RhissethRunnerNative.ps1 `
+  -ResourceId da44a388-e458-4379-ab4c-c204696804b2 `
+  -ScriptName Publish-RhissethFromRunner.py `
+  -Operation publish
+```
+
+Перед запуском рабочая ветка должна быть проверена и не содержать случайных
+незакоммиченных изменений. Если правило невозможно применить, публикацию нужно
+выполнять только по другому reviewed-процессу с эквивалентными backup,
+валидацией и audit-log.
