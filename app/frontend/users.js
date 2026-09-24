@@ -2,6 +2,7 @@
 const $ = s => document.querySelector(s);
 const labels = {admin:'Администраторы',moderator:'Модераторы',user:'Пользователи'};
 let csrf='', page=1, selected=null, loading=false;
+document.querySelector('input[name="login"]')?.setAttribute('minlength','2');
 async function api(url, options={}) {
   const response=await fetch(url,{...options,headers:{'Content-Type':'application/json','X-CSRF-Token':csrf,...options.headers}});
   const result=await response.json();
