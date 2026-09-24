@@ -1,0 +1,31 @@
+[DEFAULT]
+banaction = nftables-multiport
+backend = auto
+findtime = 10m
+maxretry = 3
+bantime = 1d
+destemail = root@localhost
+action = %(action_)s
+
+[rhisseth-auth]
+enabled = true
+filter = rhisseth
+logpath = /opt/rhisseth/reports/nginx-access.log
+port = http,https
+maxretry = 3
+bantime = 1d
+
+[recidive]
+enabled = true
+logpath = /var/log/fail2ban.log
+findtime = 30d
+maxretry = 2
+bantime = 30d
+
+[rhisseth-permanent]
+enabled = true
+filter = rhisseth
+logpath = /var/log/fail2ban.log
+findtime = 365d
+maxretry = 3
+bantime = -1

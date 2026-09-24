@@ -20,6 +20,9 @@ def main():
     backup = ROOT / 'backups' / now.strftime('%Y%m%d-%H%M%S'); backup.mkdir(parents=True, exist_ok=True); backup.chmod(0o700)
     if not archive.is_file() or archive.stat().st_size == 0: raise RuntimeError('archive missing')
     dump = backup / 'rhisseth.dump'
+    for source, name in (('/etc/nginx/sites-available/rhisseth', 'nginx-rhisseth.before'), ('/etc/systemd/system/rhisseth.service', 'rhisseth.service.before')):
+        source_path = Path(source)
+        if source_path.exists(): shutil.copy2(source_path, backup / name)
     with dump.open('wb') as stream:
         result = subprocess.run(['runuser', '-u', 'postgres', '--', 'pg_dump', '-Fc', '-d', 'rhisseth'], stdout=stream, stderr=subprocess.PIPE)
     if result.returncode: raise RuntimeError('database backup failed')
@@ -31,7 +34,18 @@ def main():
     with tarfile.open(archive, 'r:gz') as tar: tar.extractall(staging)
     old_backup = backup / 'repository-before'; shutil.copytree(repo, old_backup, symlinks=True)
     shutil.rmtree(repo); staging.rename(repo)
-    run(['systemctl', 'restart', 'rhisseth']); run(['systemctl', 'is-active', 'rhisseth']); run(['nginx', '-t'])
+    run(['apt-get', 'update'])
+    run(['apt-get', 'install', '-y', '--no-install-recommends', 'fail2ban', 'logrotate'])
+    shutil.copy2(repo / 'deploy/native/rhisseth.service', '/etc/systemd/system/rhisseth.service')
+    shutil.copy2(repo / 'deploy/native/nginx.conf', '/etc/nginx/sites-available/rhisseth')
+    shutil.copy2(repo / 'deploy/native/nginx-logrotate.conf', '/etc/logrotate.d/rhisseth')
+    shutil.copy2(repo / 'deploy/native/fail2ban-logrotate.conf', '/etc/logrotate.d/rhisseth-fail2ban')
+    shutil.copy2(repo / 'deploy/native/fail2ban-rhisseth.conf', '/etc/fail2ban/filter.d/rhisseth.conf')
+    shutil.copy2(repo / 'deploy/native/fail2ban-jail.local', '/etc/fail2ban/jail.d/rhisseth.local')
+    run(['nginx', '-t'])
+    run(['systemctl', 'daemon-reload']); run(['systemctl', 'restart', 'rhisseth']); run(['systemctl', 'is-active', 'rhisseth'])
+    run(['systemctl', 'restart', 'fail2ban']); run(['systemctl', 'is-active', 'fail2ban'])
+    run(['systemctl', 'reload', 'nginx'])
     run(['curl', '--insecure', '--max-time', '15', '-sS', '-o', '/dev/null', '-w', 'HTTPS %{http_code}\\n', 'https://62.113.109.168/'])
     emit(f'Backup: {dump}; previous repository: {old_backup}; change/reboot: deployed/no reboot')
 try:

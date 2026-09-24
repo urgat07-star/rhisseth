@@ -1,6 +1,6 @@
 #requires -Version 7.0
 param([string]$ResourceId = '',
-      [ValidateSet('Inspect-RhissethVpsFromRunner.py', 'Consolidate-RhissethRunnerFiles.py', 'Deploy-RhissethFromRunner.py', 'Publish-RhissethFromRunner.py')]
+      [ValidateSet('Inspect-RhissethVpsFromRunner.py', 'Consolidate-RhissethRunnerFiles.py', 'Deploy-RhissethFromRunner.py', 'Publish-RhissethFromRunner.py', 'Diagnose-RhissethVps.py', 'Diagnose-RhissethRunner.py')]
       [string]$ScriptName = 'Inspect-RhissethVpsFromRunner.py',
       [ValidateSet('inspect', 'install', 'validate', 'hosting', 'snapshot', 'publish-map', 'audit-map', 'deploy-hexes', 'publish')][string]$Operation = 'inspect')
 $ErrorActionPreference = 'Stop'
@@ -41,6 +41,14 @@ try {
         $out = & scp.exe @opts "$root/scripts/automation/Publish-RhissethVps.py" 'avalon@10.210.52.128:/home/avalon/rhisseth.ru/scripts/automation/Publish-RhissethVps.py' 2>&1
         if ($LASTEXITCODE -ne 0) { $out | Add-Content -LiteralPath $log; throw 'VPS publication payload transfer failed' }
     }
+    if ($ScriptName -eq 'Diagnose-RhissethVps.py') {
+        $out = & scp.exe @opts "$root/scripts/automation/Diagnose-RhissethVps.py" 'avalon@10.210.52.128:/home/avalon/rhisseth.ru/scripts/automation/Diagnose-RhissethVps.py' 2>&1
+        if ($LASTEXITCODE -ne 0) { $out | Add-Content -LiteralPath $log; throw 'VPS diagnostic script transfer failed' }
+    }
+    if ($ScriptName -eq 'Diagnose-RhissethRunner.py') {
+        $out = & scp.exe @opts "$root/scripts/automation/Diagnose-RhissethRunner.py" 'avalon@10.210.52.128:/home/avalon/rhisseth.ru/scripts/automation/Diagnose-RhissethRunner.py' 2>&1
+        if ($LASTEXITCODE -ne 0) { $out | Add-Content -LiteralPath $log; throw 'Runner diagnostic script transfer failed' }
+    }
     if ($ScriptName -eq 'Publish-RhissethFromRunner.py') {
         $archive = Join-Path $env:TEMP ('rhisseth-publish-' + $now.ToString('yyyyMMdd-HHmmss') + '.tgz')
         git -C $root archive --format=tar.gz --output=$archive HEAD
@@ -51,7 +59,7 @@ try {
     }
     $command = "python3 $remote"
     if ($ResourceId) { $command += " $ResourceId" }
-    if ($ScriptName -eq 'Deploy-RhissethFromRunner.py' -or $ScriptName -eq 'Publish-RhissethFromRunner.py') { $command += " $Operation" }
+    if ($ScriptName -eq 'Deploy-RhissethFromRunner.py' -or $ScriptName -eq 'Publish-RhissethFromRunner.py' -or $ScriptName -eq 'Diagnose-RhissethVps.py' -or $ScriptName -eq 'Diagnose-RhissethRunner.py') { $command += " $Operation" }
     $out = & ssh.exe @opts avalon@10.210.52.128 $command 2>&1
     $code = $LASTEXITCODE
     $safe = ($out | ForEach-Object { [string]$_ }) -join "`n"
