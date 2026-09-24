@@ -81,6 +81,15 @@ async def start(request: Request):
         if cells is None:cells=secrets.choice(choices)
         elif not set(cells)<=free_cells(conn):raise HTTPException(409,'Гексы заняты или не подходят для баронии. Обновите карту')
         barony=conn.execute('INSERT INTO player_baronies(user_id,name,crest,color,agreement_at) VALUES (%s,%s,%s,%s,now()) RETURNING id',(request.state.user['user_id'],name.strip(),crest,color.lower())).fetchone()[0]
+        for position,(q,r) in enumerate(cells,1):
+            conn.execute('INSERT INTO barony_start_hexes(barony_id,position,q,r) VALUES (%s,%s,%s,%s)',(barony,position,q,r))
+        granted=conn.execute('INSERT INTO game_wallets(user_id,gold) VALUES (%s,300) ON CONFLICT DO NOTHING RETURNING user_id',(request.state.user['user_id'],)).fetchone()
+        if granted:
+            conn.execute("INSERT INTO game_gold_ledger(user_id,amount,reason) VALUES (%s,300,'starting_grant')",(request.state.user['user_id'],))
+            conn.execute('''INSERT INTO game_inventory(user_id,resource_code,quantity)
+                SELECT %s,code,starting_quantity FROM game_resources''',(request.state.user['user_id'],))
+            conn.execute('''INSERT INTO game_resource_ledger(user_id,resource_code,amount,reason)
+                SELECT %s,code,starting_quantity,'starting_grant' FROM game_resources WHERE starting_quantity>0''',(request.state.user['user_id'],))
         for q,r in cells:
             conn.execute('UPDATE hexes SET data=data || %s,updated_at=now() WHERE q=%s AND r=%s', (Jsonb({'Тип владельца':'Игрок','Владелец':str(request.state.user['user_id']),'Название баронии':name.strip(),'Цвет баронии':color.lower(),'Герб баронии':crest,'ID территории':str(barony)}),q,r))
     return {'started':True,'title':'Барон','name':name.strip(),'crest':crest,'color':color.lower(),'cells':cells}

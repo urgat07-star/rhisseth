@@ -21,13 +21,22 @@ class ArmyTests(unittest.TestCase):
         mocked.return_value.__enter__.return_value=conn
 
     def test_player_can_hire_generated_general(self):
-        conn=MagicMock(); conn.execute.return_value.fetchone.side_effect=[(0,),(7,'Альрик Храбрый','general/gen-01.webp')]
+        conn=MagicMock(); conn.execute.return_value.fetchone.side_effect=[(300,),(0,),(1,'Генерал 1','general/gen-01.webp'),(0,0),(7,'Альрик Храбрый','general/gen-01.webp')]
         self.connection(conn)
         with patch('main.current_user',return_value=self.player):
             response=self.client.post('/api/cabinet/army/generals',json={},headers=self.headers)
         self.assertEqual(response.status_code,200)
         self.assertEqual(response.json()['general']['id'],7)
         self.assertTrue(response.json()['general']['name'])
+        self.assertTrue(any('SET gold=gold-100' in call.args[0] for call in conn.execute.call_args_list))
+
+    def test_general_hire_rejects_insufficient_gold(self):
+        conn=MagicMock(); conn.execute.return_value.fetchone.return_value=(99,)
+        self.connection(conn)
+        with patch('main.current_user',return_value=self.player):
+            response=self.client.post('/api/cabinet/army/generals',json={},headers=self.headers)
+        self.assertEqual(response.status_code,409)
+        self.assertFalse(any('INSERT INTO player_generals' in call.args[0] for call in conn.execute.call_args_list))
 
     def test_player_cannot_change_foreign_general(self):
         conn=MagicMock(); conn.execute.return_value.fetchone.return_value=None

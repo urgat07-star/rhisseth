@@ -52,11 +52,11 @@
       </div>
     </section>
     <section id="panel-army" class="player-panel" role="tabpanel" aria-labelledby="tab-army" hidden>
-      <div class="army-heading"><div><h2>Армии</h2><p>Генерал представляет армию на глобальной карте и может командовать отрядом из 1–5 юнитов.</p></div><button id="hire-general" class="save" type="button">Нанять генерала</button></div>
+      <div class="army-heading"><div><h2>Армии</h2><p>Генерал представляет армию на глобальной карте и может командовать отрядом из 1–5 юнитов.</p><p id="army-gold"></p></div><button id="hire-general" class="save" type="button">Нанять генерала — 100 золотых</button></div>
       <div id="generals-list" class="generals-list"></div>
     </section>
-    <section id="panel-economy" class="player-panel" role="tabpanel" aria-labelledby="tab-economy" hidden><h2>Экономика</h2><h3>Ресурсы земель</h3><p class="hint">Количество гексов по основному ресурсу.</p><dl id="resource-stats"></dl><h3>Торговля и налоги</h3><p>Торговля, налоги и учёт запасов ещё в разработке.</p></section>
-    <section id="panel-diplomacy" class="player-panel" role="tabpanel" aria-labelledby="tab-diplomacy" hidden><h2>Управление дипломатией</h2><p>Дипломатическая система ещё в разработке. Здесь появятся отношения с другими владениями.</p></section>
+    <section id="panel-economy" class="player-panel" role="tabpanel" aria-labelledby="tab-economy" hidden><h2>Экономика</h2><h3>Казна и запасы</h3><dl id="inventory-stats"></dl><h3>Резерв крестьян</h3><p id="peasant-reserve"></p><form id="peasant-transfer-form"><label>Q <input name="q" type="number" required></label><label>R <input name="r" type="number" required></label><label>Количество <input name="quantity" type="number" min="1" required></label><button type="submit">Отправить на свой гекс</button></form><p id="peasant-transfer-status" role="status"></p><ul id="peasant-hexes"></ul><h3>Ресурсы земель</h3><p class="hint">Количество гексов по основному ресурсу.</p><dl id="resource-stats"></dl><h3>Торговля и налоги</h3><p>Торговля и налоги ещё в разработке.</p></section>
+    <section id="panel-diplomacy" class="player-panel" role="tabpanel" aria-labelledby="tab-diplomacy" hidden><h2>Дипломатия</h2><p>Выкуп пленного генерала: 100 золотых.</p><div id="captive-generals"></div></section>
     <section id="panel-barony" class="player-panel" role="tabpanel" aria-labelledby="tab-barony">
       <div id="barony-content" hidden>
         <h2>Статистика баронии</h2><button id="refresh-cabinet" type="button">Обновить статистику</button>
@@ -79,6 +79,6 @@
     </dialog>
   </main>
 
-  <script src="cabinet.js?v=army-1" defer></script>
+  <script src="cabinet.js?v=batell-0.3-1" defer></script>
 </body>
 </html>

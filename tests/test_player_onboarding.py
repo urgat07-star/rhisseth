@@ -46,7 +46,7 @@ class PlayerOnboardingTests(unittest.TestCase):
 
     def test_connected_chain_not_in_suggested_options_can_be_saved(self):
         conn = MagicMock()
-        conn.execute.return_value.fetchone.side_effect = [None, (7,)]
+        conn.execute.return_value.fetchone.side_effect = [None, (7,), (2,)]
         with patch('main.current_user',return_value=self.user), patch('game_start.connect') as connect, \
              patch('game_start.candidates',return_value=[((0,0),(1,0))]), \
              patch('game_start.free_cells',return_value={(0,0),(1,0),(2,0)}):

@@ -331,3 +331,11 @@ input, select, textarea, button { font: inherit; }
 .page-modal::backdrop { background: rgba(9, 13, 24, .72); backdrop-filter: blur(3px); }
 .page-modal iframe { display: block; width: 100%; height: 100%; border: 0; background: #111827; }
 .page-modal__close { position: absolute; z-index: 2; top: 10px; right: 14px; font-size: 2rem; }
+/* The seasonal label stays readable until the visual design is finalized. */
+.game-date { position:absolute; z-index:5; top:12px; left:12px; padding:7px 11px; border-radius:5px; background:rgba(20,26,30,.85); color:#fff; font-weight:600; }
+.battle-lines{grid-template-columns:minmax(105px,1fr) minmax(240px,440px) minmax(105px,1fr);gap:8px}
+.battle-grid{display:grid;grid-template-columns:repeat(10,minmax(20px,1fr));gap:2px;width:100%;align-self:center}
+.battle-cell{aspect-ratio:1;border:1px solid #7b6d53;background:#e6ddc6;color:#192319;cursor:pointer;font-size:.7rem;padding:0}
+.battle-cell.attacker{background:#8bb3da}.battle-cell.defender{background:#d99a80}
+.battle-cell.wall{background:#716e69;color:#fff;font-size:1.2rem}
+.battle-unit.spent{opacity:.65}.battle-unit.defeated{opacity:.35}

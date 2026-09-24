@@ -4,7 +4,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 RID = 'da44a388-e458-4379-ab4c-c204696804b2'
-if len(sys.argv) != 3 or sys.argv[1] != RID or sys.argv[2] != 'publish': raise SystemExit('Invalid operation')
+if len(sys.argv) != 3 or sys.argv[1] != RID or sys.argv[2] not in ('publish','publish-v03'): raise SystemExit('Invalid operation')
 now = dt.datetime.now(dt.timezone.utc)
 root = Path.home() / 'rhisseth.ru'
 archive = root / 'temp/rhisseth-publish.tgz'
@@ -29,10 +29,12 @@ def main():
     def ssh(args): return subprocess.run(['sshpass', '-e', *args], env=sshenv, capture_output=True, text=True, timeout=180)
     result = ssh(['scp', *options, str(archive), 'root@62.113.109.168:/opt/rhisseth/temp/rhisseth-publish.tgz'])
     if result.returncode: raise RuntimeError('Archive upload failed')
-    payload = Path(__file__).with_name('Publish-RhissethVps.py')
-    result = ssh(['scp', *options, str(payload), 'root@62.113.109.168:/opt/rhisseth/scripts/automation/Publish-RhissethVps.py'])
+    name = 'Publish-BatellV03Vps.py' if sys.argv[2]=='publish-v03' else 'Publish-RhissethVps.py'
+    payload = Path(__file__).with_name(name)
+    result = ssh(['scp', *options, str(payload), 'root@62.113.109.168:/opt/rhisseth/scripts/automation/'+name])
     if result.returncode: raise RuntimeError('Reviewed VDS payload upload failed')
-    result = ssh(['ssh', *options, 'root@62.113.109.168', 'python3 /opt/rhisseth/scripts/automation/Publish-RhissethVps.py publish'])
+    interpreter = '/opt/rhisseth/venv/bin/python' if sys.argv[2]=='publish-v03' else 'python3'
+    result = ssh(['ssh', *options, 'root@62.113.109.168', interpreter+' /opt/rhisseth/scripts/automation/'+name+' '+sys.argv[2]])
     emit((result.stdout + '\n' + result.stderr).replace(resource['password'], '<redacted>').strip())
     emit('Exit code: ' + str(result.returncode))
     if result.returncode: raise RuntimeError('VDS publication failed')

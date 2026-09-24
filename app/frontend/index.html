@@ -41,6 +41,7 @@
 
 	<main>
 		<section id="map-viewport" class="map-viewport" aria-label="Интерактивная карта гексов">
+			<div id="game-date" class="game-date" aria-live="polite">0 год Эры Дракона, Весна</div>
 			<div id="loading" class="loading">Загрузка данных карты…</div>
 			<div id="map-stage" class="map-stage">
 				<img id="terrain-map" src="terrain-map-group3-artistic-v6-no-grid.png" alt="Художественная карта местности Rhisseth V6 с горами, лесами, реками и островами" draggable="false">
@@ -84,9 +85,13 @@
 			<ol id="battle-log" class="battle-log" aria-live="polite"></ol>
 			<div class="battle-lines">
 				<section><h3>Нападающие</h3><div id="attackers" class="unit-column"></div></section>
-				<div class="battle-mark" aria-hidden="true">⚔</div>
+				<div id="battle-grid" class="battle-grid" aria-label="Тактическое поле 10 на 10"></div>
 				<section><h3>Защитники</h3><div id="defenders" class="unit-column"></div></section>
 			</div>
+			<button id="battle-deploy" type="button">Начать бой и сохранить расстановку</button>
+			<button id="battle-end-round" type="button">Завершить раунд</button>
+			<button id="battle-retreat" type="button">Отступить</button>
+			<button id="battle-destroy" type="button" hidden>Разрушить постройку</button>
 			<button id="finish-battle" class="finish-battle" type="button">Закончить бой</button>
 		</div>
 	</dialog>
@@ -97,7 +102,7 @@
     </dialog>
 	
 	<footer id="data-status">Final V2 · подключение к PostgreSQL…</footer>
-	<script src="app.js?v=army-system-0.3" defer></script>
+	<script src="app.js?v=batell-0.3-1" defer></script>
 	<script>
     const pageModal = document.getElementById('page-modal');
     const pageModalFrame = document.getElementById('page-modal-frame');

@@ -2,7 +2,7 @@
 param([string]$ResourceId = '',
       [ValidateSet('Inspect-RhissethVpsFromRunner.py', 'Consolidate-RhissethRunnerFiles.py', 'Deploy-RhissethFromRunner.py', 'Publish-RhissethFromRunner.py', 'Diagnose-RhissethVps.py', 'Diagnose-RhissethRunner.py')]
       [string]$ScriptName = 'Inspect-RhissethVpsFromRunner.py',
-      [ValidateSet('inspect', 'install', 'validate', 'hosting', 'snapshot', 'publish-map', 'audit-map', 'deploy-hexes', 'publish')][string]$Operation = 'inspect')
+      [ValidateSet('inspect', 'install', 'validate', 'hosting', 'snapshot', 'publish-map', 'audit-map', 'deploy-hexes', 'publish', 'publish-v03')][string]$Operation = 'inspect')
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../..')).Path
 $workspaceRoot = (Resolve-Path -LiteralPath (Join-Path $root '..')).Path
@@ -38,7 +38,8 @@ try {
         }
     }
     if ($ScriptName -eq 'Publish-RhissethFromRunner.py') {
-        $out = & scp.exe @opts "$root/scripts/automation/Publish-RhissethVps.py" 'avalon@10.210.52.128:/home/avalon/rhisseth.ru/scripts/automation/Publish-RhissethVps.py' 2>&1
+        $payloadName = if ($Operation -eq 'publish-v03') { 'Publish-BatellV03Vps.py' } else { 'Publish-RhissethVps.py' }
+        $out = & scp.exe @opts "$root/scripts/automation/$payloadName" "avalon@10.210.52.128:/home/avalon/rhisseth.ru/scripts/automation/$payloadName" 2>&1
         if ($LASTEXITCODE -ne 0) { $out | Add-Content -LiteralPath $log; throw 'VPS publication payload transfer failed' }
     }
     if ($ScriptName -eq 'Diagnose-RhissethVps.py') {
