@@ -32,7 +32,7 @@ def main():
     old_backup = backup / 'repository-before'; shutil.copytree(repo, old_backup, symlinks=True)
     shutil.rmtree(repo); staging.rename(repo)
     run(['systemctl', 'restart', 'rhisseth']); run(['systemctl', 'is-active', 'rhisseth']); run(['nginx', '-t'])
-    run(['curl', '--max-time', '15', '-sS', '-o', '/dev/null', '-w', 'HTTP %{http_code}\\n', 'https://62.113.109.168/'])
+    run(['curl', '--insecure', '--max-time', '15', '-sS', '-o', '/dev/null', '-w', 'HTTPS %{http_code}\\n', 'https://62.113.109.168/'])
     emit(f'Backup: {dump}; previous repository: {old_backup}; change/reboot: deployed/no reboot')
 try:
     main(); emit('Validation: publication success'); sys.exit(0)
