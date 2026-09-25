@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Rhisseth — интерактивная карта</title>
-  <link rel="stylesheet" href="styles.css?v=crests-webp-3">
+  <link rel="stylesheet" href="styles.css?v=batell-0.3.1">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Infant:ital,wght@0,300..700;1,300..700&family=Libertinus+Sans:ital,wght@0,400;0,700;1,400&family=Monomakh&display=swap" rel="stylesheet">
@@ -79,6 +79,7 @@
 					<button id="raid-hex" type="button">Ограбить население</button>
 				</div>
 				<button id="end-turn" class="end-turn" type="button" hidden>Конец хода</button>
+				<button id="skip-turn" class="end-turn" type="button" hidden disabled>Пропустить ход</button>
 			</section>
 		</section>
 	</main>
@@ -100,6 +101,7 @@
 			<button id="finish-battle" class="finish-battle" type="button">Закончить бой</button>
 		</div>
 	</dialog>
+	<dialog id="battle-unit-details" aria-labelledby="battle-unit-details-title"><h3 id="battle-unit-details-title"></h3><div id="battle-unit-details-body"></div><button type="button" onclick="this.closest('dialog').close()">Закрыть</button></dialog>
 
     <dialog id="page-modal" class="page-modal" aria-label="Окно Rhisseth">
         <button id="close-page-modal" class="close page-modal__close" type="button" aria-label="Закрыть">×</button>
@@ -107,7 +109,7 @@
     </dialog>
 	
 	<footer id="data-status">Final V2 · подключение к PostgreSQL…</footer>
-	<script src="app.js?v=batell-0.3-1" defer></script>
+	<script src="app.js?v=batell-0.3.1" defer></script>
 	<script>
     const pageModal = document.getElementById('page-modal');
     const pageModalFrame = document.getElementById('page-modal-frame');

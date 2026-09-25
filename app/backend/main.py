@@ -62,7 +62,7 @@ async def access_control(request: Request, call_next):
             start_action = path == '/api/start' and request.method == 'POST'
             cabinet_action = (request.method,path) in {('PATCH','/api/cabinet/account'),('PATCH','/api/cabinet/barony/crest'),('PATCH','/api/cabinet/barony/name'),('DELETE','/api/cabinet/barony'),('POST','/api/cabinet/peasants/transfer')} or (request.method == 'POST' and path.startswith('/api/cabinet/diplomacy/generals/') and path.endswith('/ransom'))
             army_action = request.method in ('POST','DELETE') and path.startswith('/api/cabinet/army/')
-            game_action = request.method == 'POST' and (path.startswith('/api/game/hexes/') and path.endswith(('/capture','/battle','/raid')) or path.startswith('/api/game/battles/') or path.startswith('/api/game/generals/') or path == '/api/game/clock/end-turn')
+            game_action = request.method == 'POST' and (path.startswith('/api/game/hexes/') and path.endswith(('/capture','/battle','/raid')) or path.startswith('/api/game/battles/') or path.startswith('/api/game/generals/') or path in ('/api/game/clock/end-turn','/api/game/clock/skip'))
             if user['role_alias'] not in ('admin','moderator') and not territory_name_action and not start_action and not cabinet_action and not army_action and not game_action:
                 return JSONResponse({'error':'Недостаточно прав для редактирования'},status_code=403)
     response = await call_next(request)

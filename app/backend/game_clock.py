@@ -1,4 +1,5 @@
 """Persistent seasonal clock; all changes are serialized on the clock row."""
+from datetime import timedelta
 from fastapi import APIRouter, HTTPException, Request
 from db import connect
 
@@ -46,14 +47,43 @@ def _eligible(conn):
         WHERE p.seen_at > now()-interval '5 minutes' ''').fetchall()}
 
 
+def _participants(conn):
+    return {row[0] for row in conn.execute('''SELECT DISTINCT b.user_id FROM player_baronies b
+        JOIN hexes h ON h.data->>'Владелец'=b.user_id::text
+        AND h.data->>'Тип владельца'='Игрок' ''').fetchall()}
+
+
 def _payload(conn, turn, started, ends, user_id):
     eligible = _eligible(conn)
+    participants = _participants(conn)
     voted = {row[0] for row in conn.execute('SELECT user_id FROM game_turn_votes WHERE turn_number=%s', (turn,)).fetchall()}
+    vote_time = conn.execute('SELECT voted_at FROM game_turn_votes WHERE turn_number=%s AND user_id=%s', (turn,user_id)).fetchone() if user_id in voted else None
+    skip_at = vote_time[0] + timedelta(minutes=2) if vote_time else None
+    now = conn.execute('SELECT now()').fetchone()[0]
     return {'turn':turn, 'year':turn // 4, 'season':SEASONS[turn % 4],
             'label':f'{turn // 4} год Эры Дракона, {SEASONS[turn % 4]}',
             'started_at':started.isoformat(), 'ends_at':ends.isoformat(),
             'online_players':len(eligible), 'ready_players':len(eligible & voted),
-            'can_vote':user_id in eligible, 'voted':user_id in voted}
+            'can_vote':user_id in eligible, 'voted':user_id in voted,
+            'skip_at':skip_at.isoformat() if skip_at else None,
+            'can_skip':bool(skip_at and now>=skip_at and participants-voted and not (eligible-voted))}
+
+
+@router.post('/api/game/clock/skip')
+async def skip_turn(request: Request):
+    data = await request.json()
+    if not isinstance(data,dict) or set(data)!={'turn'} or type(data['turn']) is not int:
+        raise HTTPException(400,'Укажите номер хода')
+    with connect() as conn:
+        turn,started,ends = _clock(conn)
+        if data['turn'] != turn:raise HTTPException(409,'Ход уже завершён; обновите карту')
+        user_id=request.state.user['user_id']
+        state=_payload(conn,turn,started,ends,user_id)
+        if not state['voted']:raise HTTPException(403,'Сначала завершите свой ход')
+        if not state['can_skip']:raise HTTPException(409,'Пропуск доступен через две минуты, если непроголосовавший соперник офлайн')
+        _advance(conn,turn,turn+1,'test_skip',user_id)
+        new,started,ends=conn.execute('SELECT turn_number,started_at,ends_at FROM game_clock WHERE id=true').fetchone()
+        return _payload(conn,new,started,ends,user_id)
 
 
 @router.get('/api/game/clock')
@@ -83,7 +113,7 @@ async def vote_end_turn(request: Request):
             raise HTTPException(403, 'Для завершения хода нужна барония с территорией')
         conn.execute('INSERT INTO game_turn_votes(turn_number,user_id) VALUES (%s,%s) ON CONFLICT DO NOTHING', (turn, user_id))
         voted = {row[0] for row in conn.execute('SELECT user_id FROM game_turn_votes WHERE turn_number=%s', (turn,)).fetchall()}
-        if eligible <= voted:
+        if _participants(conn) <= voted:
             _advance(conn, turn, turn + 1, 'votes', user_id)
             turn, started, ends = conn.execute('SELECT turn_number,started_at,ends_at FROM game_clock WHERE id=true').fetchone()
         return _payload(conn, turn, started, ends, user_id)

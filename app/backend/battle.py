@@ -22,6 +22,13 @@ def _int(value,default=0):
     except (TypeError,ValueError):return default
 
 
+def _capture_neighbor(conn, q, r, user_id):
+    return conn.execute('''SELECT data FROM hexes WHERE (q,r) IN
+        ((%s,%s),(%s,%s),(%s,%s),(%s,%s),(%s,%s),(%s,%s))
+        AND data->>'Тип владельца'='Игрок' AND data->>'Владелец'=%s LIMIT 1''',
+        tuple(value for dq,dr in NEIGHBORS for value in (q+dq,r+dr))+(str(user_id),)).fetchone()
+
+
 def _battle(conn,battle_id,user_id,lock=True):
     suffix=' FOR UPDATE' if lock else ''
     row=conn.execute('''SELECT id,attacker_user_id,general_id,target_q,target_r,source_q,source_r,
@@ -284,13 +291,14 @@ def _finish(conn,battle,winner,retreat=False):
         conn.execute('SELECT pg_advisory_xact_lock(%s,%s)',(battle['target_q'],battle['target_r']))
         target=conn.execute('SELECT data FROM hexes WHERE q=%s AND r=%s FOR UPDATE',(battle['target_q'],battle['target_r'])).fetchone()
         source=conn.execute('SELECT data FROM hexes WHERE q=%s AND r=%s',(battle['source_q'],battle['source_r'])).fetchone()
-        if not target or not source or source[0].get('Тип владельца')!='Игрок' or source[0].get('Владелец')!=str(general[1]):
-            raise HTTPException(409,'Исходная территория изменилась')
+        neighbor=_capture_neighbor(conn,battle['target_q'],battle['target_r'],general[1])
+        if not target or not source or not neighbor:
+            raise HTTPException(409,'Цель больше не соседствует с владениями баронства')
         if target[0].get('Тип владельца','Ничейная территория')!=battle['target_owner_type'] or str(target[0].get('Владелец') or '')!=battle['target_owner_id']:
             raise HTTPException(409,'Владелец цели изменился во время боя')
         ownership={'Тип владельца':'Игрок','Владелец':str(general[1])}
         for field in ('ID территории','Название территории','Название баронии','Цвет баронии','Герб баронии'):
-            ownership[field]=source[0].get(field,'')
+            ownership[field]=neighbor[0].get(field,'')
         conn.execute('UPDATE hexes SET data=data || %s,updated_at=now() WHERE q=%s AND r=%s',
                      (Jsonb(ownership),battle['target_q'],battle['target_r']))
     elif winner=='attacker' and battle['purpose']=='raid':
@@ -341,8 +349,8 @@ async def _start_battle(q:int,r:int,request:Request,purpose:str):
         conn.execute('SELECT pg_advisory_xact_lock(%s,%s)',(q,r))
         source=conn.execute('SELECT data FROM hexes WHERE q=%s AND r=%s',(general[1],general[2])).fetchone()
         target=conn.execute('SELECT data FROM hexes WHERE q=%s AND r=%s FOR UPDATE',(q,r)).fetchone()
-        if not source or source[0].get('Тип владельца')!='Игрок' or source[0].get('Владелец')!=str(user_id):
-            raise HTTPException(409,'Генерал должен находиться на собственной территории')
+        if not source:
+            raise HTTPException(409,'Исходный гекс недоступен')
         if not target or target[0].get('Категория')=='Море':
             raise HTTPException(409,'Целевой гекс недоступен')
         travel_cost=0
@@ -352,6 +360,8 @@ async def _start_battle(q:int,r:int,request:Request,purpose:str):
         owner_id=str(target[0].get('Владелец') or '')
         if purpose=='capture' and owner_type=='Игрок' and owner_id==str(user_id):
             raise HTTPException(409,'Свой гекс захватывать нельзя')
+        if purpose=='capture' and not _capture_neighbor(conn,q,r,user_id):
+            raise HTTPException(409,'Цель должна соседствовать с владениями баронства')
         if purpose=='raid':
             last=conn.execute('SELECT last_turn FROM game_hex_raids WHERE q=%s AND r=%s',(q,r)).fetchone()
             cooldown=conn.execute('SELECT cooldown_turns FROM raid_balance WHERE building_level=%s',(max(0,min(7,_int(target[0].get('Уровень гекса')))),)).fetchone()

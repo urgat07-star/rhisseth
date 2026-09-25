@@ -345,8 +345,12 @@ input, select, textarea, button { font: inherit; }
 
 
 .battle-lines{grid-template-columns:minmax(105px,1fr) minmax(240px,440px) minmax(105px,1fr);gap:8px}
-.battle-grid{display:grid;grid-template-columns:repeat(10,minmax(20px,1fr));gap:2px;width:100%;align-self:center}
-.battle-cell{aspect-ratio:1;border:1px solid #7b6d53;background:#e6ddc6;color:#192319;cursor:pointer;font-size:.7rem;padding:0}
+.battle-grid{display:grid;grid-template-columns:repeat(10,minmax(20px,1fr));gap:0;width:100%;align-self:center}
+.battle-cell{aspect-ratio:1;border:0;background:#e6ddc6;color:#192319;cursor:pointer;font-size:.7rem;padding:0;clip-path:polygon(25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%);margin:0 -1px}
+.battle-cell img{width:90%;height:90%;object-fit:contain;pointer-events:none}
 .battle-cell.attacker{background:#8bb3da}.battle-cell.defender{background:#d99a80}
 .battle-cell.wall{background:#716e69;color:#fff;font-size:1.2rem}
+.battle-cell.reachable{background:#66c56f}.battle-cell.active-unit{background:#ffe15b;filter:drop-shadow(0 0 5px #ffdf25)}
+.battle-cell.selected-unit{background:#ff993d;filter:drop-shadow(0 0 7px #ff7b2d)}
+.battle-cell.attackable{cursor:crosshair;cursor:url('sword-cursor.svg') 4 28,crosshair}
 .battle-unit.spent{opacity:.65}.battle-unit.defeated{opacity:.35}

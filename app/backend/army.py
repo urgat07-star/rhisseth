@@ -9,7 +9,7 @@ from db import connect
 router = APIRouter()
 FIRST_NAMES = ('Альрик','Борислав','Велемир','Годвин','Драгомир','Казимир','Ратмир','Святозар')
 SURNAMES = ('Северный','Железная Рука','Храбрый','Серый Волк','из Речной Долины','Непреклонный')
-UNIT_FIELDS = ('name','troop_type','health','armor','defense','attack','attack_range','speed','initiative','morale','description','image_path','price','building','note','active')
+UNIT_FIELDS = ('name','troop_type','health','armor','defense','attack','attack_range','speed','initiative','morale','description','image_path','price','building','note','active','combat_level')
 GENERAL_FIELDS = ('name','description','image_path','health','attack','defense','initiative','speed','logistics','skills','experience_per_level','max_level','max_attack_bonus','max_defense_bonus','active')
 
 async def body(request):
@@ -219,6 +219,7 @@ async def edit_unit(unit_id: int, request: Request):
         if not isinstance(data[key],str) or len(data[key])>4000: raise HTTPException(400,f'Некорректное поле: {key}')
     for key in ('armor','defense','attack','attack_range','speed','initiative','morale'):
         if type(data[key]) is not int or not 0<=data[key]<=100: raise HTTPException(400,f'{key}: число 0–100')
+    if type(data['combat_level']) is not int or not 1<=data['combat_level']<=5:raise HTTPException(400,'Уровень юнита: число 1–5')
     if type(data['active']) is not bool or not data['name'].strip() or not data['troop_type'].strip(): raise HTTPException(400,'Заполните название, тип и активность')
     if not data['image_path'].startswith('units/') or not data['image_path'].endswith('.webp'): raise HTTPException(400,'Изображение должно находиться в units/*.webp')
     values=[data[field].strip() if isinstance(data[field],str) else data[field] for field in editable_fields]
@@ -237,6 +238,7 @@ async def create_unit(request: Request):
     if type(data['health']) is not int or not 1<=data['health']<=10000: raise HTTPException(400,'health: число 1–10000')
     for key in ('armor','defense','attack','attack_range','speed','initiative','morale'):
         if type(data[key]) is not int or not 0<=data[key]<=100: raise HTTPException(400,f'{key}: число 0–100')
+    if type(data['combat_level']) is not int or not 1<=data['combat_level']<=5:raise HTTPException(400,'Уровень юнита: число 1–5')
     if type(data['active']) is not bool or not data['name'].strip() or not data['troop_type'].strip(): raise HTTPException(400,'Заполните название, тип и активность')
     if not data['image_path'].startswith('units/') or not data['image_path'].endswith('.webp'): raise HTTPException(400,'Изображение должно находиться в units/*.webp')
     values=[data[field].strip() if isinstance(data[field],str) else data[field] for field in fields]

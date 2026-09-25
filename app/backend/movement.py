@@ -59,10 +59,10 @@ async def move_general(general_id:int,request:Request):
             raise HTTPException(409,'Сначала завершите текущий бой')
         source=conn.execute('SELECT data FROM hexes WHERE q=%s AND r=%s',(general[0],general[1])).fetchone()
         target=conn.execute('SELECT data FROM hexes WHERE q=%s AND r=%s',(q,r)).fetchone()
-        if not source or source[0].get('Тип владельца')!='Игрок' or source[0].get('Владелец')!=str(user_id):
-            raise HTTPException(409,'Исходный гекс не принадлежит баронии')
-        if not target or target[0].get('Категория')=='Море' or target[0].get('Тип владельца')!='Игрок' or target[0].get('Владелец')!=str(user_id):
-            raise HTTPException(409,'Для перехода на чужой гекс выберите боевое действие')
+        if not source:
+            raise HTTPException(409,'Исходный гекс недоступен')
+        if not target or target[0].get('Категория')=='Море':
+            raise HTTPException(409,'Целевой гекс недоступен')
         cost,crossing=movement_cost(conn,general_id,(general[0],general[1]),(q,r),source[0],target[0],general[3])
         conn.execute('''UPDATE player_generals SET previous_q=q,previous_r=r,q=%s,r=%s,
             logistics_left=logistics_left-%s WHERE id=%s''',(q,r,cost,general_id))
@@ -71,7 +71,8 @@ async def move_general(general_id:int,request:Request):
         try:danger=int(target[0].get('Опасность') or 0)
         except (TypeError,ValueError):danger=0
         roll=random.randint(1,6)
-        kind=encounter(roll,danger,level,'own')
+        own=target[0].get('Тип владельца')=='Игрок' and target[0].get('Владелец')==str(user_id)
+        kind=encounter(roll,danger,level,'own') if own else None
         if kind:
             from battle import create_encounter_battle
             result['battle']=create_encounter_battle(conn,user_id,general_id,(general[0],general[1]),(q,r),target[0],turn,kind)
