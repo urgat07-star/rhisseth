@@ -32,7 +32,7 @@ def main():
     if staging.exists(): shutil.rmtree(staging)
     staging.mkdir()
     with tarfile.open(archive, 'r:gz') as tar: tar.extractall(staging)
-    for name in ('rhisseth-ip-whitelist-add.sh', 'rhisseth-ip-whitelist-list.sh', 'rhisseth-ip-blacklist-add.sh', 'rhisseth-ip-bans-list.sh'):
+    for name in ('rhisseth-ip-whitelist-add.sh', 'rhisseth-ip-whitelist-list.sh', 'rhisseth-ip-blacklist-add.sh', 'rhisseth-ip-bans-list.sh', 'rhisseth-ip-sync.sh'):
         script = staging / 'deploy/native' / name
         if script.exists(): script.chmod(0o755)
     old_backup = backup / 'repository-before'; shutil.copytree(repo, old_backup, symlinks=True)
@@ -45,6 +45,8 @@ def main():
     shutil.copy2(repo / 'deploy/native/fail2ban-logrotate.conf', '/etc/logrotate.d/rhisseth-fail2ban')
     shutil.copy2(repo / 'deploy/native/fail2ban-rhisseth.conf', '/etc/fail2ban/filter.d/rhisseth.conf')
     shutil.copy2(repo / 'deploy/native/fail2ban-jail.local', '/etc/fail2ban/jail.d/rhisseth.local')
+    shutil.copy2(repo / 'deploy/native/rhisseth-ip-sync.sh', '/usr/local/sbin/rhisseth-ip-sync')
+    Path('/usr/local/sbin/rhisseth-ip-sync').chmod(0o755)
     whitelist = Path('/etc/nginx/conf.d/rhisseth-whitelist.conf')
     whitelist.write_text('geo $rhisseth_whitelisted {\n    default 0;\n    77.87.202.186 1;\n    89.17.57.22 1;\n    109.252.183.46 1;\n    185.216.87.44 1;\n}\n')
     whitelist.chmod(0o644)
