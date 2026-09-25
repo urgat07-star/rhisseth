@@ -4,7 +4,7 @@ const RADIUS = 80;
 const HEX_WIDTH = Math.sqrt(3) * RADIUS;
 const MAP_WIDTH = 3200;
 const MAP_HEIGHT = 2200;
-const VERSION = "Rhisseth · batell v0.3.3 · Artistic V6";
+const VERSION = "Rhisseth · batell v0.3.4 · Artistic V6";
 const API_BASE = "/api";
 let csrfToken = '';
 let canEdit = false;
@@ -391,7 +391,7 @@ async function handleGameHexClick(row) {
   try{
     const response=await fetch(`${API_BASE}/game/generals/${game.general.id}/move`,{
       method:'POST',headers:{'X-CSRF-Token':csrfToken,'Content-Type':'application/json'},
-      body:JSON.stringify({q:row.Q,r:row.R})});
+      body:JSON.stringify({q:Number(row.Q),r:Number(row.R)})});
     const result=await response.json();if(!response.ok)throw new Error(result.error||result.detail||`HTTP ${response.status}`);
     game.pendingRow=row;
     game.unitKey=target;game.general.unitKey=target;game.general.q=row.Q;game.general.r=row.R;

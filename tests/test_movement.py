@@ -9,6 +9,10 @@ from main import app
 
 
 class MovementTests(unittest.TestCase):
+    def test_frontend_converts_map_string_coordinates_before_move(self):
+        source=(Path(__file__).resolve().parents[1]/'app/frontend/app.js').read_text(encoding='utf-8')
+        self.assertIn('body:JSON.stringify({q:Number(row.Q),r:Number(row.R)})',source)
+
     def test_move_spends_target_passability(self):
         source={'Тип владельца':'Игрок','Владелец':'2','Категория':'Суша'}
         target={**source,'Проходимость':'3'}
