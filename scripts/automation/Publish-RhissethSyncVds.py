@@ -8,6 +8,7 @@ import shutil
 import subprocess
 import sys
 import tarfile
+import time
 from zoneinfo import ZoneInfo
 
 ROOT = Path('/opt/rhisseth')
@@ -99,9 +100,16 @@ def main():
         swapped = True
         run(['systemctl', 'start', 'rhisseth'])
         stopped = False
-        if run(['curl', '--max-time', '20', '-sS', '-o', '/dev/null', '-w', '%{http_code}',
-                'http://127.0.0.1:8080/health']) != '200':
-            raise RuntimeError('Application health check failed')
+        for _ in range(30):
+            health = subprocess.run(['curl', '--max-time', '2', '-sS', '-o', '/dev/null',
+                                     '-w', '%{http_code}', 'http://127.0.0.1:8080/health'],
+                                    capture_output=True, text=True)
+            if health.returncode == 0 and health.stdout == '200':
+                emit('Command: curl local /health; exit_code=0; HTTP 200')
+                break
+            time.sleep(1)
+        else:
+            raise RuntimeError('Application health check failed after 30 attempts')
         run(['systemctl', 'is-active', 'rhisseth'])
         run(['nginx', '-t'])
         emit('Validation: application /health HTTP 200, service active, nginx config valid')
