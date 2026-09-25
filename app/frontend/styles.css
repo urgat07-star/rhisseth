@@ -70,6 +70,9 @@ main { padding: clamp(12px, 2vw, 28px); }
 .end-turn {font-family: "Monomakh", system-ui;font-size:22px; margin:20px auto 0; }
 .game-panel .end-turn{pointer-events:auto}
 .game-panel{max-width:calc(100vw - 16px)}
+.skip-turn-controls{display:flex;align-items:center;justify-content:center;gap:12px;pointer-events:auto}
+.skip-turn-controls .end-turn{margin:20px 0 0}
+.skip-turn-controls span{min-width:145px;margin-top:20px;color:#f2df9c;font-variant-numeric:tabular-nums}
 .battle-modal { width: min(880px,calc(100vw - 24px)); color: #eee6cf; border: 1px solid #aa9560; border-radius: 10px; padding: 0; background: #111712; }
 .battle-modal::backdrop { background: #050806d9; backdrop-filter: blur(3px); }
 .battle-arena { position: relative; min-height: 540px; padding: 24px 28px 78px; background: radial-gradient(circle at 50% 35%,#493f2a,#1b241c 52%,#0f1410); }

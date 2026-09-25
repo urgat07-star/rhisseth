@@ -4,7 +4,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 RID = 'da44a388-e458-4379-ab4c-c204696804b2'
-if len(sys.argv) != 3 or sys.argv[1] != RID or sys.argv[2] not in ('publish','publish-v03','publish-v031','publish-v032'): raise SystemExit('Invalid operation')
+if len(sys.argv) != 3 or sys.argv[1] != RID or sys.argv[2] not in ('publish','publish-v03','publish-v031','publish-v032','publish-v033'): raise SystemExit('Invalid operation')
 now = dt.datetime.now(dt.timezone.utc)
 root = Path.home() / 'rhisseth.ru'
 archive = root / 'temp/rhisseth-publish.tgz'
@@ -29,11 +29,11 @@ def main():
     def ssh(args): return subprocess.run(['sshpass', '-e', *args], env=sshenv, capture_output=True, text=True, timeout=180)
     result = ssh(['scp', *options, str(archive), 'root@62.113.109.168:/opt/rhisseth/temp/rhisseth-publish.tgz'])
     if result.returncode: raise RuntimeError('Archive upload failed')
-    name = {'publish-v03':'Publish-BatellV03Vps.py','publish-v031':'Publish-BatellV031Vps.py','publish-v032':'Publish-BatellV032Vps.py'}.get(sys.argv[2], 'Publish-RhissethVps.py')
+    name = {'publish-v03':'Publish-BatellV03Vps.py','publish-v031':'Publish-BatellV031Vps.py','publish-v032':'Publish-BatellV032Vps.py','publish-v033':'Publish-BatellV033Vps.py'}.get(sys.argv[2], 'Publish-RhissethVps.py')
     payload = Path(__file__).with_name(name)
     result = ssh(['scp', *options, str(payload), 'root@62.113.109.168:/opt/rhisseth/scripts/automation/'+name])
     if result.returncode: raise RuntimeError('Reviewed VDS payload upload failed')
-    interpreter = '/opt/rhisseth/venv/bin/python' if sys.argv[2] in ('publish-v03','publish-v031','publish-v032') else 'python3'
+    interpreter = '/opt/rhisseth/venv/bin/python' if sys.argv[2] in ('publish-v03','publish-v031','publish-v032','publish-v033') else 'python3'
     result = ssh(['ssh', *options, 'root@62.113.109.168', interpreter+' /opt/rhisseth/scripts/automation/'+name+' '+sys.argv[2]])
     emit((result.stdout + '\n' + result.stderr).replace(resource['password'], '<redacted>').strip())
     emit('Exit code: ' + str(result.returncode))

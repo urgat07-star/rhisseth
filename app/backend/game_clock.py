@@ -5,6 +5,7 @@ from db import connect
 
 router = APIRouter()
 SEASONS = ('Весна', 'Лето', 'Осень', 'Зима')
+PRESENCE_WINDOW_SECONDS = 90
 
 
 def _turn_effects(conn, new_turn):
@@ -44,7 +45,7 @@ def _eligible(conn):
     return {row[0] for row in conn.execute('''SELECT DISTINCT p.user_id FROM game_presence p
         JOIN player_baronies b ON b.user_id=p.user_id
         JOIN hexes h ON h.data->>'Владелец'=p.user_id::text AND h.data->>'Тип владельца'='Игрок'
-        WHERE p.seen_at > now()-interval '5 minutes' ''').fetchall()}
+        WHERE p.seen_at > now()-(%s * interval '1 second') ''',(PRESENCE_WINDOW_SECONDS,)).fetchall()}
 
 
 def _participants(conn):
@@ -60,30 +61,47 @@ def _payload(conn, turn, started, ends, user_id):
     vote_time = conn.execute('SELECT voted_at FROM game_turn_votes WHERE turn_number=%s AND user_id=%s', (turn,user_id)).fetchone() if user_id in voted else None
     skip_at = vote_time[0] + timedelta(minutes=2) if vote_time else None
     now = conn.execute('SELECT now()').fetchone()[0]
+    pending_ids = participants - voted
+    names = dict(conn.execute('SELECT user_id,user_login FROM users WHERE user_id=ANY(%s)',
+                              (list(participants),)).fetchall()) if participants else {}
+    wait_elapsed = bool(skip_at and now >= skip_at)
+    pending_players = [{'id':player_id, 'login':names.get(player_id,f'Игрок {player_id}'),
+                        'online':player_id in eligible,
+                        'can_skip':wait_elapsed and player_id not in eligible}
+                       for player_id in sorted(pending_ids)]
+    skippable = next((player['id'] for player in pending_players if player['can_skip']), None)
     return {'turn':turn, 'year':turn // 4, 'season':SEASONS[turn % 4],
             'label':f'{turn // 4} год Эры Дракона, {SEASONS[turn % 4]}',
             'started_at':started.isoformat(), 'ends_at':ends.isoformat(),
             'online_players':len(eligible), 'ready_players':len(eligible & voted),
             'can_vote':user_id in eligible, 'voted':user_id in voted,
             'skip_at':skip_at.isoformat() if skip_at else None,
-            'can_skip':bool(skip_at and now>=skip_at and participants-voted and not (eligible-voted))}
+            'pending_players':pending_players, 'skippable_player_id':skippable,
+            'can_skip':skippable is not None}
 
 
 @router.post('/api/game/clock/skip')
 async def skip_turn(request: Request):
     data = await request.json()
-    if not isinstance(data,dict) or set(data)!={'turn'} or type(data['turn']) is not int:
-        raise HTTPException(400,'Укажите номер хода')
+    if (not isinstance(data,dict) or set(data)!={'turn','player_id'} or
+            type(data['turn']) is not int or type(data['player_id']) is not int):
+        raise HTTPException(400,'Укажите номер хода и игрока')
     with connect() as conn:
         turn,started,ends = _clock(conn)
         if data['turn'] != turn:raise HTTPException(409,'Ход уже завершён; обновите карту')
         user_id=request.state.user['user_id']
         state=_payload(conn,turn,started,ends,user_id)
         if not state['voted']:raise HTTPException(403,'Сначала завершите свой ход')
-        if not state['can_skip']:raise HTTPException(409,'Пропуск доступен через две минуты, если непроголосовавший соперник офлайн')
-        _advance(conn,turn,turn+1,'test_skip',user_id)
-        new,started,ends=conn.execute('SELECT turn_number,started_at,ends_at FROM game_clock WHERE id=true').fetchone()
-        return _payload(conn,new,started,ends,user_id)
+        target=next((player for player in state['pending_players'] if player['id']==data['player_id']),None)
+        if not target:raise HTTPException(409,'Этот игрок уже завершил ход')
+        if not target['can_skip']:raise HTTPException(409,'Пропуск доступен через две минуты только для офлайн-игрока')
+        conn.execute('INSERT INTO game_turn_votes(turn_number,user_id) VALUES (%s,%s) ON CONFLICT DO NOTHING',
+                     (turn,data['player_id']))
+        voted = {row[0] for row in conn.execute('SELECT user_id FROM game_turn_votes WHERE turn_number=%s',(turn,)).fetchall()}
+        if _participants(conn) <= voted:
+            _advance(conn,turn,turn+1,'test_skip',user_id)
+            turn,started,ends=conn.execute('SELECT turn_number,started_at,ends_at FROM game_clock WHERE id=true').fetchone()
+        return _payload(conn,turn,started,ends,user_id)
 
 
 @router.get('/api/game/clock')

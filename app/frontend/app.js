@@ -4,7 +4,7 @@ const RADIUS = 80;
 const HEX_WIDTH = Math.sqrt(3) * RADIUS;
 const MAP_WIDTH = 3200;
 const MAP_HEIGHT = 2200;
-const VERSION = "Rhisseth · batell v0.3.2 · Artistic V6";
+const VERSION = "Rhisseth · batell v0.3.3 · Artistic V6";
 const API_BASE = "/api";
 let csrfToken = '';
 let canEdit = false;
@@ -367,7 +367,7 @@ async function createMapUnit() {
     general.unitKey=Number.isInteger(general.q)&&Number.isInteger(general.r)?cellKey(general.q,general.r):game.unitKey;
     const image=document.createElementNS('http://www.w3.org/2000/svg','image'); image.id=`player-unit-${general.id}`; image.setAttribute('class','map-unit');
     image.setAttribute('href',general.icon); image.setAttribute('width','82'); image.setAttribute('height','82'); image.setAttribute('aria-label',`Генерал ${general.name}, юнитов: ${general.units.length}`); image.setAttribute('tabindex','0');
-    image.addEventListener('click',event=>{event.stopPropagation();if(game.player!==1)return;document.querySelectorAll('.map-unit').forEach(item=>item.classList.remove('selected'));game.general=general;game.armyUnits=general.units;game.unitKey=general.unitKey;game.selected=true;image.classList.add('selected');paintMoveTargets();setGameMessage(`Армия «${general.name}»: выберите соседний гекс.`);});
+    image.addEventListener('click',event=>{event.stopPropagation();if(game.player!==1){setGameMessage('Ваш ход уже завершён. Дождитесь остальных игроков или используйте «Пропустить ход», когда кнопка станет доступна.');return;}document.querySelectorAll('.map-unit').forEach(item=>item.classList.remove('selected'));game.general=general;game.armyUnits=general.units;game.unitKey=general.unitKey;game.selected=true;image.classList.add('selected');paintMoveTargets();setGameMessage(`Армия «${general.name}»: выберите соседний гекс.`);});
     layer.append(image); positionGeneralImage(general,index,false);
   });
   const activeResponse=await fetch(`${API_BASE}/game/active-battle`,{cache:'no-store'});
@@ -426,6 +426,21 @@ document.querySelector('#hold-hex')?.addEventListener('click',()=>{
 document.querySelector('#raid-hex')?.addEventListener('click',()=>openBattle('Местное население','raid'));
 let currentGlobalTurn = null;
 let skipRefreshTimer = null;
+let skipCountdownTimer = null;
+function startSkipCountdown(skipAt,visible,ready){
+  const controls=document.querySelector('#skip-turn-controls');
+  const label=document.querySelector('#skip-countdown');
+  clearInterval(skipCountdownTimer);controls.hidden=!visible;
+  if(!visible){label.textContent='';return;}
+  if(ready){label.textContent='Можно пропустить ход';return;}
+  if(!skipAt){label.textContent='Ожидание таймера';return;}
+  const update=()=>{
+    const seconds=Math.max(0,Math.ceil((new Date(skipAt).getTime()-Date.now())/1000));
+    if(seconds<=0){label.textContent='Можно пропустить ход';clearInterval(skipCountdownTimer);refreshGameClock();return;}
+    label.textContent=`До пропуска: ${String(Math.floor(seconds/60)).padStart(2,'0')}:${String(seconds%60).padStart(2,'0')}`;
+  };
+  update();skipCountdownTimer=setInterval(update,1000);
+}
 async function refreshGameClock() {
   try {
     const response = await fetch(`${API_BASE}/game/clock`, {cache:'no-store'});
@@ -448,10 +463,17 @@ async function refreshGameClock() {
     }
     currentGlobalTurn = state.turn;
     game.player = state.voted ? 2 : 1;
-    turnLabel.textContent = `Ход ${state.turn + 1} · готово ${state.ready_players}/${state.online_players}`;
+    const pending=state.pending_players||[];
+    const pendingNames=pending.map(player=>player.login).join(', ');
+    turnLabel.textContent = `Ход ${state.turn + 1} · ${pending.length?`ожидаем: ${pendingNames}`:'все игроки завершили ход'}`;
     endTurnButton.textContent = state.voted ? 'Ожидание игроков' : 'Конец хода';
     endTurnButton.disabled = !state.can_vote || state.voted;
-    const skip=document.querySelector('#skip-turn');skip.hidden=!state.voted;skip.disabled=!state.can_skip;
+    const skip=document.querySelector('#skip-turn');
+    const skippable=pending.find(player=>player.id===state.skippable_player_id);
+    skip.disabled=!state.can_skip;
+    skip.dataset.playerId=skippable?.id||'';
+    skip.textContent=skippable?`Пропустить ход: ${skippable.login}`:`Ожидаем: ${pendingNames}`;
+    startSkipCountdown(state.skip_at,state.voted&&pending.length>0,state.can_skip);
     if(state.skip_at&&!state.can_skip)skip.title=`Доступно после ${new Date(state.skip_at).toLocaleTimeString('ru-RU')}`;
     clearTimeout(skipRefreshTimer);
     if(state.skip_at&&!state.can_skip)skipRefreshTimer=setTimeout(refreshGameClock,Math.max(1000,new Date(state.skip_at).getTime()-Date.now()+250));
@@ -472,9 +494,11 @@ endTurnButton?.addEventListener('click',async()=>{
   } catch (error) { setGameMessage(error.message); endTurnButton.disabled = false; }
 });
 document.querySelector('#skip-turn')?.addEventListener('click',async()=>{
-  try{const response=await fetch(`${API_BASE}/game/clock/skip`,{method:'POST',headers:{'X-CSRF-Token':csrfToken,'Content-Type':'application/json'},body:JSON.stringify({turn:currentGlobalTurn})});
-    const result=await response.json();if(!response.ok)throw new Error(result.error||`HTTP ${response.status}`);
-    await refreshGameClock();setGameMessage('Начался новый глобальный ход.');
+  const playerId=Number(document.querySelector('#skip-turn').dataset.playerId);if(!playerId)return;
+  try{const response=await fetch(`${API_BASE}/game/clock/skip`,{method:'POST',headers:{'X-CSRF-Token':csrfToken,'Content-Type':'application/json'},body:JSON.stringify({turn:currentGlobalTurn,player_id:playerId})});
+    const result=await response.json();if(!response.ok)throw new Error(result.error||result.detail||`HTTP ${response.status}`);
+    const advanced=result.turn!==currentGlobalTurn;await refreshGameClock();
+    setGameMessage(advanced?'Начался новый глобальный ход.':'Ход офлайн-игрока пропущен. Ожидаем остальных игроков.');
   }catch(error){setGameMessage(error.message);}
 });
 if (!creatingBarony) setInterval(refreshGameClock,30000);

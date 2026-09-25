@@ -31,6 +31,8 @@ class ClockConnection:
             return Result([(1,), (2,)])
         if 'SELECT user_id FROM game_turn_votes' in sql:
             return Result([(1,)])
+        if 'SELECT user_id,user_login FROM users' in sql:
+            return Result([(1,'Первый'),(2,'Второй')])
         if 'SELECT voted_at FROM game_turn_votes' in sql:
             return Result([(self.now - timedelta(minutes=self.vote_age_minutes),)])
         if 'SELECT now()' in sql:
@@ -43,8 +45,12 @@ class SkipTurnTests(unittest.TestCase):
         now = datetime(2026, 9, 25, tzinfo=timezone.utc)
         state = _payload(ClockConnection(now, {1}), 1, now, now + timedelta(hours=12), 1)
         self.assertTrue(state['can_skip'])
+        self.assertEqual(state['skippable_player_id'],2)
+        self.assertEqual(state['pending_players'],[{'id':2,'login':'Второй','online':False,'can_skip':True}])
         online_opponent = _payload(ClockConnection(now, {1, 2}), 1, now, now + timedelta(hours=12), 1)
         self.assertFalse(online_opponent['can_skip'])
+        self.assertEqual(online_opponent['pending_players'][0]['login'],'Второй')
+        self.assertTrue(online_opponent['pending_players'][0]['online'])
         early = _payload(ClockConnection(now, {1}, vote_age_minutes=1), 1, now, now + timedelta(hours=12), 1)
         self.assertFalse(early['can_skip'])
 

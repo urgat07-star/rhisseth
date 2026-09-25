@@ -83,7 +83,10 @@
 					<button id="raid-hex" type="button">Ограбить население</button>
 				</div>
 				<button id="end-turn" class="end-turn" type="button" hidden>Конец хода</button>
-				<button id="skip-turn" class="end-turn" type="button" hidden disabled>Пропустить ход</button>
+				<div id="skip-turn-controls" class="skip-turn-controls" hidden>
+					<button id="skip-turn" class="end-turn" type="button" disabled>Пропустить ход</button>
+					<span id="skip-countdown" aria-live="polite"></span>
+				</div>
 			</section>
 		</section>
 	</main>
@@ -109,7 +112,7 @@
     </dialog>
 	
 	<footer id="data-status">Final V2 · подключение к PostgreSQL…</footer>
-	<script src="app.js?v=batell-0.3.2" defer></script>
+	<script src="app.js?v=batell-0.3.3" defer></script>
 	<script>
     const pageModal = document.getElementById('page-modal');
     const pageModalFrame = document.getElementById('page-modal-frame');
