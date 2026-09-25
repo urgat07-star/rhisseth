@@ -28,7 +28,7 @@
                 <li class="user-menu__item">
                     <a class="user-menu__link js-modal-page" href="cabinet.html#settings">Профиль</a>
                 </li>
-                <li class="user-menu__item" id="admin-menu-item">
+                <li class="user-menu__item" id="admin-menu-item" hidden>
                     <a class="user-menu__link" href="/map">Управление</a>
                 </li>
                 <li class="user-menu__item">
@@ -45,7 +45,7 @@
 	<main>
 		<section id="map-viewport" class="map-viewport" aria-label="Интерактивная карта гексов">
 			<div id="game-date" class="game-date" aria-live="polite">0 год Эры Дракона, Весна</div>
-			<div id="game-resources" class="game-resources" aria-live="polite">G:130 (+30)&nbsp;&nbsp;&nbsp;M:300 (+30)&nbsp;&nbsp;&nbsp;P: 87 (+9)</div>
+			<div id="game-resources" class="game-resources" aria-live="polite" title="G — золото, M — материалы, P — крестьяне">Загрузка ресурсов…</div>
 			<div id="loading" class="loading">Загрузка данных карты…</div>
 			<div id="map-stage" class="map-stage">
 				<img id="terrain-map" src="terrain-map-group3-artistic-v6-no-grid.png" alt="Художественная карта местности Rhisseth V6 с горами, лесами, реками и островами" draggable="true">
@@ -77,7 +77,6 @@
 					<button id="claim-hex" type="button">Захватить ячейку</button>
 					<button id="hold-hex" type="button">Ничего не делать</button>
 					<button id="raid-hex" type="button">Ограбить население</button>
-					<button id="end-turn" class="end-turn" type="button" hidden>Конец хода</button>
 				</div>
 				<button id="end-turn" class="end-turn" type="button" hidden>Конец хода</button>
 			</section>
@@ -138,12 +137,6 @@
         document.getElementById('logout')?.click();
     });
     
-    // Синхронизация видимости пункта "Управление" с верхней ссылкой
-    const adminLink = document.getElementById('admin-link');
-    const adminMenuItem = document.getElementById('admin-menu-item');
-    if (adminLink && adminMenuItem) {
-        adminMenuItem.hidden = adminLink.hidden;
-    }
 	</script>
 
 </body>

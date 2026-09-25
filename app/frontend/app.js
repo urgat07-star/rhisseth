@@ -315,6 +315,18 @@ const hexActions = document.querySelector('#hex-actions');
 const endTurnButton = document.querySelector('#end-turn');
 const battleModal = document.querySelector('#battle-modal');
 
+async function refreshGameResources() {
+  const [armyResponse, peasantsResponse] = await Promise.all([
+    fetch(`${API_BASE}/cabinet/army`, {cache:'no-store'}),
+    fetch(`${API_BASE}/cabinet/peasants`, {cache:'no-store'})
+  ]);
+  if (!armyResponse.ok || !peasantsResponse.ok) throw new Error('Не удалось загрузить ресурсы');
+  const [army, peasants] = await Promise.all([armyResponse.json(), peasantsResponse.json()]);
+  const materials = Object.values(army.inventory || {}).reduce((sum, quantity) => sum + Number(quantity || 0), 0);
+  const population = Number(peasants.reserve || 0) + (peasants.hexes || []).reduce((sum, hex) => sum + Number(hex.quantity || 0), 0);
+  document.querySelector('#game-resources').textContent = `G:${army.gold}   M:${materials}   P:${population}`;
+}
+
 function adjacentKeys(key) {
   const [q,r] = key.split(',').map(Number);
   return neighbors.map(([dq,dr])=>cellKey(q+dq,r+dr)).filter(next=>rowsByKey.has(next));
@@ -406,6 +418,10 @@ async function refreshGameClock() {
     if (!response.ok) return;
     const state = await response.json();
     document.querySelector('#game-date').textContent = state.label;
+    refreshGameResources().catch(error => {
+      document.querySelector('#game-resources').textContent = 'Ресурсы недоступны';
+      console.error('Ресурсы:', error);
+    });
     if (currentGlobalTurn !== null && currentGlobalTurn !== state.turn) {
       game.moved = false; game.pendingRow = null; game.player = 1;
       setGameMessage('Начался новый глобальный ход.');
@@ -429,7 +445,7 @@ endTurnButton?.addEventListener('click',async()=>{
     await refreshGameClock();
   } catch (error) { setGameMessage(error.message); endTurnButton.disabled = false; }
 });
-if (!creatingBarony) { setInterval(refreshGameClock,30000); refreshGameClock(); }
+if (!creatingBarony) setInterval(refreshGameClock,30000);
 
 function unitCard(unit) {
   const button=document.createElement('button'); button.type='button'; button.className='battle-unit';
@@ -573,6 +589,7 @@ async function loadData() {
   if (creatingBarony) canEdit = false;
   document.querySelector('#admin-link').hidden = !canEdit;
   document.querySelector('#admin-link').href = '/admin/hexes';
+  document.querySelector('#admin-menu-item').hidden = !canEdit;
   document.querySelector('#user-status').textContent = identity.login;
   const userRole = document.querySelector('#user-role');
   if (userRole) userRole.textContent = `· ${identity.role}`;
@@ -689,6 +706,7 @@ async function claimBarony(event) {
 loadData()
   .then(async ({ rows, source }) => {
     render(rows);
+    if (!creatingBarony) await refreshGameClock();
     if (!creatingBarony) await createMapUnit();
     await setupPlayerPage();
     document.querySelector("#data-status").textContent = `${VERSION} · источник: ${source}`;
