@@ -322,9 +322,9 @@ async function refreshGameResources() {
   ]);
   if (!armyResponse.ok || !peasantsResponse.ok) throw new Error('Не удалось загрузить ресурсы');
   const [army, peasants] = await Promise.all([armyResponse.json(), peasantsResponse.json()]);
-  const materials = Object.values(army.inventory || {}).reduce((sum, quantity) => sum + Number(quantity || 0), 0);
-  const population = Number(peasants.reserve || 0) + (peasants.hexes || []).reduce((sum, hex) => sum + Number(hex.quantity || 0), 0);
-  document.querySelector('#game-resources').textContent = `G:${army.gold}   M:${materials}   P:${population}`;
+  const food = Number(army.inventory?.food || 0);
+  const population = (peasants.hexes || []).reduce((sum, hex) => sum + Number(hex.quantity || 0), 0);
+  document.querySelector('#game-resources').textContent = `G:${army.gold}  F:${food}  P:${population}`;
 }
 
 function adjacentKeys(key) {
