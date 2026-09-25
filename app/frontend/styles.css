@@ -35,12 +35,15 @@ main { padding: clamp(12px, 2vw, 28px); }
   margin: auto;
   overflow: hidden;
   border: 1px solid #78806977;
-  border-radius: 8px;
+  border-radius: 0;
   background: #283542;
   box-shadow: 0 22px 70px #0009;
 }
 
-.map-stage { position: relative; width: 100%; aspect-ratio: 1508 / 1043; }
+.map-stage {
+    position: relative; 
+    width: 100%; aspect-ratio: 1508 / 1043;
+    border: 9px solid;border-image: url('map-border.png') 4 round;border-image-outset: 1px;}
 .map-stage img, #hex-overlay { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .map-stage img { user-select: none; }
 #hex-overlay { z-index: 2; }
@@ -56,11 +59,14 @@ main { padding: clamp(12px, 2vw, 28px); }
 
 .loading { position: absolute; z-index: 5; inset: 0; display: grid; place-items: center; background: #182019e8; color: #d8ddca; }
 .loading.error { color: #ffd2cb; }
-.game-panel { position: fixed; z-index: 20; left: 14px; top: 14px; display: grid; gap: 5px; max-width: min(430px,calc(100% - 28px)); padding: 10px 13px; border: 1px solid #b8a86b99; border-radius: 6px; background: #151b16f2; box-shadow: 0 6px 20px #0008; font-size: 13px; pointer-events: none; }
-.game-panel strong { color: #f2df9c; }
-.hex-actions { display: flex; flex-wrap: wrap; gap: 7px; padding-top: 4px; pointer-events: auto; }
+.game-panel {font-family: "Libertinus Sans", sans-serif; position: fixed; z-index: 20; left: 38.3%; top: 110px; display: grid; gap: 5px;width:450px; padding: 10px 13px; border: 1px solid #b8a86b99; border-radius: 6px; background:rgba(21, 27, 22, 0.8); box-shadow: 0 6px 20px #0008; font-size: 13px; pointer-events: none; }
+.game-panel strong { color: #f2df9c;text-align:center;font-size: 18px; }
+.game-panel span {font-size:16px;text-align:center;}
+.hex-actions {display: flex; flex-wrap: wrap;gap: 15px;justify-content: center; padding-top: 15px; pointer-events: auto; }
 .hex-actions button, .end-turn, .finish-battle { padding: 8px 11px; border: 1px solid #c2b47a; border-radius: 4px; background: #4d5134; color: #fff6d8; cursor: pointer; }
-.end-turn { position: fixed; z-index: 20; right: 16px; top: 16px; font-weight: 700; }
+.hex-actions button:hover, .end-turn:hover, .finish-battle:hover { padding: 8px 11px; border: 1px solid #FFCB29; border-radius: 4px; background: #AE9A5A; color: #3B2F00; cursor: pointer; }
+/*.end-turn {font-family: "Monomakh", system-ui;font-size:22px; position: absolute; z-index: 20; right: 44%; top: 10px; font-weight: 700; }*/
+.end-turn {font-family: "Monomakh", system-ui;font-size:22px; margin:20px auto 0; }
 .battle-modal { width: min(880px,calc(100vw - 24px)); color: #eee6cf; border: 1px solid #aa9560; border-radius: 10px; padding: 0; background: #111712; }
 .battle-modal::backdrop { background: #050806d9; backdrop-filter: blur(3px); }
 .battle-arena { position: relative; min-height: 540px; padding: 24px 28px 78px; background: radial-gradient(circle at 50% 35%,#493f2a,#1b241c 52%,#0f1410); }
@@ -332,7 +338,12 @@ input, select, textarea, button { font: inherit; }
 .page-modal iframe { display: block; width: 100%; height: 100%; border: 0; background: #111827; }
 .page-modal__close { position: absolute; z-index: 2; top: 10px; right: 14px; font-size: 2rem; }
 /* The seasonal label stays readable until the visual design is finalized. */
-.game-date { position:absolute; z-index:5; top:12px; left:12px; padding:7px 11px; border-radius:5px; background:rgba(20,26,30,.85); color:#fff; font-weight:600; }
+/*.game-date {font-family: "Cormorant Infant", serif;font-size:26px; position:absolute; z-index:5; top:12px; left:12px; padding:7px 11px; border-radius:5px; background:rgba(20,26,30,.85); color:#fff; font-weight:600; }*/
+.game-date {font-family: "Cormorant Infant", serif;font-size:26px; position:absolute; z-index:5; top:12px; left:12px; padding:14px 84px 20px 40px; background-image:url(time-border.svg); color:#fff; font-weight:600; }
+
+.game-resources {font-family: "Cormorant Infant", serif;font-size:26px; position:absolute; z-index:5; top:12px; right:12px; padding:14px 28px 20px 60px; background-image:url(resurces-border.svg); color:#fff; font-weight:600; }
+
+
 .battle-lines{grid-template-columns:minmax(105px,1fr) minmax(240px,440px) minmax(105px,1fr);gap:8px}
 .battle-grid{display:grid;grid-template-columns:repeat(10,minmax(20px,1fr));gap:2px;width:100%;align-self:center}
 .battle-cell{aspect-ratio:1;border:1px solid #7b6d53;background:#e6ddc6;color:#192319;cursor:pointer;font-size:.7rem;padding:0}

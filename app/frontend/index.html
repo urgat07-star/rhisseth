@@ -5,14 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Rhisseth — интерактивная карта</title>
   <link rel="stylesheet" href="styles.css?v=crests-webp-3">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Infant:ital,wght@0,300..700;1,300..700&family=Libertinus+Sans:ital,wght@0,400;0,700;1,400&family=Monomakh&display=swap" rel="stylesheet">
 </head>
 <body>
 	<header class="topbar">
     <div>
         <p class="eyebrow">RHISSETH</p>
-        <h1>Оперативная карта</h1>
+        <!--h1>Оперативная карта</h1-->
     </div>
-    <div class="hint" id="editor-hint">Правая кнопка — сведения о гексе</div>
+    <div class="hint" id="editor-hint"></div>
     <a id="admin-link" href="/map" hidden>Управление островами</a>
     <button id="start-game" type="button">Моя барония</button>
 
@@ -23,9 +26,9 @@
         <div class="user-menu__dropdown">
             <ul class="user-menu__list">
                 <li class="user-menu__item">
-                    <a class="user-menu__link js-modal-page" href="cabinet.html">Профиль</a>
+                    <a class="user-menu__link js-modal-page" href="cabinet.html#settings">Профиль</a>
                 </li>
-                <li class="user-menu__item" id="admin-menu-item" hidden>
+                <li class="user-menu__item" id="admin-menu-item">
                     <a class="user-menu__link" href="/map">Управление</a>
                 </li>
                 <li class="user-menu__item">
@@ -42,9 +45,10 @@
 	<main>
 		<section id="map-viewport" class="map-viewport" aria-label="Интерактивная карта гексов">
 			<div id="game-date" class="game-date" aria-live="polite">0 год Эры Дракона, Весна</div>
+			<div id="game-resources" class="game-resources" aria-live="polite">G:130 (+30)&nbsp;&nbsp;&nbsp;M:300 (+30)&nbsp;&nbsp;&nbsp;P: 87 (+9)</div>
 			<div id="loading" class="loading">Загрузка данных карты…</div>
 			<div id="map-stage" class="map-stage">
-				<img id="terrain-map" src="terrain-map-group3-artistic-v6-no-grid.png" alt="Художественная карта местности Rhisseth V6 с горами, лесами, реками и островами" draggable="false">
+				<img id="terrain-map" src="terrain-map-group3-artistic-v6-no-grid.png" alt="Художественная карта местности Rhisseth V6 с горами, лесами, реками и островами" draggable="true">
 				<svg id="hex-overlay" viewBox="0 0 3200 2200" preserveAspectRatio="none" aria-label="Интерактивная гекс-сетка"><g id="barony-boundaries"></g><g id="barony-emblems"></g></svg>
 
 			</div>
@@ -65,6 +69,7 @@
 				</form>
 				<p id="save-status" class="save-status" aria-live="polite"></p>
 			</aside>
+			
 			<section id="game-panel" class="game-panel" aria-live="polite">
 				<strong id="turn-label">Ход игрока</strong>
 				<span id="game-message">Выберите воина, затем соседний гекс.</span>
@@ -72,9 +77,10 @@
 					<button id="claim-hex" type="button">Захватить ячейку</button>
 					<button id="hold-hex" type="button">Ничего не делать</button>
 					<button id="raid-hex" type="button">Ограбить население</button>
+					<button id="end-turn" class="end-turn" type="button" hidden>Конец хода</button>
 				</div>
+				<button id="end-turn" class="end-turn" type="button" hidden>Конец хода</button>
 			</section>
-			<button id="end-turn" class="end-turn" type="button" hidden>Конец хода</button>
 		</section>
 	</main>
 
