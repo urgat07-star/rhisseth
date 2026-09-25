@@ -2,7 +2,7 @@
 param([string]$ResourceId = '',
       [ValidateSet('Inspect-RhissethVpsFromRunner.py', 'Consolidate-RhissethRunnerFiles.py', 'Deploy-RhissethFromRunner.py', 'Publish-RhissethFromRunner.py', 'Diagnose-RhissethVps.py', 'Diagnose-RhissethRunner.py')]
       [string]$ScriptName = 'Inspect-RhissethVpsFromRunner.py',
-      [ValidateSet('inspect', 'install', 'validate', 'hosting', 'snapshot', 'publish-map', 'audit-map', 'deploy-hexes', 'publish', 'publish-v03')][string]$Operation = 'inspect')
+      [ValidateSet('inspect', 'install', 'validate', 'hosting', 'snapshot', 'publish-map', 'audit-map', 'deploy-hexes', 'publish', 'publish-v03', 'publish-v031')][string]$Operation = 'inspect')
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../..')).Path
 $workspaceRoot = (Resolve-Path -LiteralPath (Join-Path $root '..')).Path
@@ -38,7 +38,7 @@ try {
         }
     }
     if ($ScriptName -eq 'Publish-RhissethFromRunner.py') {
-        $payloadName = if ($Operation -eq 'publish-v03') { 'Publish-BatellV03Vps.py' } else { 'Publish-RhissethVps.py' }
+        $payloadName = if ($Operation -eq 'publish-v03') { 'Publish-BatellV03Vps.py' } elseif ($Operation -eq 'publish-v031') { 'Publish-BatellV031Vps.py' } else { 'Publish-RhissethVps.py' }
         $out = & scp.exe @opts "$root/scripts/automation/$payloadName" "avalon@10.210.52.128:/home/avalon/rhisseth.ru/scripts/automation/$payloadName" 2>&1
         if ($LASTEXITCODE -ne 0) { $out | Add-Content -LiteralPath $log; throw 'VPS publication payload transfer failed' }
     }
@@ -52,7 +52,11 @@ try {
     }
     if ($ScriptName -eq 'Publish-RhissethFromRunner.py') {
         $archive = Join-Path $env:TEMP ('rhisseth-publish-' + $now.ToString('yyyyMMdd-HHmmss') + '.tgz')
-        git -C $root archive --format=tar.gz --output=$archive HEAD
+        $archiveRef = if ($Operation -eq 'publish-v031') { 'v0.3.1' } else { 'HEAD' }
+        $archiveCommit = (git -C $root rev-list -n 1 $archiveRef).Trim()
+        if ($LASTEXITCODE -ne 0 -or -not $archiveCommit) { throw 'Publication archive ref missing' }
+        "Archive ref: $archiveRef; commit: $archiveCommit" | Add-Content -LiteralPath $log
+        git -C $root archive --format=tar.gz --output=$archive $archiveRef
         if ($LASTEXITCODE -ne 0) { throw 'Local Git archive creation failed' }
         $out = & scp.exe @opts $archive 'avalon@10.210.52.128:/home/avalon/rhisseth.ru/temp/rhisseth-publish.tgz' 2>&1
         Remove-Item -LiteralPath $archive -Force -ErrorAction SilentlyContinue
