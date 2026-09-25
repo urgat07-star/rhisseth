@@ -1,8 +1,8 @@
 #requires -Version 7.0
 param([string]$ResourceId = '',
-      [ValidateSet('Inspect-RhissethVpsFromRunner.py', 'Consolidate-RhissethRunnerFiles.py', 'Deploy-RhissethFromRunner.py', 'Publish-RhissethFromRunner.py', 'Diagnose-RhissethVps.py', 'Diagnose-RhissethRunner.py')]
+      [ValidateSet('Inspect-RhissethVpsFromRunner.py', 'Consolidate-RhissethRunnerFiles.py', 'Deploy-RhissethFromRunner.py', 'Publish-RhissethFromRunner.py', 'Diagnose-RhissethVps.py', 'Diagnose-RhissethRunner.py', 'Configure-RhissethSharedAuthFromRunner.py')]
       [string]$ScriptName = 'Inspect-RhissethVpsFromRunner.py',
-      [ValidateSet('inspect', 'install', 'validate', 'hosting', 'snapshot', 'publish-map', 'audit-map', 'deploy-hexes', 'publish', 'publish-v03', 'publish-v031')][string]$Operation = 'inspect')
+      [ValidateSet('inspect', 'install', 'validate', 'hosting', 'snapshot', 'publish-map', 'audit-map', 'deploy-hexes', 'publish', 'publish-v03', 'publish-v031', 'publish-v032', 'apply')][string]$Operation = 'inspect')
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../..')).Path
 $workspaceRoot = (Resolve-Path -LiteralPath (Join-Path $root '..')).Path
@@ -38,7 +38,7 @@ try {
         }
     }
     if ($ScriptName -eq 'Publish-RhissethFromRunner.py') {
-        $payloadName = if ($Operation -eq 'publish-v03') { 'Publish-BatellV03Vps.py' } elseif ($Operation -eq 'publish-v031') { 'Publish-BatellV031Vps.py' } else { 'Publish-RhissethVps.py' }
+        $payloadName = if ($Operation -eq 'publish-v03') { 'Publish-BatellV03Vps.py' } elseif ($Operation -eq 'publish-v031') { 'Publish-BatellV031Vps.py' } elseif ($Operation -eq 'publish-v032') { 'Publish-BatellV032Vps.py' } else { 'Publish-RhissethVps.py' }
         $out = & scp.exe @opts "$root/scripts/automation/$payloadName" "avalon@10.210.52.128:/home/avalon/rhisseth.ru/scripts/automation/$payloadName" 2>&1
         if ($LASTEXITCODE -ne 0) { $out | Add-Content -LiteralPath $log; throw 'VPS publication payload transfer failed' }
     }
@@ -50,9 +50,19 @@ try {
         $out = & scp.exe @opts "$root/scripts/automation/Diagnose-RhissethRunner.py" 'avalon@10.210.52.128:/home/avalon/rhisseth.ru/scripts/automation/Diagnose-RhissethRunner.py' 2>&1
         if ($LASTEXITCODE -ne 0) { $out | Add-Content -LiteralPath $log; throw 'Runner diagnostic script transfer failed' }
     }
+    if ($ScriptName -eq 'Configure-RhissethSharedAuthFromRunner.py') {
+        $out = & scp.exe @opts "$root/scripts/automation/Configure-RhissethSharedAuthVps.py" 'avalon@10.210.52.128:/home/avalon/rhisseth.ru/scripts/automation/Configure-RhissethSharedAuthVps.py' 2>&1
+        if ($LASTEXITCODE -ne 0) { $out | Add-Content -LiteralPath $log; throw 'Shared-auth VDS payload transfer failed' }
+        if ($Operation -eq 'apply') {
+            $out = & ssh.exe @opts avalon@10.210.52.128 'mkdir -p /home/avalon/rhisseth.ru/temp && chmod 700 /home/avalon/rhisseth.ru/temp' 2>&1
+            if ($LASTEXITCODE -ne 0) { throw 'Runner temporary directory preparation failed' }
+            $out = & scp.exe @opts "$root/app/backend/admin_users.py" 'avalon@10.210.52.128:/home/avalon/rhisseth.ru/temp/admin_users.py' 2>&1
+            if ($LASTEXITCODE -ne 0) { $out | Add-Content -LiteralPath $log; throw 'Shared-auth application guard transfer failed' }
+        }
+    }
     if ($ScriptName -eq 'Publish-RhissethFromRunner.py') {
         $archive = Join-Path $env:TEMP ('rhisseth-publish-' + $now.ToString('yyyyMMdd-HHmmss') + '.tgz')
-        $archiveRef = if ($Operation -eq 'publish-v031') { 'v0.3.1' } else { 'HEAD' }
+        $archiveRef = if ($Operation -eq 'publish-v031') { 'v0.3.1' } elseif ($Operation -eq 'publish-v032') { 'v0.3.2' } else { 'HEAD' }
         $archiveCommit = (git -C $root rev-list -n 1 $archiveRef).Trim()
         if ($LASTEXITCODE -ne 0 -or -not $archiveCommit) { throw 'Publication archive ref missing' }
         "Archive ref: $archiveRef; commit: $archiveCommit" | Add-Content -LiteralPath $log
@@ -64,7 +74,7 @@ try {
     }
     $command = "python3 $remote"
     if ($ResourceId) { $command += " $ResourceId" }
-    if ($ScriptName -eq 'Deploy-RhissethFromRunner.py' -or $ScriptName -eq 'Publish-RhissethFromRunner.py' -or $ScriptName -eq 'Diagnose-RhissethVps.py' -or $ScriptName -eq 'Diagnose-RhissethRunner.py') { $command += " $Operation" }
+    if ($ScriptName -eq 'Deploy-RhissethFromRunner.py' -or $ScriptName -eq 'Publish-RhissethFromRunner.py' -or $ScriptName -eq 'Diagnose-RhissethVps.py' -or $ScriptName -eq 'Diagnose-RhissethRunner.py' -or $ScriptName -eq 'Configure-RhissethSharedAuthFromRunner.py') { $command += " $Operation" }
     $out = & ssh.exe @opts avalon@10.210.52.128 $command 2>&1
     $code = $LASTEXITCODE
     $safe = ($out | ForEach-Object { [string]$_ }) -join "`n"
