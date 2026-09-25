@@ -106,7 +106,7 @@ def _drive_ai(conn,battle,units):
         if not adjacent:
             target=min(targets,key=lambda u:distance((defender['x'],defender['y']),(u['x'],u['y'])))
             occupied={(u['x'],u['y']) for u in units if u['health']>0 and u['id']!=defender['id']}
-            options=[(x,y) for x in range(10) for y in range(10)
+            options=[(x,y) for x in range(8) for y in range(8)
                      if reachable((defender['x'],defender['y']),(x,y),defender['speed'],occupied)]
             if options:
                 next_cell=min(options,key=lambda p:distance(p,(target['x'],target['y'])))
@@ -203,7 +203,7 @@ def create_encounter_battle(conn,user_id,general_id,source,target,target_data,tu
     for index,unit in enumerate(defenders):
         conn.execute('''INSERT INTO game_battle_units(battle_id,side,unit_id,name,image_path,x,y,
             health,max_health,attack,defense,armor,attack_range,speed,initiative)
-            VALUES (%s,'defender',%s,%s,%s,8,%s,%s,%s,%s,%s,%s,%s,%s,%s)''',
+            VALUES (%s,'defender',%s,%s,%s,7,%s,%s,%s,%s,%s,%s,%s,%s,%s)''',
             (battle_id,unit['id'],unit['name'],unit['image_path'],index+1,unit['health'],unit['health'],
              unit['attack'],unit['defense'],unit['armor'],max(1,unit['attack_range']),unit['speed'],unit['initiative']))
     _apply_template(conn,battle_id,user_id)
@@ -240,7 +240,7 @@ def _apply_template(conn,battle_id,user_id):
         LEFT JOIN player_general_units pgu ON pgu.id=u.assignment_id
         WHERE u.battle_id=%s AND u.side='attacker' ORDER BY u.id''',(battle_id,)).fetchall()
     positions=[template.get(slot,(x,y)) for _,slot,x,y in rows]
-    if len(set(positions))!=len(positions):return
+    if len(set(positions))!=len(positions) or any(not 0<=x<=3 or not 0<=y<8 for x,y in positions):return
     for (unit_id,_,_,_),(x,y) in zip(rows,positions):
         conn.execute('UPDATE game_battle_units SET x=%s,y=%s WHERE id=%s',(x,y,unit_id))
 
@@ -250,7 +250,7 @@ def _insert_wall(conn,battle_id,level):
     if not health:return
     conn.execute('''INSERT INTO game_battle_units(battle_id,side,is_wall,name,image_path,x,y,
         health,max_health,attack,defense,armor,attack_range,speed,initiative,active)
-        VALUES (%s,'defender',true,'Стена','',7,5,%s,%s,0,0,0,1,0,0,false)''',
+        VALUES (%s,'defender',true,'Стена','',6,5,%s,%s,0,0,0,1,0,0,false)''',
         (battle_id,health,health))
 
 
@@ -337,12 +337,12 @@ async def _start_battle(q:int,r:int,request:Request,purpose:str):
     with connect() as conn:
         turn,_,_=_clock(conn)
         general=conn.execute('''SELECT pg.id,pg.q,pg.r,pg.status,gc.health,gc.attack+pg.attack_bonus,
-            gc.defense+pg.defense_bonus,gc.initiative,gc.speed,pg.name,pg.icon,pg.logistics_left
+            gc.defense+pg.defense_bonus,gc.initiative,gc.speed,pg.name,pg.icon,pg.logistics_left,pg.previous_q,pg.previous_r,pg.last_moved_turn
             FROM player_generals pg JOIN general_catalog gc ON gc.id=pg.catalog_id
             WHERE pg.id=%s AND pg.user_id=%s FOR UPDATE''',(data['general_id'],user_id)).fetchone()
         if not general or general[3]!='active' or general[1] is None:
             raise HTTPException(404,'Доступный генерал не найден')
-        if (q-general[1],r-general[2]) not in NEIGHBORS and not (purpose=='raid' and (q,r)==(general[1],general[2])):
+        if (q-general[1],r-general[2]) not in NEIGHBORS and (q,r)!=(general[1],general[2]):
             raise HTTPException(409,'Цель должна соседствовать с генералом')
         if conn.execute('SELECT 1 FROM game_turn_votes WHERE turn_number=%s AND user_id=%s',(turn,user_id)).fetchone():
             raise HTTPException(409,'Глобальный ход уже завершён')
@@ -382,9 +382,10 @@ async def _start_battle(q:int,r:int,request:Request,purpose:str):
                         FROM unit_catalog WHERE active AND image_path LIKE %s''',(prefix,)).fetchall()]
         defenders=choose_defenders(candidates,budget,random)
         if not defenders:raise HTTPException(409,'Нет доступных защитников для этого гекса')
+        retreat_source=(general[12],general[13]) if (q,r)==(general[1],general[2]) and general[14]==turn and general[12] is not None and general[13] is not None else (general[1],general[2])
         battle_id=conn.execute('''INSERT INTO game_battles(attacker_user_id,general_id,target_q,target_r,source_q,source_r,
             target_owner_type,target_owner_id,purpose,created_turn) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id''',
-            (user_id,general[0],q,r,general[1],general[2],owner_type,owner_id,purpose,turn)).fetchone()[0]
+            (user_id,general[0],q,r,*retreat_source,owner_type,owner_id,purpose,turn)).fetchone()[0]
         for index,unit in enumerate(attackers):
             conn.execute('''INSERT INTO game_battle_units(battle_id,side,assignment_id,unit_id,name,image_path,x,y,
                 health,max_health,attack,defense,armor,attack_range,speed,initiative)
@@ -397,16 +398,33 @@ async def _start_battle(q:int,r:int,request:Request,purpose:str):
         for index,unit in enumerate(defenders):
             conn.execute('''INSERT INTO game_battle_units(battle_id,side,unit_id,name,image_path,x,y,
                 health,max_health,attack,defense,armor,attack_range,speed,initiative)
-                VALUES (%s,'defender',%s,%s,%s,8,%s,%s,%s,%s,%s,%s,%s,%s,%s)''',
+                VALUES (%s,'defender',%s,%s,%s,7,%s,%s,%s,%s,%s,%s,%s,%s,%s)''',
                 (battle_id,unit['id'],unit['name'],unit['image_path'],index+1,unit['health'],unit['health'],
                  unit['attack'],unit['defense'],unit['armor'],max(1,unit['attack_range']),unit['speed'],unit['initiative']))
         _insert_wall(conn,battle_id,building)
         _apply_template(conn,battle_id,user_id)
         conn.execute('''UPDATE player_generals SET previous_q=q,previous_r=r,q=%s,r=%s,
-            logistics_left=logistics_left-%s WHERE id=%s''',(q,r,travel_cost,general[0]))
+            logistics_left=logistics_left-%s,last_moved_turn=CASE WHEN %s THEN %s ELSE last_moved_turn END WHERE id=%s''',
+            (q,r,travel_cost,(q,r)!=(general[1],general[2]),turn,general[0]))
         battle=_battle(conn,battle_id,user_id)
         _event(conn,battle,'started',{'attackers':len(attackers)+1,'defenders':len(defenders)})
         return _state(conn,battle)
+
+
+@router.get('/api/game/hexes/{q}/{r}/raid-availability')
+def raid_availability(q:int,r:int,request:Request):
+    if (q,r) not in coordinates():raise HTTPException(404,'Гекс вне карты')
+    with connect() as conn:
+        turn,_,_=_clock(conn)
+        target=conn.execute('SELECT data FROM hexes WHERE q=%s AND r=%s',(q,r)).fetchone()
+        if not target or target[0].get('Категория')=='Море':
+            return {'available':False,'reason':'Гекс недоступен'}
+        last=conn.execute('SELECT last_turn FROM game_hex_raids WHERE q=%s AND r=%s',(q,r)).fetchone()
+        cooldown=conn.execute('SELECT cooldown_turns FROM raid_balance WHERE building_level=%s',
+            (max(0,min(7,_int(target[0].get('Уровень гекса')))),)).fetchone()
+        if not cooldown:return {'available':False,'reason':'Не задан баланс грабежа'}
+        available=not last or turn-last[0]>=cooldown[0]
+        return {'available':available,'reason':'' if available else 'Гекс ещё нельзя грабить повторно'}
 
 
 @router.get('/api/game/battles/{battle_id}')
@@ -432,7 +450,7 @@ async def save_deployment(battle_id:int,request:Request):
         not isinstance(item,dict) or set(item)!={'id','x','y'} or any(type(item[key]) is not int for key in item)
         for item in positions):
         raise HTTPException(400,'Укажите позиции всех своих бойцов')
-    if any(not 0<=item['x']<=3 or not 0<=item['y']<=9 for item in positions):
+    if any(not 0<=item['x']<=3 or not 0<=item['y']<=7 for item in positions):
         raise HTTPException(400,'Расстановка возможна в первых четырёх столбцах')
     if len({item['id'] for item in positions})!=len(positions) or len({(item['x'],item['y']) for item in positions})!=len(positions):
         raise HTTPException(400,'Бойцы не могут делить клетку')

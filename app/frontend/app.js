@@ -4,7 +4,7 @@ const RADIUS = 80;
 const HEX_WIDTH = Math.sqrt(3) * RADIUS;
 const MAP_WIDTH = 3200;
 const MAP_HEIGHT = 2200;
-const VERSION = "Rhisseth · batell v0.3.1 · Artistic V6";
+const VERSION = "Rhisseth · batell v0.3.2 · Artistic V6";
 const API_BASE = "/api";
 let csrfToken = '';
 let canEdit = false;
@@ -337,7 +337,12 @@ function movementTargets(key) {
 }
 function setGameMessage(message) { gameMessage.textContent = message; }
 function paintMoveTargets() {
-  polygons.forEach((polygon,key)=>polygon.classList.toggle('move-target',game.selected && !game.moved && movementTargets(game.unitKey).includes(key) && rowsByKey.get(key)?.['Категория']!=='Море'));
+  polygons.forEach((polygon,key)=>polygon.classList.toggle('move-target',game.selected && movementTargets(game.unitKey).includes(key) && rowsByKey.get(key)?.['Категория']!=='Море'));
+}
+function updateGeneralTurnCount(){
+  const total=game.armies.length;
+  const moved=game.armies.filter(general=>general.last_moved_turn===currentGlobalTurn).length;
+  document.querySelector('#general-turn-count').textContent=`Генералы: ${moved}/${total} ходили, ${total-moved} ещё нет`;
 }
 function unitPosition(key) {
   const [q,r] = key.split(',').map(Number);
@@ -351,6 +356,7 @@ async function createMapUnit() {
   const response=await fetch(`${API_BASE}/game/armies`,{cache:'no-store'});
   if (!response.ok) throw new Error(`Армии: HTTP ${response.status}`);
   game.armies=(await response.json()).generals.filter(item=>item.status==='active');
+  updateGeneralTurnCount();
   game.general=game.armies[0] || null;
   if (!game.general) { setGameMessage('Создайте генерала и добавьте ему солдат в разделе «Армия» личного кабинета.'); return; }
   game.armyUnits=game.general.units;
@@ -361,7 +367,7 @@ async function createMapUnit() {
     general.unitKey=Number.isInteger(general.q)&&Number.isInteger(general.r)?cellKey(general.q,general.r):game.unitKey;
     const image=document.createElementNS('http://www.w3.org/2000/svg','image'); image.id=`player-unit-${general.id}`; image.setAttribute('class','map-unit');
     image.setAttribute('href',general.icon); image.setAttribute('width','82'); image.setAttribute('height','82'); image.setAttribute('aria-label',`Генерал ${general.name}, юнитов: ${general.units.length}`); image.setAttribute('tabindex','0');
-    image.addEventListener('click',event=>{event.stopPropagation();if(game.player!==1||game.moved)return;document.querySelectorAll('.map-unit').forEach(item=>item.classList.remove('selected'));game.general=general;game.armyUnits=general.units;game.unitKey=general.unitKey;game.selected=true;image.classList.add('selected');paintMoveTargets();setGameMessage(`Армия «${general.name}»: выберите соседний гекс.`);});
+    image.addEventListener('click',event=>{event.stopPropagation();if(game.player!==1)return;document.querySelectorAll('.map-unit').forEach(item=>item.classList.remove('selected'));game.general=general;game.armyUnits=general.units;game.unitKey=general.unitKey;game.selected=true;image.classList.add('selected');paintMoveTargets();setGameMessage(`Армия «${general.name}»: выберите соседний гекс.`);});
     layer.append(image); positionGeneralImage(general,index,false);
   });
   const activeResponse=await fetch(`${API_BASE}/game/active-battle`,{cache:'no-store'});
@@ -379,44 +385,43 @@ function moveUnitImage(key,animate=true) {
 }
 async function handleGameHexClick(row) {
   const target=cellKey(row.Q,row.R);
-  if (game.player!==1 || !game.selected || game.moved || !movementTargets(game.unitKey).includes(target)) return;
+  if (game.player!==1 || !game.selected || !movementTargets(game.unitKey).includes(target)) return;
   if (row['Категория']==='Море') { setGameMessage('Морские гексы недоступны: по ним смогут двигаться только корабли.'); return; }
-  game.pendingRow=row;
-  if(row['Тип владельца']==='Игрок'&&row['Владелец']===userId){
-    try{
-      const response=await fetch(`${API_BASE}/game/generals/${game.general.id}/move`,{
-        method:'POST',headers:{'X-CSRF-Token':csrfToken,'Content-Type':'application/json'},
-        body:JSON.stringify({q:row.Q,r:row.R})});
-      const result=await response.json();if(!response.ok)throw new Error(result.error||`HTTP ${response.status}`);
-      game.unitKey=target;game.general.unitKey=target;game.general.q=row.Q;game.general.r=row.R;
-      game.general.logistics_left=result.logistics_left;moveUnitImage(target);
-      game.selected=false;paintMoveTargets();
-      if(result.battle){game.battle=result.battle;renderBattle();battleModal.showModal();hexActions.hidden=true;}
-      else showHexActions();
-      setGameMessage(`Армия перешла на Q${row.Q} R${row.R}. Логистика: ${result.logistics_left}.`);
-    }catch(error){setGameMessage(error.message);}return;
-  }
-  game.pendingRow=row; game.selected=false;
-  document.querySelectorAll('.map-unit').forEach(item=>item.classList.remove('selected'));
-  paintMoveTargets(); closeCard(); showHexActions();
+  game.pendingRow=null;hexActions.hidden=true;
+  try{
+    const response=await fetch(`${API_BASE}/game/generals/${game.general.id}/move`,{
+      method:'POST',headers:{'X-CSRF-Token':csrfToken,'Content-Type':'application/json'},
+      body:JSON.stringify({q:row.Q,r:row.R})});
+    const result=await response.json();if(!response.ok)throw new Error(result.error||result.detail||`HTTP ${response.status}`);
+    game.pendingRow=row;
+    game.unitKey=target;game.general.unitKey=target;game.general.q=row.Q;game.general.r=row.R;
+    game.general.logistics_left=result.logistics_left;game.general.last_moved_turn=currentGlobalTurn;moveUnitImage(target);
+    game.selected=false;paintMoveTargets();closeCard();updateGeneralTurnCount();
+    document.querySelectorAll('.map-unit').forEach(item=>item.classList.remove('selected'));
+    if(result.battle){game.battle=result.battle;renderBattle();battleModal.showModal();hexActions.hidden=true;}
+    else await showHexActions();
+    setGameMessage(`Армия перешла на Q${row.Q} R${row.R}. Логистика: ${result.logistics_left}.`);
+  }catch(error){setGameMessage(error.message);}
 }
-function showHexActions() {
+async function showHexActions() {
   const row=game.pendingRow; if (!row) return;
-  const canClaim=row['Категория']!=='Море' && row['Владелец']!==userId && adjacentKeys(cellKey(row.Q,row.R)).some(key=>rowsByKey.get(key)?.['Владелец']===userId);
+  const canClaim=row['Категория']!=='Море' && !(row['Тип владельца']==='Игрок'&&String(row['Владелец'])===String(userId)) && adjacentKeys(cellKey(row.Q,row.R)).some(key=>rowsByKey.get(key)?.['Тип владельца']==='Игрок'&&String(rowsByKey.get(key)?.['Владелец'])===String(userId));
   document.querySelector('#claim-hex').hidden=!canClaim;
   document.querySelector('#claim-hex').title=canClaim?'':'Гекс должен соприкасаться с вашим владением';
+  try{
+    const response=await fetch(`${API_BASE}/game/hexes/${row.Q}/${row.R}/raid-availability`,{cache:'no-store'});
+    const state=await response.json();
+    document.querySelector('#raid-hex').hidden=!response.ok||!state.available;
+    document.querySelector('#raid-hex').title=state.reason||'';
+  }catch(error){document.querySelector('#raid-hex').hidden=true;}
   hexActions.hidden=false;
 }
 function finishHexAction(message) { hexActions.hidden=true; endTurnButton.hidden=false; setGameMessage(message); }
 document.querySelector('#claim-hex')?.addEventListener('click',()=>openBattle('Защитник', 'capture'));
-document.querySelector('#hold-hex')?.addEventListener('click',async()=>{
-  if(!game.pendingRow||!game.general)return;
-  try{const row=game.pendingRow;const response=await fetch(`${API_BASE}/game/generals/${game.general.id}/move`,{method:'POST',headers:{'X-CSRF-Token':csrfToken,'Content-Type':'application/json'},body:JSON.stringify({q:row.Q,r:row.R})});
-    const result=await response.json();if(!response.ok)throw new Error(result.error||`HTTP ${response.status}`);
-    const target=cellKey(row.Q,row.R);game.unitKey=target;game.general.unitKey=target;game.general.q=row.Q;game.general.r=row.R;game.general.logistics_left=result.logistics_left;moveUnitImage(target);
-    finishHexAction(`Армия перешла на Q${row.Q} R${row.R}. Логистика: ${result.logistics_left}.`);
-    if(result.battle){game.battle=result.battle;renderBattle();battleModal.showModal();}
-  }catch(error){setGameMessage(error.message);}
+document.querySelector('#hold-hex')?.addEventListener('click',()=>{
+  if(!game.pendingRow)return;
+  finishHexAction(`Армия осталась на Q${game.pendingRow.Q} R${game.pendingRow.R}.`);
+  game.pendingRow=null;
 });
 document.querySelector('#raid-hex')?.addEventListener('click',()=>openBattle('Местное население','raid'));
 let currentGlobalTurn = null;
@@ -433,6 +438,12 @@ async function refreshGameClock() {
     });
     if (currentGlobalTurn !== null && currentGlobalTurn !== state.turn) {
       game.moved = false; game.pendingRow = null; game.player = 1;
+      const armiesResponse=await fetch(`${API_BASE}/game/armies`,{cache:'no-store'});
+      if(armiesResponse.ok){
+        const fresh=(await armiesResponse.json()).generals;
+        for(const general of game.armies){const updated=fresh.find(item=>item.id===general.id);if(updated)Object.assign(general,updated);}
+        updateGeneralTurnCount();
+      }
       setGameMessage('Начался новый глобальный ход.');
     }
     currentGlobalTurn = state.turn;
@@ -448,6 +459,8 @@ async function refreshGameClock() {
   } catch (error) { console.error('Часы игры:', error); }
 }
 endTurnButton?.addEventListener('click',async()=>{
+  const waiting=game.armies.filter(general=>general.last_moved_turn!==currentGlobalTurn);
+  if(waiting.length&&!window.confirm(`Ещё не ходили генералы: ${waiting.map(general=>general.name).join(', ')}. Завершить ход?`))return;
   endTurnButton.disabled = true;
   try {
     const response = await fetch(`${API_BASE}/game/clock/end-turn`, {method:'POST',headers:{'X-CSRF-Token':csrfToken,'Content-Type':'application/json'},body:JSON.stringify({turn:currentGlobalTurn})});
@@ -490,7 +503,7 @@ function battleReachable(unit,x,y,units){
   const seen=new Set([`${unit.x},${unit.y}`]),queue=[[unit.x,unit.y,0]];
   while(queue.length){const [cx,cy,steps]=queue.shift();if(cx===x&&cy===y)return true;if(steps>=unit.speed)continue;
     for(const [dx,dy] of neighbors){const nx=cx+dx,ny=cy+dy,key=`${nx},${ny}`;
-      if(nx<0||nx>=10||ny<0||ny>=10||seen.has(key)||units.some(other=>other.id!==unit.id&&other.health>0&&other.x===nx&&other.y===ny))continue;
+      if(nx<0||nx>=8||ny<0||ny>=8||seen.has(key)||units.some(other=>other.id!==unit.id&&other.health>0&&other.x===nx&&other.y===ny))continue;
       seen.add(key);queue.push([nx,ny,steps+1]);
     }
   }
@@ -517,8 +530,6 @@ async function openBattle(_enemy,purpose='capture') {
 }
 function renderBattle() {
   const state=game.battle; if (!state) return;
-  document.querySelector('#attackers').replaceChildren(...state.units.filter(u=>u.side==='attacker').map(unitCard));
-  document.querySelector('#defenders').replaceChildren(...state.units.filter(u=>u.side==='defender').map(unitCard));
   document.querySelector('#battle-log').replaceChildren();
   const attacks=state.events.filter(event=>event.type==='attack').slice(-12);
   if(attacks.length)attacks.forEach(event=>battleLog(battleAttackLog(event,state.units)));
@@ -536,9 +547,10 @@ function renderBattle() {
     &&!(state.battle.target_owner_type==='Игрок'&&state.battle.target_owner_id===userId)
     &&!state.battle.destroyed_at&&Number(targetRow?.['Уровень гекса']||0)>0);
   const field=document.querySelector('#battle-grid'); field.replaceChildren();
-  for(let y=0;y<10;y++)for(let x=0;x<10;x++){
+  for(let y=0;y<8;y++)for(let x=0;x<8;x++){
     const cell=document.createElement('button'); cell.type='button'; cell.className='battle-cell'; cell.title=`${x},${y}`;
-    if(y%2)cell.style.transform='translateX(50%)';
+    cell.style.left=`${(x+y/2)*100/11.5}%`;
+    cell.style.top=`${y*12}%`;
     const unit=state.units.find(item=>item.health>0&&item.x===x&&item.y===y);
     if(unit){if(unit.is_wall)cell.textContent='▦';else{const img=document.createElement('img');img.src=unit.image_path;img.alt=unit.name;cell.append(img);}cell.title=`${unit.name}: ${unit.health}/${unit.max_health}`;cell.classList.add(unit.is_wall?'wall':unit.side);}
     if(unit&&state.eligible_unit_ids.includes(unit.id))cell.classList.add('active-unit');
@@ -596,9 +608,13 @@ document.querySelector('#finish-battle')?.addEventListener('click',async()=>{
   battleModal.close();game.battle=null;game.selectedUnit=null;game.pendingRow=null;game.selected=false;hexActions.hidden=true;
   try{const response=await fetch(`${API_BASE}/hexes`,{cache:'no-store'});const data=await response.json();if(!response.ok)throw new Error(data.error||`HTTP ${response.status}`);
     polygons.forEach(polygon=>polygon.remove());polygons.clear();rowsByKey.clear();render(data);
-    const army=await fetch(`${API_BASE}/game/armies`,{cache:'no-store'});if(army.ok){game.armies=(await army.json()).generals.filter(item=>item.status==='active');
+    const army=await fetch(`${API_BASE}/game/armies`,{cache:'no-store'});if(army.ok){
+      const fresh=(await army.json()).generals.filter(item=>item.status==='active');
+      game.armies=game.armies.filter(general=>fresh.some(item=>item.id===general.id));
+      for(const general of game.armies)Object.assign(general,fresh.find(item=>item.id===general.id));
       document.querySelectorAll('.map-unit').forEach(image=>{if(!game.armies.some(general=>image.id===`player-unit-${general.id}`))image.remove();});
       for(const general of game.armies){general.unitKey=cellKey(general.q,general.r);positionGeneralImage(general,0,false);}
+      updateGeneralTurnCount();
       game.general=game.armies.find(general=>general.id===game.general?.id)||game.armies[0]||null;
       if(game.general){game.unitKey=game.general.unitKey;game.armyUnits=game.general.units;}
     }
@@ -674,13 +690,7 @@ document.querySelector('#logout').addEventListener('click', async () => {
   if (response.ok) window.location.href = '/index.php';
 });
 let claiming = false;
-document.querySelector('#start-game').addEventListener('click', () => {
-  if (window.parent !== window && typeof window.parent.openPageModal === 'function') {
-    window.parent.openPageModal(new URL('create-barony.html', window.location.href).href);
-  } else {
-    window.location.href = 'create-barony.html';
-  }
-});
+document.querySelector('#start-game').addEventListener('click',()=>{window.location.href='cabinet.html#barony';});
 async function setupPlayerPage() {
   if (!creatingBarony) return;
   const response = await fetch('/api/start/options',{cache:'no-store'});

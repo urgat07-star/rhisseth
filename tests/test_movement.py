@@ -23,7 +23,7 @@ class MovementTests(unittest.TestCase):
         self.assertEqual(response.status_code,200)
         self.assertEqual(response.json()['logistics_left'],2)
         update=[call for call in conn.execute.call_args_list if call.args[0].startswith('UPDATE player_generals')]
-        self.assertEqual(update[0].args[1],(0,0,3,7))
+        self.assertEqual(update[0].args[1],(0,0,3,0,7))
 
     def test_move_refuses_insufficient_logistics(self):
         source={'Тип владельца':'Игрок','Владелец':'2','Категория':'Суша'}

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Rhisseth — интерактивная карта</title>
-  <link rel="stylesheet" href="styles.css?v=batell-0.3.1">
+  <link rel="stylesheet" href="styles.css?v=batell-0.3.2">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Infant:ital,wght@0,300..700;1,300..700&family=Libertinus+Sans:ital,wght@0,400;0,700;1,400&family=Monomakh&display=swap" rel="stylesheet">
@@ -16,12 +16,15 @@
         <!--h1>Оперативная карта</h1-->
     </div>
     <div class="hint" id="editor-hint"></div>
-    <a id="admin-link" href="/map" hidden>Управление островами</a>
-    <button id="start-game" type="button">Моя барония</button>
+    <nav class="map-top-actions" aria-label="Основная навигация">
+      <a id="admin-link" class="ornate-link" href="/admin/hexes" hidden>Админ-панель</a>
+      <button id="start-game" class="ornate-link" type="button">Барония</button>
+      <a id="user-status" class="ornate-link" href="cabinet.html#settings" title="Личный кабинет"></a>
+    </nav>
 
     <!-- ▼ Выпадающее меню пользователя (CSS-only) ▼ -->
     <details class="user-menu">
-        <summary class="user-menu__trigger" title="Меню пользователя"><a id="user-status" href="cabinet.html" title="Перейти в личный кабинет"></a></summary>
+        <summary class="user-menu__trigger" title="Меню пользователя">☰</summary>
         <span id="user-role" class="user-menu__role"></span>
         <div class="user-menu__dropdown">
             <ul class="user-menu__list">
@@ -72,6 +75,7 @@
 			
 			<section id="game-panel" class="game-panel" aria-live="polite">
 				<strong id="turn-label">Ход игрока</strong>
+				<span id="general-turn-count" aria-live="polite"></span>
 				<span id="game-message">Выберите воина, затем соседний гекс.</span>
 				<div id="hex-actions" class="hex-actions" hidden>
 					<button id="claim-hex" type="button">Захватить ячейку</button>
@@ -89,11 +93,7 @@
 			<h2 id="battle-title">Бой</h2>
 			<p id="battle-status">Ход нападающего: выберите своего юнита.</p>
 			<ol id="battle-log" class="battle-log" aria-live="polite"></ol>
-			<div class="battle-lines">
-				<section><h3>Нападающие</h3><div id="attackers" class="unit-column"></div></section>
-				<div id="battle-grid" class="battle-grid" aria-label="Тактическое поле 10 на 10"></div>
-				<section><h3>Защитники</h3><div id="defenders" class="unit-column"></div></section>
-			</div>
+			<div class="battle-lines"><div id="battle-grid" class="battle-grid" aria-label="Тактическое поле 8 на 8"></div></div>
 			<button id="battle-deploy" type="button">Начать бой и сохранить расстановку</button>
 			<button id="battle-end-round" type="button">Завершить раунд</button>
 			<button id="battle-retreat" type="button">Отступить</button>
@@ -109,7 +109,7 @@
     </dialog>
 	
 	<footer id="data-status">Final V2 · подключение к PostgreSQL…</footer>
-	<script src="app.js?v=batell-0.3.1" defer></script>
+	<script src="app.js?v=batell-0.3.2" defer></script>
 	<script>
     const pageModal = document.getElementById('page-modal');
     const pageModalFrame = document.getElementById('page-modal-frame');
@@ -126,10 +126,6 @@
         document.querySelector('.user-menu')?.removeAttribute('open');
         openPageModal(link.href);
     }));
-    document.getElementById('user-status')?.addEventListener('click', (event) => {
-        event.preventDefault();
-        openPageModal(event.currentTarget.href);
-    });
     document.getElementById('close-page-modal').addEventListener('click', closePageModal);
     pageModal.addEventListener('cancel', closePageModal);
     pageModal.addEventListener('click', (event) => { if (event.target === pageModal) closePageModal(); });

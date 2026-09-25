@@ -19,11 +19,14 @@ class BattleRuleTests(unittest.TestCase):
         self.assertEqual(distance((0,0),(1,1)),2)
         self.assertTrue(reachable((0,0),(2,0),2,set()))
         self.assertFalse(reachable((0,0),(2,0),2,{(1,0)}))
+        self.assertTrue(reachable((6,7),(7,7),1,set()))
+        self.assertFalse(reachable((7,7),(8,7),1,set()))
+        self.assertFalse(reachable((7,7),(7,8),1,set()))
 
     def test_wall_blocks_passage_but_spear_and_archer_reach_across(self):
-        wall=(7,5)
-        attacker=(6,5)
-        defender=(8,5)
+        wall=(6,5)
+        attacker=(5,5)
+        defender=(7,5)
         self.assertFalse(reachable(attacker,wall,3,{wall}))
         self.assertFalse(reachable(attacker,defender,2,{wall}))
         self.assertEqual(distance(attacker,defender),2)

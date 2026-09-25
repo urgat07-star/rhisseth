@@ -65,7 +65,7 @@ async def move_general(general_id:int,request:Request):
             raise HTTPException(409,'Целевой гекс недоступен')
         cost,crossing=movement_cost(conn,general_id,(general[0],general[1]),(q,r),source[0],target[0],general[3])
         conn.execute('''UPDATE player_generals SET previous_q=q,previous_r=r,q=%s,r=%s,
-            logistics_left=logistics_left-%s WHERE id=%s''',(q,r,cost,general_id))
+            logistics_left=logistics_left-%s,last_moved_turn=%s WHERE id=%s''',(q,r,cost,turn,general_id))
         result={'moved':True,'q':q,'r':r,'logistics_left':general[3]-cost,'cost':cost,'crossing':crossing}
         level=max(0,min(7,int(target[0].get('Уровень гекса') or 0)))
         try:danger=int(target[0].get('Опасность') or 0)

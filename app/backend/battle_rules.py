@@ -2,6 +2,7 @@
 from collections import deque
 
 NEIGHBORS=((1,0),(-1,0),(0,1),(0,-1),(1,-1),(-1,1))
+BATTLE_SIZE=8
 BUILDING_POWER={0:0,1:1,2:2,3:2,4:3,5:4,6:5,7:10}
 BUILDING_DANGER={0:0,1:0,2:0,3:0,4:1,5:2,6:3,7:0}
 WALL_HEALTH={4:5,5:7,6:9,7:12}
@@ -13,7 +14,7 @@ def distance(a,b):
 
 
 def reachable(start,goal,speed,occupied):
-    if goal in occupied or not 0<=goal[0]<10 or not 0<=goal[1]<10:
+    if goal in occupied or not 0<=goal[0]<BATTLE_SIZE or not 0<=goal[1]<BATTLE_SIZE:
         return False
     queue=deque([(start,0)]);seen={start}
     while queue:
@@ -22,7 +23,7 @@ def reachable(start,goal,speed,occupied):
         if steps>=speed:continue
         for dq,dr in NEIGHBORS:
             point=(cell[0]+dq,cell[1]+dr)
-            if 0<=point[0]<10 and 0<=point[1]<10 and point not in seen and point not in occupied:
+            if 0<=point[0]<BATTLE_SIZE and 0<=point[1]<BATTLE_SIZE and point not in seen and point not in occupied:
                 seen.add(point);queue.append((point,steps+1))
     return False
 
