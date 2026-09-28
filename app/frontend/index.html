@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Rhisseth — интерактивная карта</title>
-  <link rel="stylesheet" href="styles.css?v=batell-0.3.2">
+  <link rel="stylesheet" href="styles.css?v=battle-sidebar-20260928">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Infant:ital,wght@0,300..700;1,300..700&family=Libertinus+Sans:ital,wght@0,400;0,700;1,400&family=Monomakh&display=swap" rel="stylesheet">
@@ -98,11 +98,11 @@
 			<p id="battle-status">Ход нападающего: выберите своего юнита.</p>
 			<ol id="battle-log" class="battle-log" aria-live="polite"></ol>
 			<div class="battle-lines"><div id="battle-grid" class="battle-grid" aria-label="Тактическое поле 8 на 6"></div></div>
-			<button id="battle-deploy" type="button">Начать бой и сохранить расстановку</button>
+			<div class="battle-controls"><div class="battle-controls-left"><button id="battle-deploy" type="button">Начать бой и сохранить расстановку</button>
 			<button id="battle-end-round" type="button">Завершить раунд</button>
-			<button id="battle-retreat" type="button">Отступить</button>
+			</div><div class="battle-controls-right"><button id="battle-retreat" type="button">Отступить</button>
 			<button id="battle-destroy" type="button" hidden>Разрушить постройку</button>
-			<button id="finish-battle" class="finish-battle" type="button">Закончить бой</button>
+			<button id="finish-battle" class="finish-battle" type="button">Закончить бой</button></div></div>
 		</div>
 	</dialog>
 	<dialog id="battle-unit-details" aria-labelledby="battle-unit-details-title"><h3 id="battle-unit-details-title"></h3><div id="battle-unit-details-body"></div><button type="button" onclick="this.closest('dialog').close()">Закрыть</button></dialog>
@@ -113,7 +113,7 @@
     </dialog>
 	
 	<footer id="data-status">Final V2 · подключение к PostgreSQL…</footer>
-    <script src="app.js?v=batell-0.3.5" defer></script>
+    <script src="app.js?v=battle-sidebar-20260928" defer></script>
 	<script>
     const pageModal = document.getElementById('page-modal');
     const pageModalFrame = document.getElementById('page-modal-frame');

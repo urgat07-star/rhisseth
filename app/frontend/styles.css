@@ -146,18 +146,20 @@ main { padding: clamp(12px, 2vw, 28px); }
   padding: 0;
   background: #111712;
 }
-.battle-modal { width: min(98vw, 1500px); max-width: 98vw; max-height: 98vh; }
+.battle-modal { width: 98vw; max-width: 98vw; height: 96dvh; max-height: 96dvh; box-sizing: border-box; }
 .battle-modal::backdrop { background: #050806d9; backdrop-filter: blur(3px); }
 
 .battle-arena {
   position: relative;
-  min-height: 540px;
-  padding: 24px 28px 78px;
+  min-height: 0;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 20px;
   background: radial-gradient(circle at 50% 35%, #493f2a, #1b241c 52%, #0f1410);
   display: grid;
   grid-template-columns: 270px minmax(0, 1fr);
   grid-template-rows: auto auto minmax(0, 1fr) auto;
-  grid-template-areas: "title field" "status field" "log field" "actions field";
+  grid-template-areas: "title field" "status field" "log field" "controls field";
   column-gap: 24px;
 }
 .battle-arena h2 { grid-area: title; margin: 0 0 12px; font-family: Georgia, serif; text-align: left; }
@@ -184,14 +186,14 @@ main { padding: clamp(12px, 2vw, 28px); }
 
 .finish-battle { position: absolute; right: 22px; bottom: 20px; }
 
-.battle-log { grid-area: log; max-height: 260px; margin: 0 0 14px; padding: 8px 8px 8px 30px; overflow: auto; border: 1px solid #756846; background: #0b0e0b99; font-size: 13px; }
+.battle-log { grid-area: log; min-height: 0; height: 100%; box-sizing: border-box; max-height: none; margin: 0; padding: 8px 8px 8px 30px; overflow: auto; border: 1px solid #756846; background: #0b0e0b99; font-size: 13px; }
 .battle-log li { margin: 2px 0; }
 
 /* Боевая гекс-сетка */
 .battle-grid {
   position: relative;
-  width: min(100%, 92vh);
-  aspect-ratio: 1.42;
+  width: min(100%, 150vh);
+  aspect-ratio: 1.5494;
   align-self: center;
   background: radial-gradient(ellipse at 8% 10%,#46663b 0 3%,transparent 4%), radial-gradient(ellipse at 92% 14%,#46663b 0 3%,transparent 4%), radial-gradient(ellipse at 8% 88%,#3c5e38 0 4%,transparent 5%), radial-gradient(ellipse at 92% 86%,#3c5e38 0 4%,transparent 5%), repeating-linear-gradient(25deg,#355333 0 3px,#385a35 3px 7px,#304c2f 7px 11px);
   border: 1px solid #132217;
@@ -200,7 +202,7 @@ main { padding: clamp(12px, 2vw, 28px); }
 .battle-cell {
   position: absolute;
   width: 11.764706%;
-  height: 16.6667%;
+  height: 21.052632%;
   border: 0;
   background: transparent;
   color: #192319;
@@ -214,8 +216,17 @@ main { padding: clamp(12px, 2vw, 28px); }
 }
 .battle-cell::before,
 .battle-cell::after { content: ''; position: absolute; inset: 0; pointer-events: none; clip-path: polygon(50% 0,100% 25%,100% 75%,50% 100%,0 75%,0 25%); }
-.battle-cell::before { background: #050805; z-index: 0; }
-.battle-cell::after { inset: 2px; background: rgba(49,82,45,.58); z-index: 1; }
+.battle-cell::before { display: none; }
+.battle-cell::after { inset: 0; background: rgba(49,82,45,.18); z-index: 1; }
+.battle-cell-outline { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 3; pointer-events: none; overflow: visible; }
+.battle-cell-outline polygon { fill: none; stroke: #080d08; stroke-width: 2px; }
+.battle-controls { grid-area: controls; display:flex; flex-direction:column; gap:12px; padding-top:16px; }
+.battle-controls-left, .battle-controls-right { display:flex; flex-wrap:wrap; gap:12px; align-items:center; }
+.battle-controls button { position:static; padding:10px 16px; border:1px solid #c2b47a; border-radius:5px; background:#4d5134; color:#fff6d8; font:inherit; cursor:pointer; }
+.battle-controls button:disabled { opacity:.45; cursor:default; }
+.battle-controls #battle-end-round { background:#315c43; }
+.battle-controls #battle-retreat { background:#694237; }
+.battle-lines { min-height:0; }
 .battle-toolbar { display:flex; justify-content:flex-end; margin:-4px 0 8px; color:#efe5bd; font-size:13px; }
 .battle-toolbar select { margin-left:6px; padding:4px 8px; border:1px solid #9f8b51; border-radius:4px; background:#171e16; color:#f4eac7; }
 .battle-grid[data-terrain="forest"] { background: radial-gradient(circle at 20% 20%,#496c3b,#203c2b 55%,#12251e); }
@@ -600,7 +611,7 @@ th { position: sticky; top: 0; background: #252b24; }
 
   .stat-grid { grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); }
 
-  .battle-grid { width: min(100%, 78vh); }
+  .battle-grid { width: 100%; }
 }
 
 /* ---------- <= 768px : большие телефоны / маленькие планшеты ---------- */
