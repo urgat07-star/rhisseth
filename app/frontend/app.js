@@ -367,7 +367,7 @@ async function createMapUnit() {
     general.unitKey=Number.isInteger(general.q)&&Number.isInteger(general.r)?cellKey(general.q,general.r):game.unitKey;
     const image=document.createElementNS('http://www.w3.org/2000/svg','image'); image.id=`player-unit-${general.id}`; image.setAttribute('class','map-unit');
     image.setAttribute('href',general.icon); image.setAttribute('width','82'); image.setAttribute('height','82'); image.setAttribute('aria-label',`Генерал ${general.name}, юнитов: ${general.units.length}`); image.setAttribute('tabindex','0');
-    image.addEventListener('click',event=>{event.stopPropagation();if(game.player!==1){setGameMessage('Ваш ход уже завершён. Дождитесь остальных игроков или используйте «Пропустить ход», когда кнопка станет доступна.');return;}document.querySelectorAll('.map-unit').forEach(item=>item.classList.remove('selected'));game.general=general;game.armyUnits=general.units;game.unitKey=general.unitKey;game.selected=true;image.classList.add('selected');paintMoveTargets();setGameMessage(`Армия «${general.name}»: выберите соседний гекс.`);});
+    image.addEventListener('click',event=>{event.stopPropagation();if(game.player!==1){setGameMessage('Ваш ход уже завершён. Дождитесь остальных игроков или используйте «Пропустить ход», когда кнопка станет доступна.');return;}const current=game.armies.find(item=>item.id===general.id);if(!current)return;document.querySelectorAll('.map-unit').forEach(item=>item.classList.remove('selected'));game.general=current;game.armyUnits=current.units;game.unitKey=current.unitKey;game.selected=true;image.classList.add('selected');paintMoveTargets();setGameMessage(`Армия «${current.name}»: выберите соседний гекс.`);});
     layer.append(image); positionGeneralImage(general,index,false);
   });
   const activeResponse=await fetch(`${API_BASE}/game/active-battle`,{cache:'no-store'});
@@ -581,7 +581,13 @@ function renderBattle() {
   for(let y=0;y<6;y++)for(let x=0;x<8;x++){
     const cell=document.createElement('button'); cell.type='button'; cell.className='battle-cell'; cell.title=`${x},${y}`;
     cell.style.left=`${(x+(y%2)/2)*100/8.5}%`;
-    cell.style.top=`${y*16.6667}%`;
+    cell.style.top=`${y*15.7894737}%`;
+    const outline=document.createElementNS('http://www.w3.org/2000/svg','svg');
+    outline.setAttribute('viewBox','0 0 100 100');outline.setAttribute('preserveAspectRatio','none');outline.setAttribute('aria-hidden','true');
+    outline.classList.add('battle-cell-outline');
+    const edge=document.createElementNS('http://www.w3.org/2000/svg','polygon');
+    edge.setAttribute('points','50,0 100,25 100,75 50,100 0,75 0,25');
+    edge.setAttribute('vector-effect','non-scaling-stroke');outline.append(edge);cell.append(outline);
     const unit=state.units.find(item=>item.health>0&&item.x===x&&item.y===y);
     if(unit){if(unit.is_wall)cell.textContent='▦';else{const img=document.createElement('img');img.src=unit.image_path;img.alt=unit.name;cell.append(img);}cell.title=`${unit.name}: ${unit.health}/${unit.max_health}`;cell.classList.add(unit.is_wall?'wall':unit.side);}
     if(unit&&state.eligible_unit_ids.includes(unit.id))cell.classList.add('active-unit');
