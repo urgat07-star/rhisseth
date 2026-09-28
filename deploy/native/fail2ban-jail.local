@@ -13,7 +13,8 @@ enabled = true
 filter = rhisseth
 logpath = /opt/rhisseth/reports/nginx-access.log
 port = http,https
-maxretry = 3
+findtime = 60
+maxretry = 10
 bantime = 1d
 
 [recidive]
