@@ -106,7 +106,7 @@ def _drive_ai(conn,battle,units):
         if not adjacent:
             target=min(targets,key=lambda u:distance((defender['x'],defender['y']),(u['x'],u['y'])))
             occupied={(u['x'],u['y']) for u in units if u['health']>0 and u['id']!=defender['id']}
-            options=[(x,y) for x in range(8) for y in range(8)
+            options=[(x,y) for x in range(6) for y in range(8)
                      if reachable((defender['x'],defender['y']),(x,y),defender['speed'],occupied)]
             if options:
                 next_cell=min(options,key=lambda p:distance(p,(target['x'],target['y'])))
@@ -240,7 +240,7 @@ def _apply_template(conn,battle_id,user_id):
         LEFT JOIN player_general_units pgu ON pgu.id=u.assignment_id
         WHERE u.battle_id=%s AND u.side='attacker' ORDER BY u.id''',(battle_id,)).fetchall()
     positions=[template.get(slot,(x,y)) for _,slot,x,y in rows]
-    if len(set(positions))!=len(positions) or any(not 0<=x<=3 or not 0<=y<8 for x,y in positions):return
+    if len(set(positions))!=len(positions) or any(not 0<=x<=2 or not 0<=y<8 for x,y in positions):return
     for (unit_id,_,_,_),(x,y) in zip(rows,positions):
         conn.execute('UPDATE game_battle_units SET x=%s,y=%s WHERE id=%s',(x,y,unit_id))
 

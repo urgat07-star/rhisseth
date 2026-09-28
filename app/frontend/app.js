@@ -534,7 +534,7 @@ function battleReachable(unit,x,y,units){
   const seen=new Set([`${unit.x},${unit.y}`]),queue=[[unit.x,unit.y,0]];
   while(queue.length){const [cx,cy,steps]=queue.shift();if(cx===x&&cy===y)return true;if(steps>=unit.speed)continue;
     for(const [dx,dy] of neighbors){const nx=cx+dx,ny=cy+dy,key=`${nx},${ny}`;
-      if(nx<0||nx>=8||ny<0||ny>=8||seen.has(key)||units.some(other=>other.id!==unit.id&&other.health>0&&other.x===nx&&other.y===ny))continue;
+      if(nx<0||nx>=6||ny<0||ny>=8||seen.has(key)||units.some(other=>other.id!==unit.id&&other.health>0&&other.x===nx&&other.y===ny))continue;
       seen.add(key);queue.push([nx,ny,steps+1]);
     }
   }
@@ -578,9 +578,10 @@ function renderBattle() {
     &&!(state.battle.target_owner_type==='Игрок'&&state.battle.target_owner_id===userId)
     &&!state.battle.destroyed_at&&Number(targetRow?.['Уровень гекса']||0)>0);
   const field=document.querySelector('#battle-grid'); field.replaceChildren();
-  for(let y=0;y<8;y++)for(let x=0;x<8;x++){
+  field.dataset.terrain=field.dataset.terrain||'meadow';
+  for(let y=0;y<8;y++)for(let x=0;x<6;x++){
     const cell=document.createElement('button'); cell.type='button'; cell.className='battle-cell'; cell.title=`${x},${y}`;
-    cell.style.left=`${(x+y/2)*100/11.5}%`;
+    cell.style.left=`${(x+y/2)*100/6.5}%`;
     cell.style.top=`${y*12}%`;
     const unit=state.units.find(item=>item.health>0&&item.x===x&&item.y===y);
     if(unit){if(unit.is_wall)cell.textContent='▦';else{const img=document.createElement('img');img.src=unit.image_path;img.alt=unit.name;cell.append(img);}cell.title=`${unit.name}: ${unit.health}/${unit.max_health}`;cell.classList.add(unit.is_wall?'wall':unit.side);}
@@ -605,7 +606,7 @@ async function battleUnitClick(unit) {
 async function battleMove(x,y) {
   if (!game.selectedUnit || game.battle?.battle.status!=='active') return;
   if(!game.battle.battle.deployment_locked){
-    if(x>3||game.battle.units.some(unit=>unit.id!==game.selectedUnit.id&&unit.health>0&&unit.x===x&&unit.y===y))return;
+    if(x>2||game.battle.units.some(unit=>unit.id!==game.selectedUnit.id&&unit.health>0&&unit.x===x&&unit.y===y))return;
     game.selectedUnit.x=x;game.selectedUnit.y=y;renderBattle();return;
   }
   try {await battleCommand(`/game/battles/${game.battle.battle.id}/units/${game.selectedUnit.id}/move`,{x,y,round:game.battle.battle.round_number});}
