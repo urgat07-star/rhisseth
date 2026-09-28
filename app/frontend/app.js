@@ -581,7 +581,7 @@ function renderBattle() {
   for(let y=0;y<6;y++)for(let x=0;x<8;x++){
     const cell=document.createElement('button'); cell.type='button'; cell.className='battle-cell'; cell.title=`${x},${y}`;
     cell.style.left=`${(x+(y%2)/2)*100/8.5}%`;
-    cell.style.top=`${y*16.6667}%`;
+    cell.style.top=`${y*12.5}%`;
     const unit=state.units.find(item=>item.health>0&&item.x===x&&item.y===y);
     if(unit){if(unit.is_wall)cell.textContent='▦';else{const img=document.createElement('img');img.src=unit.image_path;img.alt=unit.name;cell.append(img);}cell.title=`${unit.name}: ${unit.health}/${unit.max_health}`;cell.classList.add(unit.is_wall?'wall':unit.side);}
     if(unit&&state.eligible_unit_ids.includes(unit.id))cell.classList.add('active-unit');
