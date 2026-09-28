@@ -178,17 +178,17 @@ main { padding: clamp(12px, 2vw, 28px); }
 /* Боевая гекс-сетка */
 .battle-grid {
   position: relative;
-  width: min(94vw, 62vh);
-  aspect-ratio: .82;
+  width: min(94vw, 78vh);
+  aspect-ratio: 1.42;
   align-self: center;
-  background: linear-gradient(135deg,#667c42,#354b2f 48%,#263b29);
+  background: radial-gradient(ellipse at 8% 10%,#46663b 0 3%,transparent 4%), radial-gradient(ellipse at 92% 14%,#46663b 0 3%,transparent 4%), radial-gradient(ellipse at 8% 88%,#3c5e38 0 4%,transparent 5%), radial-gradient(ellipse at 92% 86%,#3c5e38 0 4%,transparent 5%), repeating-linear-gradient(25deg,#355333 0 3px,#385a35 3px 7px,#304c2f 7px 11px);
   border: 1px solid #132217;
   overflow: hidden;
 }
 .battle-cell {
   position: absolute;
   width: 15.384615%;
-  height: 12.5%;
+  height: 16.6667%;
   border: 1px solid #080d08;
   background: #273721aa;
   color: #192319;
@@ -575,7 +575,7 @@ th { position: sticky; top: 0; background: #252b24; }
 
   .stat-grid { grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); }
 
-  .battle-grid { width: min(94vw, 62vh); }
+  .battle-grid { width: min(94vw, 78vh); }
 }
 
 /* ---------- <= 768px : большие телефоны / маленькие планшеты ---------- */
