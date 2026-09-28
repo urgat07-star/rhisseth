@@ -51,8 +51,8 @@ async def edit(user_id: int, request: Request):
     if password or confirmation:
         if password!=confirmation or len(password)<8 or not 8<=len(password.encode('utf-8'))<=72:
             raise HTTPException(400,'Пароли должны совпадать: минимум 8 символов, максимум 72 байта UTF-8')
-    if not 3<=len(login)<=50 or len(email)>255 or not re.fullmatch(r'[^\s@]+@[^\s@]+\.[^\s@]+',email) or role not in ('admin','moderator','user'):
-        raise HTTPException(400,'Проверьте логин (3–50 символов), e-mail и группу')
+    if not 2<=len(login)<=50 or len(email)>255 or not re.fullmatch(r'[^\s@]+@[^\s@]+\.[^\s@]+',email) or role not in ('admin','moderator','user'):
+        raise HTTPException(400,'Проверьте логин (2–50 символов), e-mail и группу')
     try:
         with connect() as conn:
             conn.execute('SELECT pg_advisory_xact_lock(731605)')
@@ -62,6 +62,11 @@ async def edit(user_id: int, request: Request):
             if not old: raise HTTPException(404,'Пользователь не найден')
             previous=dict(zip(('login','email','role'),old))
             if data['expected']!=previous: raise HTTPException(409,'Данные изменились. Обновите список')
+            if role == 'admin':
+                if old[2] != 'admin' and len(login) < 6:
+                    raise HTTPException(400,'Для нового администратора логин должен содержать минимум 6 символов')
+            elif len(login) < 3:
+                raise HTTPException(400,'Логин пользователя должен содержать минимум 3 символа')
             if old[2]=='admin' and role!='admin':
                 if user_id==request.state.user['user_id']: raise HTTPException(409,'Нельзя понизить собственную группу')
                 if conn.execute("SELECT count(*) FROM users JOIN roles USING(role_id) WHERE role_alias='admin'").fetchone()[0]<=1:

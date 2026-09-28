@@ -1,23 +1,35 @@
+/* ============================================================
+   1. БАЗА: переменные, сброс, html/body
+   ============================================================ */
 :root {
   color-scheme: dark;
-  font-family: "Segoe UI", system-ui, sans-serif;
+  font-family: "Libertinus Sans", sans-serif;
   background: #111611;
   color: #e9ecdf;
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html, body { margin: 0; min-height: 100%; }
 body {
   min-height: 100vh;
   background: radial-gradient(circle at 50% -20%, #344034 0, #171d18 38%, #0d110e 100%);
 }
 
+input, select, textarea, button { font: inherit; }
+a { color: #e0d49f; }
+
+
+/* ============================================================
+   2. TOPBAR
+   ============================================================ */
 .topbar {
   min-height: 82px;
+  /*ax-width: 1600px;*/
   padding: 16px clamp(18px, 4vw, 58px);
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: space-evenly;
   gap: 24px;
   border-bottom: 1px solid #75806a55;
   background: #111711e8;
@@ -27,56 +39,179 @@ body {
 h1 { margin: 0; font-family: Georgia, serif; font-size: clamp(22px, 3vw, 32px); font-weight: 500; }
 .hint { color: #cbd0c1; font-size: 14px; }
 .mouse-icon { display: inline-grid; place-items: center; width: 27px; height: 27px; margin-right: 6px; border: 1px solid #87906e; border-radius: 50%; color: #d9c795; }
+.logo-img {width:110px;}
+.goback-play A {text-decoration:none;}
 
+/* ============================================================
+   3. MAIN / КАРТА (map-viewport, map-stage, hex, barony)
+   ============================================================ */
 main { padding: clamp(12px, 2vw, 28px); }
+
 .map-viewport {
   position: relative;
   max-width: 1600px;
   margin: auto;
   overflow: hidden;
   border: 1px solid #78806977;
-  border-radius: 8px;
+  border-radius: 0;
   background: #283542;
   box-shadow: 0 22px 70px #0009;
 }
 
-.map-stage { position: relative; width: 100%; aspect-ratio: 1508 / 1043; }
+.map-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1508 / 1043;
+  border: 9px solid;
+  border-image: url('map-border.png') 4 round;
+  border-image-outset: 1px;
+}
 .map-stage img, #hex-overlay { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .map-stage img { user-select: none; }
 #hex-overlay { z-index: 2; }
 #barony-emblems { pointer-events: none; }
+
 .map-unit-layer { pointer-events: none; }
 .map-unit { cursor: pointer; pointer-events: auto; filter: drop-shadow(0 4px 4px #000c); transition: x .45s ease, y .45s ease, transform .15s ease; }
 .map-unit:hover, .map-unit.selected { filter: drop-shadow(0 0 7px #ffe290); }
-.hex-hit.move-target { fill: #d9c5603a; stroke: #fff0a7; cursor: pointer; }
-.barony-emblem { pointer-events: none; filter: drop-shadow(0 2px 2px #000b); }
+
 .hex-hit { fill: transparent; stroke: #172b3870; stroke-width: 1; vector-effect: non-scaling-stroke; cursor: context-menu; transition: fill .12s, stroke .12s; }
 .hex-hit:hover, .hex-hit.selected { fill: #f2d68328; stroke: #f3df9c; }
 .hex-hit:focus { outline: none; fill: #f2d68335; stroke: #fff1b5; }
+.hex-hit.move-target { fill: #d9c5603a; stroke: #fff0a7; cursor: pointer; }
+.hex-hit.barony-owned, .hex-hit.barony-owned:hover, .hex-hit.barony-owned:focus { fill: transparent; stroke: none; }
+.hex-hit.barony-chosen, .hex-hit.barony-chosen:hover, .hex-hit.barony-chosen:focus { fill: var(--barony-color); fill-opacity: .14; stroke: none; }
+.hex-hit.barony-available { cursor: pointer; }
+.hex-hit.barony-unavailable { cursor: not-allowed; fill: #000; fill-opacity: .18; }
 
+.barony-emblem { pointer-events: none; filter: drop-shadow(0 2px 2px #000b); }
+.barony-boundary { fill: none; stroke-width: 5; vector-effect: non-scaling-stroke; stroke-linecap: round; pointer-events: none; filter: drop-shadow(0 0 2px color-mix(in srgb, currentColor 55%, transparent)); }
+.barony-boundary-preview { stroke-width: 4; stroke-dasharray: 8 4; }
+
+
+/* ============================================================
+   4. LOADING
+   ============================================================ */
 .loading { position: absolute; z-index: 5; inset: 0; display: grid; place-items: center; background: #182019e8; color: #d8ddca; }
 .loading.error { color: #ffd2cb; }
-.game-panel { position: fixed; z-index: 20; left: 14px; top: 14px; display: grid; gap: 5px; max-width: min(430px,calc(100% - 28px)); padding: 10px 13px; border: 1px solid #b8a86b99; border-radius: 6px; background: #151b16f2; box-shadow: 0 6px 20px #0008; font-size: 13px; pointer-events: none; }
-.game-panel strong { color: #f2df9c; }
-.hex-actions { display: flex; flex-wrap: wrap; gap: 7px; padding-top: 4px; pointer-events: auto; }
+
+
+/* ============================================================
+   5. GAME PANEL (панель действий над гексом)
+   ============================================================ */
+.game-panel {
+  font-family: "Libertinus Sans", sans-serif;
+  position: fixed;
+  z-index: 20;
+  left: 38.3%;
+  top: 130px;
+  display: grid;
+  gap: 5px;
+  width: 450px;
+  padding: 10px 13px;
+  border: 1px solid #b8a86b99;
+  border-radius: 6px;
+  background: rgba(21, 27, 22, 0.8);
+  box-shadow: 0 6px 20px #0008;
+  font-size: 13px;
+  pointer-events: none;
+  max-width: calc(100vw - 16px);
+  
+  align-content: start;
+}
+.game-panel strong { color: #f2df9c; text-align: center; font-size: 18px; }
+.game-panel span { font-size: 16px; text-align: center; }
+.game-panel .end-turn { pointer-events: auto; }
+
+.hex-actions { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; padding-top: 15px; pointer-events: auto; }
 .hex-actions button, .end-turn, .finish-battle { padding: 8px 11px; border: 1px solid #c2b47a; border-radius: 4px; background: #4d5134; color: #fff6d8; cursor: pointer; }
-.end-turn { position: fixed; z-index: 20; right: 16px; top: 16px; font-weight: 700; }
-.battle-modal { width: min(880px,calc(100vw - 24px)); color: #eee6cf; border: 1px solid #aa9560; border-radius: 10px; padding: 0; background: #111712; }
+.hex-actions button:hover, .end-turn:hover, .finish-battle:hover { padding: 8px 11px; border: 1px solid #FFCB29; border-radius: 4px; background: #AE9A5A; color: #3B2F00; cursor: pointer; }
+
+/*.end-turn {font-family: "Monomakh", system-ui;font-size:22px; position: absolute; z-index: 20; right: 44%; top: 10px; font-weight: 700; }*/
+.end-turn { font-family: "Monomakh", system-ui; font-size: 22px; margin: 20px auto 0; }
+
+.skip-turn-controls { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; pointer-events: auto; }
+.skip-turn-controls .end-turn { margin: 20px 0 0; }
+.skip-turn-controls span { min-width: 145px; margin: 5px 0 5px 0; color: #f2df9c; font-variant-numeric: tabular-nums; }
+
+
+/* ============================================================
+   6. BATTLE MODAL / АРЕНА / СЕТКА БОЯ
+   ============================================================ */
+.battle-modal {
+  width: min(880px, calc(100vw - 24px));
+  color: #eee6cf;
+  border: 1px solid #aa9560;
+  border-radius: 10px;
+  padding: 0;
+  background: #111712;
+}
+.battle-modal { width: min(98vw, 1500px); max-width: 98vw; max-height: 98vh; }
 .battle-modal::backdrop { background: #050806d9; backdrop-filter: blur(3px); }
-.battle-arena { position: relative; min-height: 540px; padding: 24px 28px 78px; background: radial-gradient(circle at 50% 35%,#493f2a,#1b241c 52%,#0f1410); }
-.battle-arena h2, .battle-arena h3 { margin-top: 0; font-family: Georgia,serif; text-align: center; }
+
+.battle-arena {
+  position: relative;
+  min-height: 540px;
+  padding: 24px 28px 78px;
+  background: radial-gradient(circle at 50% 35%, #493f2a, #1b241c 52%, #0f1410);
+}
+.battle-arena h2, .battle-arena h3 { margin-top: 0; font-family: Georgia, serif; text-align: center; }
+
 .battle-lines { display: grid; grid-template-columns: 1fr auto 1fr; gap: 28px; align-items: center; }
+.battle-lines { display: flex; justify-content: center; align-items: center; gap: 0; }
 .battle-mark { font-size: 48px; color: #c8ad66; }
-.unit-column { display: grid; grid-template-columns: repeat(auto-fit,minmax(105px,1fr)); gap: 10px; align-items: start; }
+
+.unit-column { display: grid; grid-template-columns: repeat(auto-fit, minmax(105px, 1fr)); gap: 10px; align-items: start; }
 .battle-unit { position: relative; width: 100%; max-width: 150px; padding: 5px; border: 3px solid transparent; border-radius: 8px; background: #0b0e0b; cursor: pointer; }
 .battle-unit img { display: block; width: 100%; aspect-ratio: 4/3; object-fit: contain; }
 .battle-unit.selected { border-color: #d43c34; box-shadow: 0 0 18px #d43c3488; }
 .battle-unit.defeated { opacity: .25; filter: grayscale(1); pointer-events: none; }
+.battle-unit.spent { opacity: .65; }
+.battle-unit.defeated { opacity: .35; }
 .battle-unit span { display: block; padding: 4px; text-align: center; }
+
 .finish-battle { position: absolute; right: 22px; bottom: 20px; }
+
 .battle-log { max-height: 112px; margin: 0 0 14px; padding: 8px 8px 8px 30px; overflow: auto; border: 1px solid #756846; background: #0b0e0b99; font-size: 13px; }
 .battle-log li { margin: 2px 0; }
 
+/* Боевая гекс-сетка */
+.battle-grid {
+  position: relative;
+  width: min(94vw, 116vh);
+  aspect-ratio: 1.59;
+  align-self: center;
+  background: #29452f;
+  border: 1px solid #132217;
+  overflow: hidden;
+}
+.battle-cell {
+  position: absolute;
+  width: 8.695652%;
+  height: 16%;
+  border: 0;
+  background: #e6ddc6;
+  color: #192319;
+  cursor: pointer;
+  font-size: .7rem;
+  padding: 0;
+  clip-path: polygon(50% 0, 100% 25%, 100% 75%, 50% 100%, 0 75%, 0 25%);
+  transform: scale(1.018);
+  filter: drop-shadow(0 0 1px #17231a);
+}
+.battle-cell img { width: 90%; height: 90%; object-fit: contain; pointer-events: none; }
+.battle-cell.attacker { background: #8bb3da; }
+.battle-cell.defender { background: #d99a80; }
+.battle-cell.wall { background: #716e69; color: #fff; font-size: 1.2rem; }
+.battle-cell.reachable { background: #66c56f; }
+.battle-cell.active-unit { background: #ffe15b; filter: drop-shadow(0 0 5px #ffdf25); }
+.battle-cell.selected-unit { background: #ff993d; filter: drop-shadow(0 0 7px #ff7b2d); }
+.battle-cell.attackable { cursor: crosshair; cursor: url('sword-cursor.svg') 4 28, crosshair; }
+
+
+/* ============================================================
+   7. HEX-CARD (карточка гекса)
+   ============================================================ */
 .hex-card {
   position: absolute;
   z-index: 6;
@@ -95,12 +230,18 @@ main { padding: clamp(12px, 2vw, 28px); }
 .hex-card-heading h2 { min-width: 0; margin-right: 0; }
 .card-crest { flex: 0 0 auto; width: 42px; height: 42px; object-fit: contain; filter: drop-shadow(0 1px 2px #000b); }
 .close { position: absolute; top: 8px; right: 10px; border: 0; background: transparent; color: #bec3b6; font-size: 26px; cursor: pointer; }
+
 .hex-card dl { margin: 0; }
 .hex-card dl div { display: grid; grid-template-columns: 94px 1fr; gap: 8px; padding: 4px 0; border-top: 1px solid #858b7955; font-size: 12px; }
 .hex-card dt { color: #aeb5a7; font-size: 13px; }
 .hex-card dd { margin: 0; color: #f3f4eb; font-weight: 600; overflow-wrap: anywhere; }
 .rating { color: #dbc680; letter-spacing: 2px; white-space: nowrap; }
 .coordinates { margin: -8px 0 12px; color: #aeb5a7; font-size: 13px; }
+
+
+/* ============================================================
+   8. HEX-FORM (редактирование гекса)
+   ============================================================ */
 #hex-form { display: grid; gap: 9px; }
 #hex-form label { display: grid; gap: 4px; color: #aeb5a7; font-size: 12px; }
 #hex-form input, #hex-form select, #hex-form textarea {
@@ -108,216 +249,227 @@ main { padding: clamp(12px, 2vw, 28px); }
   background: #111711; color: #f3f4eb; font: inherit;
 }
 .numeric-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+
 .save { padding: 9px 12px; border: 1px solid #c2b47a; border-radius: 4px; background: #4d5134; color: #fff6d8; cursor: pointer; }
 .regenerate { padding: 9px 12px; border: 1px solid #718c9c; border-radius: 4px; background: #273f4d; color: #e8f5fb; cursor: pointer; }
 .save:disabled, .regenerate:disabled { cursor: wait; opacity: .65; }
 .save-status { min-height: 18px; margin: 0; color: #b8c092; font-size: 12px; }
 .save-status.error { color: #ffb5aa; }
 
+[hidden], #hex-form[hidden] { display: none !important; }
+
+
+/* ============================================================
+   9. FOOTER
+   ============================================================ */
 footer { padding: 0 20px 22px; text-align: center; color: #777f73; font-size: 12px; }
 footer code { color: #9da493; }
+
+
+/* ============================================================
+   10. PLAYER PANEL (выбор игрока)
+   ============================================================ */
 .player-panel { max-width: 1600px; margin: 0 auto 20px; padding: 18px; border: 1px solid #75806a77; border-radius: 8px; }
 .player-panel form { display: grid; gap: 14px; }
 .player-panel p { margin: 0; }
-.player-fields { display: grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap: 14px; }
+
+.player-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
 .player-fields label { display: grid; gap: 6px; }
 .player-fields input { padding: 10px; width: 100%; }
+
 .crest-list { display: flex; flex-wrap: wrap; gap: 12px; }
 .crest-list label { display: flex; align-items: center; gap: 4px; cursor: pointer; }
 .crest-list img { width: 90px; height: 90px; object-fit: contain; border: 2px solid transparent; }
 .crest-list input:checked + img { border-color: #f3df9c; }
+
 .color-choice { display: flex; align-items: center; gap: 12px; }
-.cabinet-summary { display: flex; align-items: center; gap: 20px; }
-.cabinet-summary img { width: 110px; height: 110px; object-fit: contain; }
+
+
+/* ============================================================
+   11. CABINET (кабинет игрока, вкладки, статистика, генералы)
+   ============================================================ */
 .cabinet-page { max-width: 1200px; margin: auto; }
+.friherra-title, .friherra-name {font-family: "Monomakh", system-ui;text-align: left;}
+.friherra-title {font-size: 20px;}
+.friherra-name {font-size: 30px;margin: 0;}
+.friherra-lens {text-align: left;}
+
+.cabinet-summary { display: grid;grid-auto-flow: column; align-items: center; gap: 20px; }
+.cabinet-summary img { width: 110px; height: 110px; object-fit: contain; }
 .cabinet-summary > div { min-width: 0; overflow-wrap: anywhere; }
+
 .cabinet-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0; }
 .cabinet-tabs button { padding: 10px 14px; border: 1px solid #75806a; border-radius: 5px; background: #202a22; color: #e9ecdf; cursor: pointer; }
 .cabinet-tabs button[aria-selected=true] { background: #4d5134; border-color: #e0d49f; }
-.stat-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(240px,100%),1fr)); gap: 14px; margin: 18px 0; }
+
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 14px; margin: 18px 0; }
 .stat-grid > section, .stat-grid > details { border: 1px solid #75806a55; padding: 14px; border-radius: 6px; min-width: 0; }
+
 .cabinet-page dl { margin: 8px 0; }
 .cabinet-page dl div { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 5px 0; border-bottom: 1px solid #75806a33; overflow-wrap: anywhere; }
 .cabinet-page dd { margin: 0; }
 .cabinet-page summary { cursor: pointer; overflow-wrap: anywhere; }
 .cabinet-page h3 { margin: 8px 0; }
+
 .barony-danger { margin-top: 28px; border-top: 1px solid #bd5b55; padding-top: 12px; }
 .danger-button { padding: 10px 14px; border: 1px solid #db8275; border-radius: 4px; background: #792e27; color: #fff; cursor: pointer; margin-top: 12px; }
 .danger-button:disabled { opacity: .5; cursor: default; }
-.army-heading { display:flex; justify-content:space-between; align-items:center; gap:16px; }
-.generals-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; margin-top:16px; }
-.general-card { display:grid; grid-template-columns:76px 1fr auto; align-items:center; gap:12px; padding:12px; border:1px solid #75806a77; border-radius:7px; background:#182019; cursor:pointer; }
-.general-card:hover,.general-card:focus { border-color:#e0d49f; outline:none; }
-.general-card img { width:76px; height:76px; object-fit:contain; }
-.general-card h3,.general-card p { margin:3px 0; }
-.general-card .danger-button { margin:0; }
-.general-dialog { width:min(760px,calc(100vw - 24px)); color:#e9ecdf; background:#202a22; border:1px solid #c2b47a; border-radius:8px; padding:24px; }
-.general-dialog::backdrop { background:#000b; }
-.general-units { display:grid; gap:8px; margin:14px 0; }
-.general-units article { display:grid; grid-template-columns:64px 1fr auto; align-items:center; gap:10px; padding:8px; border:1px solid #75806a55; }
-.general-units img { width:64px; height:52px; object-fit:contain; }
-.general-units small { display:block; color:#bfc5b8; }
-#hire-unit-form { display:flex; align-items:end; gap:10px; }
-#hire-unit-form label { display:grid; gap:5px; flex:1; }
-#unit-catalogue { width:100%; padding:8px; }
-.cabinet-page dialog { max-width: min(540px,calc(100vw - 24px)); color: #e9ecdf; background: #202a22; border: 1px solid #db8275; border-radius: 8px; padding: 22px; }
+
+.army-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.generals-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-top: 16px; }
+
+.general-card { display: grid; grid-template-columns: 76px 1fr auto; align-items: center; gap: 12px; padding: 12px; border: 1px solid #75806a77; border-radius: 7px; background: #182019; cursor: pointer; }
+.general-card:hover, .general-card:focus { border-color: #e0d49f; outline: none; }
+.general-card img { width: 76px; height: 76px; object-fit: contain; }
+.general-card h3, .general-card p { margin: 3px 0; }
+.general-card .danger-button { margin: 0; }
+
+.general-dialog { width: min(760px, calc(100vw - 24px)); color: #e9ecdf; background: #202a22; border: 1px solid #c2b47a; border-radius: 8px; padding: 24px; }
+.general-dialog::backdrop { background: #000b; }
+.general-units { display: grid; gap: 8px; margin: 14px 0; }
+.general-units article { display: grid; grid-template-columns: 64px 1fr auto; align-items: center; gap: 10px; padding: 8px; border: 1px solid #75806a55; }
+.general-units img { width: 64px; height: 52px; object-fit: contain; }
+.general-units small { display: block; color: #bfc5b8; }
+
+#hire-unit-form { display: flex; align-items: end; gap: 10px; }
+#hire-unit-form label { display: grid; gap: 5px; flex: 1; }
+#unit-catalogue { width: 100%; padding: 8px; }
+
+.cabinet-page dialog { max-width: min(540px, calc(100vw - 24px)); color: #e9ecdf; background: #202a22; border: 1px solid #db8275; border-radius: 8px; padding: 22px; }
 .cabinet-page dialog::backdrop { background: #000a; }
 .cabinet-page dialog form { display: grid; gap: 14px; }
 #abandon-confirmation { width: 100%; margin-top: 8px; padding: 9px; }
 .dialog-actions { display: flex; justify-content: flex-end; align-items: center; gap: 14px; }
-.barony-boundary { fill: none; stroke-width: 5; vector-effect: non-scaling-stroke; stroke-linecap: round; pointer-events: none; filter: drop-shadow(0 0 2px color-mix(in srgb, currentColor 55%, transparent)); }
-.barony-boundary-preview { stroke-width: 4; stroke-dasharray: 8 4; }
-.hex-hit.barony-owned, .hex-hit.barony-owned:hover, .hex-hit.barony-owned:focus { fill: transparent; stroke: none; }
-.hex-hit.barony-chosen, .hex-hit.barony-chosen:hover, .hex-hit.barony-chosen:focus { fill: var(--barony-color); fill-opacity: .14; stroke: none; }
-.hex-hit.barony-available { cursor: pointer; }
-.hex-hit.barony-unavailable { cursor: not-allowed; fill: #000; fill-opacity: .18; }
-[hidden], #hex-form[hidden] { display: none !important; }
-a { color: #e0d49f; }
+
+
+/* ============================================================
+   12. ADMIN (таблицы, редакторы)
+   ============================================================ */
 .table-scroll { overflow: auto; max-height: 65vh; }
 table { border-collapse: collapse; font-size: 12px; }
 th, td { border: 1px solid #75806a55; padding: 6px; min-width: 90px; }
 th { position: sticky; top: 0; background: #252b24; }
+
 .admin-controls { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }
 .admin-editor { max-width: 700px; border: 1px solid #c2b47a; padding: 16px; margin-top: 16px; }
-.admin-editor form { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px; }
+.admin-editor form { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 .admin-editor label { display: grid; gap: 4px; font-size: 13px; }
-input, select, textarea, button { font: inherit; }
-.unit-editor-form { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
-.unit-editor-form label { display:grid; gap:4px; }
-.unit-editor-form textarea { min-height:90px; }
-.admin-unit-image { width:100%; max-height:150px; object-fit:contain; }
 .admin-editor input, .admin-editor select, .admin-editor textarea { width: 100%; }
+
+.unit-editor-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.unit-editor-form label { display: grid; gap: 4px; }
+.unit-editor-form textarea { min-height: 90px; }
+.admin-unit-image { width: 100%; max-height: 150px; object-fit: contain; }
+
 .landscape-part { display: grid; grid-template-columns: 1fr 70px auto; gap: 4px; margin: 4px 0; }
 
-@media (max-width: 650px) {
-  .topbar { align-items: flex-start; flex-direction: column; gap: 10px; }
-  main { padding: 8px; }
-  .hex-card { position: fixed; left: 12px !important; right: 12px; bottom: 12px; top: auto !important; width: auto; }
-  .hint { font-size: 12px; }
-  .battle-lines { gap: 8px; }
-  .battle-mark { font-size: 28px; }
-  .game-panel { top: 8px; left: 8px; }
-}
 
-/* ===============================================
-   ДОПОЛНЕНИЯ: /* ===== User Menu (CSS-only, BEM) 
+/* ============================================================
+   13. USER MENU (BEM)
    =============================================== */
 .user-menu {
-    position: relative;
-    display: flex;
-    align-items: center;
-    gap: 12px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
-
 .user-menu__trigger {
-    display: inline-grid;
-    place-items: center;
-    min-width: 38px;
-    height: 38px;
-    border-radius: 50%;
-    background: #223022;
-    border: 1px solid #75806a88;
-    color: #d9c795;
-    font-weight: 600;
-    font-size: 14px;
-    cursor: pointer;
-    list-style: none;
-    transition: border-color .15s ease, background .15s ease;
+  display: inline-grid;
+  place-items: center;
+  min-width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #223022;
+  border: 1px solid #75806a88;
+  color: #d9c795;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  list-style: none;
+  transition: border-color .15s ease, background .15s ease;
 }
-.user-menu__trigger a {
-    color: inherit;
-    padding: 0 12px;
-    text-decoration: none;
-}
+.user-menu__trigger a { color: inherit; padding: 0 12px; text-decoration: none; }
 .user-menu__trigger::-webkit-details-marker { display: none; }
 
 .user-menu__trigger:hover,
 .user-menu[open] .user-menu__trigger {
-    border-color: #b8c092;
-    background: #2a3a2a;
+  border-color: #b8c092;
+  background: #2a3a2a;
 }
-
 .user-menu__trigger:empty::before {
-    content: "☗";
-    font-size: 18px;
-    color: #b8c092;
+  content: "☗";
+  font-size: 18px;
+  color: #b8c092;
 }
 
 .user-menu__role {
-    color: #b8c092;
-    font-size: 12px;
-    letter-spacing: .08em;
-    text-transform: uppercase;
+  color: #b8c092;
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
 }
 
 .user-menu__dropdown {
-    position: absolute;
-    top: calc(100% + 10px);
-    right: 0;
-    min-width: 200px;
-    padding: 6px 0;
-    background: #171d18;
-    border: 1px solid #75806a55;
-    border-radius: 10px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
-    z-index: 50;
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(-6px);
-    transition: opacity .15s ease, transform .15s ease, visibility .15s;
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  min-width: 200px;
+  padding: 6px 0;
+  background: #171d18;
+  border: 1px solid #75806a55;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+  z-index: 50;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-6px);
+  transition: opacity .15s ease, transform .15s ease, visibility .15s;
 }
-
 .user-menu[open] .user-menu__dropdown {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
 }
-
 .user-menu__dropdown::before {
-    content: "";
-    position: absolute;
-    top: -6px;
-    right: 14px;
-    width: 12px;
-    height: 12px;
-    background: #171d18;
-    border-left: 1px solid #75806a55;
-    border-top: 1px solid #75806a55;
-    transform: rotate(45deg);
+  content: "";
+  position: absolute;
+  top: -6px;
+  right: 14px;
+  width: 12px;
+  height: 12px;
+  background: #171d18;
+  border-left: 1px solid #75806a55;
+  border-top: 1px solid #75806a55;
+  transform: rotate(45deg);
 }
 
-.user-menu__list {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-}
-
+.user-menu__list { list-style: none; margin: 0; padding: 0; }
 .user-menu__link,
 .user-menu__button {
-    display: block;
-    width: 100%;
-    padding: 10px 16px;
-    font: inherit;
-    font-size: 14px;
-    color: #e9ecdf;
-    text-align: left;
-    text-decoration: none;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    transition: background .15s ease, color .15s ease;
+  display: block;
+  width: 100%;
+  padding: 10px 16px;
+  font: inherit;
+  font-size: 14px;
+  color: #e9ecdf;
+  text-align: left;
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background .15s ease, color .15s ease;
 }
-
 .user-menu__link:hover,
 .user-menu__button:hover {
-    background: #223022;
-    color: #d9c795;
+  background: #223022;
+  color: #d9c795;
 }
+.user-menu__item + .user-menu__item { border-top: 1px solid #75806a22; }
 
-.user-menu__item + .user-menu__item {
-    border-top: 1px solid #75806a22;
-}
-/* Единое окно для кабинета и служебных экранов, не уводит игрока с карты. */
+
+/* ============================================================
+   14. PAGE MODAL (единое окно кабинета/служебных экранов)
+   ============================================================ */
 .page-modal {
   width: min(1180px, calc(100vw - 32px));
   height: min(860px, calc(100vh - 32px));
@@ -326,8 +478,306 @@ input, select, textarea, button { font: inherit; }
   border-radius: 18px;
   overflow: hidden;
   background: var(--panel, #fff);
-  box-shadow: 0 24px 80px rgba(0,0,0,.45);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, .45);
 }
 .page-modal::backdrop { background: rgba(9, 13, 24, .72); backdrop-filter: blur(3px); }
 .page-modal iframe { display: block; width: 100%; height: 100%; border: 0; background: #111827; }
 .page-modal__close { position: absolute; z-index: 2; top: 10px; right: 14px; font-size: 2rem; }
+
+
+/* ============================================================
+   15. GAME DATE / RESOURCES (декоративные плашки)
+   ============================================================ */
+/*.game-date {font-family: "Cormorant Infant", serif;font-size:26px; position:absolute; z-index:5; top:12px; left:12px; padding:7px 11px; border-radius:5px; background:rgba(20,26,30,.85); color:#fff; font-weight:600; }*/
+.game-date {
+  font-family: "Cormorant Infant", serif;
+  font-size: 26px;
+  position: absolute;
+  z-index: 5;
+  top: 12px;
+  left: 12px;
+  padding: 14px 82px 20px 40px;
+  background-image: url(time-border.svg);
+  color: #fff;
+  font-weight: 600;
+}
+
+.game-resources {
+  font-family: "Cormorant Infant", serif;
+  font-size: 26px;
+  position: absolute;
+  z-index: 5;
+  top: 12px;
+  right: 12px;
+  padding: 14px 28px 20px 60px;
+  background-image: url(resurces-border.svg);
+  color: #fff;
+  font-weight: 600;
+}
+
+
+/* ============================================================
+   16. MAP TOP ACTIONS / ORNATE LINK / ADMIN NAV
+   ============================================================ */
+.map-top-actions {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: nowrap;
+    flex: 1; }
+
+.ornate-link,
+.admin-nav a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 180px;
+  min-height: 48px;
+  padding: 8px 16px;
+  border: 3px solid #8a6434;
+  border-radius: 5px;
+  background: linear-gradient(#453a2a, #171b18 45%, #302516);
+  box-shadow: inset 0 0 0 2px #c09a5a, 0 3px 6px #0009;
+  color: #f9edcf;
+  text-align: center;
+  text-decoration: none;
+  font: 600 16px Georgia, serif;
+  cursor: pointer;
+}
+.ornate-link:hover,
+.admin-nav a:hover,
+.admin-nav a[aria-current=page] { background: linear-gradient(#70532d, #353021 45%, #564023); }
+
+.admin-nav { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: flex-end; }
+.admin-nav a { min-width: 145px; min-height: 42px; font-size: 14px; }
+
+
+/* ============================================================
+   17. МЕДИА-ЗАПРОСЫ (desktop-first: от большего к меньшему)
+   ============================================================ */
+
+/* ---------- <= 1024px : планшеты / узкие десктопы ---------- */
+@media (max-width: 1024px) {
+  .game-date,
+  .game-resources {
+    font-size: 20px;
+    padding: 10px 60px 14px 30px;
+  }
+  .game-resources { padding: 10px 22px 14px 44px; }
+
+  .cabinet-summary img { width: 80px; height: 80px; }
+  .cabinet-summary { gap: 14px; }
+
+  .stat-grid { grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); }
+
+  .battle-grid { width: min(94vw, 90vh); }
+}
+
+/* ---------- <= 768px : большие телефоны / маленькие планшеты ---------- */
+@media (max-width: 768px) {
+  .topbar {
+    padding: 12px clamp(12px, 3vw, 24px);
+    min-height: auto;
+  }
+  h1 { font-size: clamp(18px, 5vw, 24px); }
+  .hint { font-size: 13px; }
+
+  /* Плашки даты/ресурсов — чтобы не накладывались друг на друга */
+  .game-date,
+  .game-resources {
+    position: static;
+    display: inline-block;
+    font-size: 18px;
+    padding: 8px 18px 10px 30px;
+    margin: 6px 8px;
+  }
+  .game-resources { padding: 8px 18px 10px 36px; }
+
+  /* Панель действий над гексом — на всю ширину */
+  .game-panel {
+    left: 8px;
+    right: 8px;
+    width: auto;
+    max-width: none;
+    top: auto;
+    font-size: 12px;
+  }
+  .game-panel strong { font-size: 16px; }
+  .game-panel span { font-size: 14px; }
+  .hex-actions { gap: 8px; padding-top: 10px; }
+  .hex-actions button, .end-turn, .finish-battle {
+    padding: 7px 10px;
+    font-size: 13px;
+  }
+  .end-turn { font-size: 18px; margin: 12px auto 0; }
+
+  /* Карточка гекса */
+  .hex-card {
+    position: fixed;
+    left: 8px !important;
+    right: 8px;
+    bottom: 8px;
+    top: auto !important;
+    width: auto !important;
+    max-height: 60vh;
+  }
+  .hex-card h2 { font-size: 20px; margin-right: 28px; }
+
+  /* User menu — выпадашка во всю ширину экрана */
+  .user-menu__dropdown {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    min-width: 0;
+    width: 100%;
+    border-radius: 14px 14px 0 0;
+    max-height: 70vh;
+    overflow: auto;
+  }
+  .user-menu__dropdown::before { display: none; }
+
+  /* Кабинет */
+  .cabinet-summary { flex-direction: column; text-align: center; }
+  .cabinet-tabs button { padding: 8px 12px; font-size: 14px; }
+
+  .generals-list { grid-template-columns: 1fr; }
+  .general-card { grid-template-columns: 60px 1fr; }
+  .general-card img { width: 60px; height: 60px; }
+
+  /* Игрок / гербы */
+  .crest-list { justify-content: center; }
+  .crest-list img { width: 70px; height: 70px; }
+
+  /* Админ-навигация */
+  .admin-nav { justify-content: center; }
+  .admin-nav a { min-width: 0; flex: 1 1 140px; }
+
+  /* Боевое модальное окно */
+  .battle-modal {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+    border: 0;
+  }
+  .battle-arena { min-height: auto; padding: 12px 10px 50px; }
+  .battle-lines { flex-direction: column; gap: 10px; }
+  .battle-mark { font-size: 28px; }
+  .unit-column { grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 6px; }
+  .battle-unit { max-width: none; }
+  .finish-battle { right: 10px; bottom: 10px; }
+
+  /* Модальное окно кабинета */
+  .page-modal {
+    width: 100vw;
+    height: 100vh;
+    max-width: 100vw;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+
+  /* Таблицы */
+  .table-scroll { max-height: 55vh; }
+  table { font-size: 11px; }
+  th, td { padding: 4px; min-width: 70px; }
+
+  /* Диалоги */
+  .general-dialog,
+  .cabinet-page dialog {
+    width: calc(100vw - 16px);
+    max-width: calc(100vw - 16px);
+    padding: 16px;
+  }
+
+  /* Редакторы */
+  .admin-editor form,
+  .unit-editor-form { grid-template-columns: 1fr; }
+}
+
+/* ---------- <= 760px : существующие правила ---------- */
+@media (max-width: 760px) {
+  .topbar { gap: 8px; flex-wrap: wrap; }
+  .ornate-link { min-width: 120px; min-height: 42px; font-size: 14px; }
+  .admin-nav a { min-width: 120px; }
+  .battle-modal { max-height: 100vh; }
+  .battle-arena { padding: 8px 8px 50px; }
+}
+
+/* ---------- <= 650px : существующие правила ---------- */
+@media (max-width: 650px) {
+  .topbar { align-items: flex-start; /***flex-direction: column;*/ gap: 10px; }
+  main { padding: 8px; }
+  .hex-card { position: fixed; left: 12px !important; right: 12px; bottom: 12px; top: auto !important; width: auto; }
+  .hint { font-size: 12px; }
+  .battle-lines { gap: 8px; }
+  .battle-mark { font-size: 28px; }
+  .game-panel { top: 8px; left: 8px; }
+
+  /* дополнения для 650px */
+  .map-top-actions { /**flex-direction: column;*/ align-items: stretch; }
+  .ornate-link,
+  .admin-nav a { width: 100%; min-width: 0; }
+  .player-fields { grid-template-columns: 1fr; }
+  .skip-turn-controls { gap: 8px; }
+  .skip-turn-controls span { min-width: 0; width: 100%; text-align: center; }
+  #hire-unit-form { flex-direction: column; align-items: stretch; }
+}
+
+/* ---------- <= 480px : маленькие телефоны ---------- */
+@media (max-width: 480px) {
+  :root { font-size: 14px; }
+
+  .topbar { padding: 10px 12px; display: grid;grid-auto-flow: column;align-items: center;}
+  h1 { font-size: 18px; }
+  .eyebrow, .card-kicker { font-size: 10px; letter-spacing: .15em; }
+  .logo {margin: 0 auto;width:100%;}
+  .logo-img {width:100px;margin-left:0;}
+  .cabinet-nav {text-align: center; width: 100%;display: grid;grid-auto-flow: column;}
+   .goback-play {display:inline-block;}
+   .goback-play A {text-decoration:none;}
+   .exit {display:inline-block;}
+  .ornate-link {font-size: 13px;}
+  details.user-menu {display: none;}
+  
+  .friherra {align-items: start;}
+  .friherra-title, .friherra-name {font-family: "Monomakh", system-ui;}
+  .friherra-title {font-size: 20px;}
+  .friherra-name {font-size: 30px;margin: 0;}
+  .friherra-lens {}
+
+  .game-date,
+  .game-resources { width: 150px; font-size: 11px;border: 1px solid #C2B47A;border-top-width: 3px; text-align:center;background:none; }
+
+
+  .hex-card { max-height: 55vh; padding: 10px; }
+  .hex-card h2 { font-size: 18px; }
+  .hex-card dl div { grid-template-columns: 80px 1fr; font-size: 11px; }
+
+  .game-panel { position: static;padding: 8px 10px;top:500px; width: 380px;margin: 0 auto;}
+  .hex-actions button, .end-turn, .finish-battle {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+  .end-turn { font-size: 16px; }
+
+  .battle-arena { padding: 8px 6px 44px; }
+  .battle-unit span { font-size: 11px; padding: 2px; }
+  .battle-log { font-size: 12px; padding-left: 22px; max-height: 90px; }
+
+  .cabinet-tabs { gap: 6px; }
+  .cabinet-tabs button { padding: 6px 10px; font-size: 13px; }
+
+  .general-card { grid-template-columns: 52px 1fr; gap: 8px; padding: 10px; }
+  .general-card img { width: 52px; height: 52px; }
+
+  .crest-list img { width: 56px; height: 56px; }
+
+  .danger-button { width: 100%; }
+
+  .dialog-actions { flex-direction: column-reverse; gap: 8px; }
+  .dialog-actions button,
+  .dialog-actions .danger-button { width: 100%; }
+}

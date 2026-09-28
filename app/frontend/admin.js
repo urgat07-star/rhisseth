@@ -117,4 +117,89 @@ document.querySelector('#territory-form').addEventListener('submit',async event=
   try{const result=await mutation('/api/admin/territories',payload,'POST');await reload();status.textContent=`${result.kind} сохранено, ID ${result.id}`;document.querySelector('#territory-editor').hidden=true;}
   catch(error){status.textContent=error.message;}finally{busy=false;button.disabled=false;}
 });
-(async()=>{try{const identity=await request('/api/me');if(!identity.can_edit)throw new Error('Доступ только для администрации');csrf=identity.csrf;await reload();status.textContent=`Гексов на карте: ${rows.length}`;}catch(error){status.textContent=error.message;}})();
+async function refreshAdminClock() {
+  const state=await request('/api/game/clock');
+  document.querySelector('#clock-current').textContent=`Сейчас: ${state.label}. Срок хода: ${new Date(state.ends_at).toLocaleString('ru-RU')}`;
+  document.querySelector('#clock-form').elements.namedItem('year').value=state.year;
+  document.querySelector('#clock-form').elements.namedItem('season').value=state.season;
+}
+async function loadRaidBalance() {
+  const data=await request('/api/admin/game/raid-balance');
+  const container=document.querySelector('#raid-balance-rows');container.replaceChildren();
+  for(const row of data.rows){
+    const form=document.createElement('form');
+    const title=document.createElement('strong');title.textContent=`${row.building_level} — ${row.building_name}`;form.append(title);
+    for(const [field,label] of [['gold','Золото'],['peasant_percent','Крестьяне, %'],['peasant_nominal','Номинал крестьян'],['morale_penalty','Потеря морали'],['cooldown_turns','Повтор через ходов']]){
+      const wrapper=document.createElement('label');wrapper.textContent=label+' ';
+      const input=document.createElement('input');input.name=field;input.type='number';input.min='0';input.max=field.includes('percent')||field.includes('morale')||field.includes('cooldown')?'100':'1000000';input.value=row[field];input.required=true;
+      wrapper.append(input);form.append(wrapper);
+    }
+    const save=document.createElement('button');save.type='submit';save.textContent='Сохранить';form.append(save);
+    form.addEventListener('submit',async event=>{
+      event.preventDefault();const payload=Object.fromEntries([...new FormData(form)].map(([key,value])=>[key,Number(value)]));
+      try{await mutation(`/api/admin/game/raid-balance/${row.building_level}`,payload,'PUT');document.querySelector('#raid-status').textContent=`Уровень ${row.building_level}: сохранено`;}
+      catch(error){document.querySelector('#raid-status').textContent=error.message;}
+    });
+    container.append(form);
+  }
+}
+async function loadRiverLinks(){
+  const data=await request('/api/admin/game/river-links');const container=document.querySelector('#river-links');container.replaceChildren();
+  for(const link of data.links){
+    const row=document.createElement('p'),label=document.createElement('span'),remove=document.createElement('button');
+    label.textContent=`Q${link.q1} R${link.r1} ↔ Q${link.q2} R${link.r2} `;remove.type='button';remove.textContent='Удалить';
+    remove.addEventListener('click',async()=>{try{await mutation('/api/admin/game/river-links',link,'DELETE');await loadRiverLinks();}catch(error){document.querySelector('#river-status').textContent=error.message;}});
+    row.append(label,remove);container.append(row);
+  }
+}
+document.querySelector('#river-form').addEventListener('submit',async event=>{
+  event.preventDefault();const payload=Object.fromEntries([...new FormData(event.currentTarget)].map(([key,value])=>[key,Number(value)]));
+  try{await mutation('/api/admin/game/river-links',payload,'POST');await loadRiverLinks();document.querySelector('#river-status').textContent='Связь сохранена';}
+  catch(error){document.querySelector('#river-status').textContent=error.message;}
+});
+async function loadBaronyResetPreview() {
+  const data=await request('/api/admin/game/reset-preview');
+  document.querySelector('#barony-reset').dataset.turn=data.turn;
+  const missing=data.missing_start_zones.map(item=>`${item.name} (ID ${item.barony_id})`).join(', ');
+  const conflicts=data.conflicts.map(item=>`Q${item.q} R${item.r}`).join(', ');
+  document.querySelector('#barony-reset-preview').textContent=`Бароний: ${data.baronies}; сейчас гексов игроков: ${data.player_owned_hexes}; стартовых гексов записано: ${data.recorded_start_hexes}. ${missing?'Нет исходной зоны: '+missing+'. ':''}${conflicts?'Конфликты: '+conflicts+'. ':''}${data.unknown_owners.length?'Гексы игроков без баронии: '+data.unknown_owners.join(', ')+'.':''}`;
+  document.querySelector('#barony-reset').disabled=!data.ready;
+  const baronySelect=document.querySelector('#start-zone-form select');const previous=baronySelect.value;baronySelect.replaceChildren();
+  for(const barony of data.barony_list)baronySelect.append(new Option(`${barony.name} (ID ${barony.id}; стартовых гексов: ${barony.start_count})`,barony.id));
+  if(data.barony_list.some(item=>String(item.id)===previous))baronySelect.value=previous;
+}
+document.querySelector('#barony-reset').addEventListener('click',async()=>{
+  const button=document.querySelector('#barony-reset');
+  if(button.disabled)return;
+  const confirmation=window.prompt('Полный тестовый сброс удалит армии, вернёт стартовые зоны, постройки, казну, ресурсы и время. Для подтверждения введите: СБРОСИТЬ ТЕСТ');
+  if(confirmation!=='СБРОСИТЬ ТЕСТ')return;
+  button.disabled=true;
+  try{
+    const result=await mutation('/api/admin/game/reset-baronies',{confirmation,expected_turn:Number(button.dataset.turn)},'POST');
+    await Promise.all([reload(),refreshAdminClock(),loadBaronyResetPreview()]);
+    document.querySelector('#barony-reset-status').textContent=`Сброшено бароний: ${result.baronies}; восстановлено стартовых гексов: ${result.restored_hexes}; удалено генералов: ${result.removed_generals}.`;
+  }catch(error){document.querySelector('#barony-reset-status').textContent=error.message;await loadBaronyResetPreview();}
+});
+document.querySelector('#start-zone-form').addEventListener('submit',async event=>{
+  event.preventDefault();
+  const baronyId=Number(event.target.elements.namedItem('barony_id').value);
+  const cells=[...selected].map(item=>item.split(',').map(Number));
+  if(cells.length<2||cells.length>3){document.querySelector('#barony-reset-status').textContent='Выберите 2–3 соседних гекса';return;}
+  if(!window.confirm(`Сохранить выбранные ${cells.length} гекса как исходную зону баронии ${baronyId}?`))return;
+  try{await mutation(`/api/admin/game/baronies/${baronyId}/start-zone`,{cells},'PUT');await loadBaronyResetPreview();document.querySelector('#barony-reset-status').textContent='Стартовая зона сохранена';}
+  catch(error){document.querySelector('#barony-reset-status').textContent=error.message;}
+});
+document.querySelector('#clock-form').addEventListener('submit',async event=>{
+  event.preventDefault();
+  const form=event.target;
+  const year=Number(form.elements.namedItem('year').value), season=form.elements.namedItem('season').value;
+  if(!window.confirm(`Установить ${year} год Эры Дракона, ${season}? Это сбросит голоса и срок текущего хода.`))return;
+  try{await mutation('/api/admin/game/clock',{year,season},'POST');await refreshAdminClock();document.querySelector('#clock-status').textContent='Дата обновлена';}
+  catch(error){document.querySelector('#clock-status').textContent=error.message;}
+});
+document.querySelector('#clock-reset').addEventListener('click',async()=>{
+  if(!window.confirm('Сбросить время к 0 году Эры Дракона, Весне?'))return;
+  try{await mutation('/api/admin/game/clock',{reset:true},'POST');await refreshAdminClock();document.querySelector('#clock-status').textContent='Время сброшено';}
+  catch(error){document.querySelector('#clock-status').textContent=error.message;}
+});
+(async()=>{try{const identity=await request('/api/me');if(!identity.can_edit)throw new Error('Доступ только для администрации');csrf=identity.csrf;await reload();if(identity.role==='admin'){document.querySelector('#clock-admin').hidden=false;document.querySelector('#raid-admin').hidden=false;document.querySelector('#river-admin').hidden=false;document.querySelector('#barony-reset-admin').hidden=false;await refreshAdminClock();await loadRaidBalance();await loadRiverLinks();await loadBaronyResetPreview();}status.textContent=`Гексов на карте: ${rows.length}`;}catch(error){status.textContent=error.message;}})();

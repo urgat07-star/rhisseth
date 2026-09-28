@@ -91,7 +91,7 @@ class PlayerCabinetTests(unittest.TestCase):
             else: self.assertFalse(any(c.args[0].startswith('UPDATE') for c in conn.execute.call_args_list))
 
     def test_profile_requires_password_and_current_version(self):
-        for valid,previous,expected in ((False,('player','player@example.invalid','hash'),403),(True,('changed','player@example.invalid','hash'),409)):
+        for valid,previous,expected in ((False,('player','player@example.invalid','hash','user'),403),(True,('changed','player@example.invalid','hash','user'),409)):
             conn=MagicMock();conn.execute.return_value.fetchone.return_value=previous
             with patch('main.current_user',return_value=self.user),patch('player_cabinet.connect') as connect,patch('player_cabinet.verify_password',return_value=valid):
                 connect.return_value.__enter__.return_value=conn
@@ -100,7 +100,7 @@ class PlayerCabinetTests(unittest.TestCase):
             self.assertFalse(any(c.args[0].startswith(('UPDATE','DELETE','INSERT')) for c in conn.execute.call_args_list))
 
     def test_profile_save_rotates_session_and_keeps_role_out_of_updates(self):
-        conn=MagicMock();conn.execute.return_value.fetchone.return_value=('player','player@example.invalid','hash')
+        conn=MagicMock();conn.execute.return_value.fetchone.return_value=('player','player@example.invalid','hash','user')
         with patch('main.current_user',return_value=self.user),patch('player_cabinet.connect') as connect,patch('player_cabinet.verify_password',return_value=True):
             connect.return_value.__enter__.return_value=conn
             response=self.client.patch('/api/cabinet/account',json=self.profile,headers=self.headers)
