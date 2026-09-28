@@ -1,0 +1,59 @@
+warning: in the working copy of 'scripts/automation/Deploy-RhissethFromRunner.py', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/automation/Invoke-RhissethRunnerNative.ps1', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/scripts/automation/Deploy-RhissethFromRunner.py b/scripts/automation/Deploy-RhissethFromRunner.py[m
+[1mindex d5c2077..aa5505d 100644[m
+[1m--- a/scripts/automation/Deploy-RhissethFromRunner.py[m
+[1m+++ b/scripts/automation/Deploy-RhissethFromRunner.py[m
+[36m@@ -9,7 +9,7 @@[m [mimport sys[m
+ from zoneinfo import ZoneInfo[m
+ [m
+ rid = 'da44a388-e458-4379-ab4c-c204696804b2'[m
+[31m-if len(sys.argv) != 3 or sys.argv[1] != rid or sys.argv[2] not in ('inspect', 'install', 'validate', 'hosting', 'snapshot', 'publish-map', 'audit-map'):[m
+[32m+[m[32mif len(sys.argv) != 3 or sys.argv[1] != rid or sys.argv[2] not in ('inspect', 'install', 'validate', 'hosting', 'snapshot', 'publish-map', 'audit-map', 'publish-preview'):[m
+     raise SystemExit('Invalid approved operation')[m
+ operation = sys.argv[2][m
+ now = dt.datetime.now(dt.timezone.utc)[m
+[36m@@ -51,7 +51,8 @@[m [mtry:[m
+     result = ssh(['ssh', *options, 'root@62.113.109.168', 'mkdir -p /opt/rhisseth/scripts/automation /opt/rhisseth/reports/automation-logs'])[m
+     if result.returncode:[m
+         raise RuntimeError('VPS project directory preparation failed')[m
+[31m-    result = ssh(['scp', *options, str(Path(__file__).with_name('Deploy-RhissethVps.py')), 'root@62.113.109.168:/opt/rhisseth/scripts/automation/Deploy-RhissethVps.py'])[m
+[32m+[m[32m    payload_name = 'Publish-Hex70PreviewVps.py' if operation == 'publish-preview' else 'Deploy-RhissethVps.py'[m
+[32m+[m[32m    result = ssh(['scp', *options, str(Path(__file__).with_name(payload_name)), 'root@62.113.109.168:/opt/rhisseth/scripts/automation/' + payload_name])[m
+     if result.returncode:[m
+         raise RuntimeError('Reviewed VPS script transfer failed')[m
+     if operation == 'hosting':[m
+[36m@@ -64,8 +65,8 @@[m [mtry:[m
+         result = ssh(['scp', *options, str(root / 'temp/hosting-bkp.zip'),str(root / 'temp/sql-bkp.zip'),'root@62.113.109.168:/opt/rhisseth/temp/'])[m
+         if result.returncode:[m
+             raise RuntimeError('Reviewed hosting archives transfer failed')[m
+[31m-    interpreter = '/opt/rhisseth/venv/bin/python' if operation in ('hosting','validate','audit-map') else 'python3'[m
+[31m-    process = subprocess.Popen(['sshpass', '-e', 'ssh', *options, 'root@62.113.109.168', f'{interpreter} /opt/rhisseth/scripts/automation/Deploy-RhissethVps.py {operation}'], env=ssh_env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)[m
+[32m+[m[32m    interpreter = '/opt/rhisseth/venv/bin/python' if operation in ('hosting','validate','audit-map','publish-preview') else 'python3'[m
+[32m+[m[32m    process = subprocess.Popen(['sshpass', '-e', 'ssh', *options, 'root@62.113.109.168', f'{interpreter} /opt/rhisseth/scripts/automation/{payload_name} {operation}'], env=ssh_env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)[m
+     for line in process.stdout:[m
+         emit(line.rstrip().replace(password, '<redacted>'))[m
+     code = process.wait()[m
+[1mdiff --git a/scripts/automation/Invoke-RhissethRunnerNative.ps1 b/scripts/automation/Invoke-RhissethRunnerNative.ps1[m
+[1mindex 2af9c4d..560db47 100644[m
+[1m--- a/scripts/automation/Invoke-RhissethRunnerNative.ps1[m
+[1m+++ b/scripts/automation/Invoke-RhissethRunnerNative.ps1[m
+[36m@@ -2,7 +2,7 @@[m
+ param([string]$ResourceId = '',[m
+       [ValidateSet('Inspect-RhissethVpsFromRunner.py', 'Consolidate-RhissethRunnerFiles.py', 'Deploy-RhissethFromRunner.py')][m
+       [string]$ScriptName = 'Inspect-RhissethVpsFromRunner.py',[m
+[31m-      [ValidateSet('inspect', 'install', 'validate', 'hosting', 'snapshot', 'publish-map', 'audit-map')][string]$Operation = 'inspect')[m
+[32m+[m[32m      [ValidateSet('inspect', 'install', 'validate', 'hosting', 'snapshot', 'publish-map', 'audit-map', 'publish-preview')][string]$Operation = 'inspect')[m
+ $ErrorActionPreference = 'Stop'[m
+ $root = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../..')).Path[m
+ $workspaceRoot = (Resolve-Path -LiteralPath (Join-Path $root '..')).Path[m
+[36m@@ -28,7 +28,8 @@[m [mtry {[m
+     $out = & scp.exe @opts "$root/scripts/automation/$ScriptName" "avalon@10.210.52.128:$remote" 2>&1[m
+     if ($LASTEXITCODE -ne 0) { $out | Add-Content -LiteralPath $log; throw 'Runner transfer failed' }[m
+     if ($ScriptName -eq 'Deploy-RhissethFromRunner.py') {[m
+[31m-        $out = & scp.exe @opts "$root/scripts/automation/Deploy-RhissethVps.py" 'avalon@10.210.52.128:/home/avalon/rhisseth.ru/scripts/automation/Deploy-RhissethVps.py' 2>&1[m
+[32m+[m[32m        $payloadName = if ($Operation -eq 'publish-preview') { 'Publish-Hex70PreviewVps.py' } else { 'Deploy-RhissethVps.py' }[m
+[32m+[m[32m        $out = & scp.exe @opts "$root/scripts/automation/$payloadName" "avalon@10.210.52.128:/home/avalon/rhisseth.ru/scripts/automation/$payloadName" 2>&1[m
+         if ($LASTEXITCODE -ne 0) { $out | Add-Content -LiteralPath $log; throw 'VPS payload transfer to runner failed' }[m
+         if ($Operation -eq 'hosting') {[m
+             $out = & ssh.exe @opts avalon@10.210.52.128 'mkdir -p /home/avalon/rhisseth.ru/temp && chmod 700 /home/avalon/rhisseth.ru/temp' 2>&1[m
