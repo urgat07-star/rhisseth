@@ -1,27 +1,40 @@
 <!doctype html>
 <html lang="ru">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Rhisseth — личный кабинет</title>
-  <link rel="stylesheet" href="styles.css?v=player-cabinet-1">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Rhisseth — личный кабинет</title>
+    <link rel="stylesheet" href="styles.css?v=player-cabinet-1">
+    <link rel="stylesheet" href="styles.css?v=batell-0.3.2">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Infant:ital,wght@0,300..700;1,300..700&family=Libertinus+Sans:ital,wght@0,400;0,700;1,400&family=Monomakh&display=swap" rel="stylesheet">
 </head>
-<body>
-  <header class="topbar">
-    <div>
-      <p class="eyebrow">RHISSETH</p>
-      <h1>Личный кабинет игрока</h1>
-    </div>
-    <a href="index.html">Открыть карту мира</a>
-    <div><span id="user-status"></span> <button id="logout" type="button">Выйти</button></div>
-  </header>
 
+<body>
+    <header class="topbar">
+        <div class="logo">
+            <img src="logo.webp" class="logo-img">
+        </div>
+        <div class="goback-play">
+            <a href="index.html">&#127758;&nbsp;В Игру</a>
+        </div>
+        <div class="exit">
+            <button id="logout" type="button">⍈ &nbsp;<span id="user-status"></span></button>
+        </div>
+  </header>
+  
   <main class="cabinet-page">
-    <p id="cabinet-status" role="status" aria-live="polite">Загрузка кабинета…</p>
-    <section id="barony-summary" class="player-panel cabinet-summary" hidden>
-      <img id="cabinet-crest" alt="Герб вашей баронии">
-      <div><p id="cabinet-title"></p><h2 id="cabinet-name"></h2><p id="cabinet-cells"></p></div>
-    </section>
+        <p id="cabinet-status" role="status" aria-live="polite">Загрузка кабинета…</p>
+        <section id="barony-summary" class="player-panel cabinet-summary" hidden>
+            <img id="cabinet-crest" alt="Герб вашей баронии">
+            <div class="friherra">
+                <p id="cabinet-title" class="friherra-title"></p>
+                <h2 id="cabinet-name" class="friherra-name"></h2>
+                <p id="cabinet-cells" class="friherra-lens"></p>
+            </div>
+        </section>
+        
     <nav class="cabinet-tabs" role="tablist" aria-label="Разделы личного кабинета">
       <button id="tab-barony" role="tab" aria-controls="panel-barony" aria-selected="true">Барония</button>
       <button id="tab-army" role="tab" aria-controls="panel-army" aria-selected="false" tabindex="-1">Армия</button>
@@ -63,7 +76,8 @@
         <div id="barony-totals" class="stat-grid"></div>
         <div class="stat-grid"><section><h3>Категории гексов</h3><dl id="category-stats"></dl></section><section><h3>Ландшафты</h3><dl id="landscape-stats"></dl></section></div>
         <h3>Население и армии</h3><p>Учёт населения и управление армиями ещё в разработке.</p>
-        <h3>Параметры гексов</h3><p class="hint">Средние и диапазоны рассчитаны по известным оценкам. Неописанные параметры в расчёт не входят.</p><div id="rating-stats" class="stat-grid"></div>
+        <h3>Параметры гексов</h3><p class="hint">Средние и диапазоны рассчитаны по известным оценкам. Неописанные параметры в расчёт не входят.</p>
+        <div id="rating-stats" class="stat-grid"></div>
         <h3>Полные сведения по каждому гексу</h3><div id="barony-hexes" class="stat-grid"></div>
       </div>
     </section>

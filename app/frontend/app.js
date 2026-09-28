@@ -324,7 +324,7 @@ async function refreshGameResources() {
   const [army, peasants] = await Promise.all([armyResponse.json(), peasantsResponse.json()]);
   const food = Number(army.inventory?.food || 0);
   const population = (peasants.hexes || []).reduce((sum, hex) => sum + Number(hex.quantity || 0), 0);
-  document.querySelector('#game-resources').textContent = `G:${army.gold}  F:${food}  P:${population}`;
+  document.querySelector('#game-resources').textContent = `Злато:${army.gold}  Пища:${food}  Холопы:${population}`;
 }
 
 function adjacentKeys(key) {
