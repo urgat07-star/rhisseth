@@ -194,16 +194,16 @@ def create_encounter_battle(conn,user_id,general_id,source,target,target_data,tu
     for index,unit in enumerate(attackers):
         conn.execute('''INSERT INTO game_battle_units(battle_id,side,assignment_id,unit_id,name,image_path,x,y,
             health,max_health,attack,defense,armor,attack_range,speed,initiative)
-            VALUES (%s,'attacker',%s,%s,%s,%s,1,%s,%s,%s,%s,%s,%s,%s,%s,%s)''',
+            VALUES (%s,'attacker',%s,%s,%s,%s,0,%s,%s,%s,%s,%s,%s,%s,%s,%s)''',
             (battle_id,unit[0],unit[1],unit[2],unit[3],index+1,*unit[4:9],max(1,unit[9]),*unit[10:]))
     conn.execute('''INSERT INTO game_battle_units(battle_id,side,is_general,name,image_path,x,y,
         health,max_health,attack,defense,armor,attack_range,speed,initiative,active)
-        VALUES (%s,'attacker',true,%s,%s,0,5,%s,%s,%s,%s,0,1,%s,%s,%s)''',
+        VALUES (%s,'attacker',true,%s,%s,0,0,%s,%s,%s,%s,0,1,%s,%s,%s)''',
         (battle_id,general[0],general[1],general[2],general[2],general[3],general[4],general[5],general[6],len(attackers)<len(defenders)))
     for index,unit in enumerate(defenders):
         conn.execute('''INSERT INTO game_battle_units(battle_id,side,unit_id,name,image_path,x,y,
             health,max_health,attack,defense,armor,attack_range,speed,initiative)
-            VALUES (%s,'defender',%s,%s,%s,7,%s,%s,%s,%s,%s,%s,%s,%s,%s)''',
+            VALUES (%s,'defender',%s,%s,%s,5,%s,%s,%s,%s,%s,%s,%s,%s,%s)''',
             (battle_id,unit['id'],unit['name'],unit['image_path'],index+1,unit['health'],unit['health'],
              unit['attack'],unit['defense'],unit['armor'],max(1,unit['attack_range']),unit['speed'],unit['initiative']))
     _apply_template(conn,battle_id,user_id)
@@ -389,16 +389,16 @@ async def _start_battle(q:int,r:int,request:Request,purpose:str):
         for index,unit in enumerate(attackers):
             conn.execute('''INSERT INTO game_battle_units(battle_id,side,assignment_id,unit_id,name,image_path,x,y,
                 health,max_health,attack,defense,armor,attack_range,speed,initiative)
-                VALUES (%s,'attacker',%s,%s,%s,%s,1,%s,%s,%s,%s,%s,%s,%s,%s,%s)''',
+                VALUES (%s,'attacker',%s,%s,%s,%s,0,%s,%s,%s,%s,%s,%s,%s,%s,%s)''',
                 (battle_id,unit[0],unit[1],unit[2],unit[3],index+1,*unit[4:9],max(1,unit[9]),*unit[10:]))
         conn.execute('''INSERT INTO game_battle_units(battle_id,side,is_general,name,image_path,x,y,
             health,max_health,attack,defense,armor,attack_range,speed,initiative,active)
-            VALUES (%s,'attacker',true,%s,%s,0,5,%s,%s,%s,%s,0,1,%s,%s,%s)''',
+            VALUES (%s,'attacker',true,%s,%s,0,0,%s,%s,%s,%s,0,1,%s,%s,%s)''',
             (battle_id,general[9],general[10],general[4],general[4],general[5],general[6],general[8],general[7],len(attackers)<len(defenders)))
         for index,unit in enumerate(defenders):
             conn.execute('''INSERT INTO game_battle_units(battle_id,side,unit_id,name,image_path,x,y,
                 health,max_health,attack,defense,armor,attack_range,speed,initiative)
-                VALUES (%s,'defender',%s,%s,%s,7,%s,%s,%s,%s,%s,%s,%s,%s,%s)''',
+                VALUES (%s,'defender',%s,%s,%s,5,%s,%s,%s,%s,%s,%s,%s,%s,%s)''',
                 (battle_id,unit['id'],unit['name'],unit['image_path'],index+1,unit['health'],unit['health'],
                  unit['attack'],unit['defense'],unit['armor'],max(1,unit['attack_range']),unit['speed'],unit['initiative']))
         _insert_wall(conn,battle_id,building)
