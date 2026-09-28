@@ -106,7 +106,7 @@ def _drive_ai(conn,battle,units):
         if not adjacent:
             target=min(targets,key=lambda u:distance((defender['x'],defender['y']),(u['x'],u['y'])))
             occupied={(u['x'],u['y']) for u in units if u['health']>0 and u['id']!=defender['id']}
-            options=[(x,y) for x in range(6) for y in range(8)
+            options=[(x,y) for x in range(8) for y in range(6)
                      if reachable((defender['x'],defender['y']),(x,y),defender['speed'],occupied)]
             if options:
                 next_cell=min(options,key=lambda p:distance(p,(target['x'],target['y'])))
@@ -203,7 +203,7 @@ def create_encounter_battle(conn,user_id,general_id,source,target,target_data,tu
     for index,unit in enumerate(defenders):
         conn.execute('''INSERT INTO game_battle_units(battle_id,side,unit_id,name,image_path,x,y,
             health,max_health,attack,defense,armor,attack_range,speed,initiative)
-            VALUES (%s,'defender',%s,%s,%s,5,%s,%s,%s,%s,%s,%s,%s,%s,%s)''',
+            VALUES (%s,'defender',%s,%s,%s,7,%s,%s,%s,%s,%s,%s,%s,%s,%s)''',
             (battle_id,unit['id'],unit['name'],unit['image_path'],index+1,unit['health'],unit['health'],
              unit['attack'],unit['defense'],unit['armor'],max(1,unit['attack_range']),unit['speed'],unit['initiative']))
     _apply_template(conn,battle_id,user_id)
@@ -240,7 +240,7 @@ def _apply_template(conn,battle_id,user_id):
         LEFT JOIN player_general_units pgu ON pgu.id=u.assignment_id
         WHERE u.battle_id=%s AND u.side='attacker' ORDER BY u.id''',(battle_id,)).fetchall()
     positions=[template.get(slot,(x,y)) for _,slot,x,y in rows]
-    if len(set(positions))!=len(positions) or any(not 0<=x<=2 or not 0<=y<8 for x,y in positions):return
+    if len(set(positions))!=len(positions) or any(x!=0 or not 0<=y<6 for x,y in positions):return
     for (unit_id,_,_,_),(x,y) in zip(rows,positions):
         conn.execute('UPDATE game_battle_units SET x=%s,y=%s WHERE id=%s',(x,y,unit_id))
 
@@ -398,7 +398,7 @@ async def _start_battle(q:int,r:int,request:Request,purpose:str):
         for index,unit in enumerate(defenders):
             conn.execute('''INSERT INTO game_battle_units(battle_id,side,unit_id,name,image_path,x,y,
                 health,max_health,attack,defense,armor,attack_range,speed,initiative)
-                VALUES (%s,'defender',%s,%s,%s,5,%s,%s,%s,%s,%s,%s,%s,%s,%s)''',
+            VALUES (%s,'defender',%s,%s,%s,7,%s,%s,%s,%s,%s,%s,%s,%s,%s)''',
                 (battle_id,unit['id'],unit['name'],unit['image_path'],index+1,unit['health'],unit['health'],
                  unit['attack'],unit['defense'],unit['armor'],max(1,unit['attack_range']),unit['speed'],unit['initiative']))
         _insert_wall(conn,battle_id,building)
