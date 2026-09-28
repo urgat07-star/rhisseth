@@ -11,17 +11,17 @@
 </head>
 <body>
 	<header class="topbar">
-    <div>
-        <p class="eyebrow">RHISSETH</p>
+    <div class="logo">
+        <!--p class="eyebrow">RHISSETH</p-->
+        <img src="logo.webp" class="logo-img">
         <!--h1>Оперативная карта</h1-->
     </div>
     <div class="hint" id="editor-hint"></div>
     <nav class="map-top-actions" aria-label="Основная навигация">
-      <a id="admin-link" class="ornate-link" href="/admin/hexes" hidden>Админ-панель</a>
+      <a id="admin-link" class="ornate-link" href="/admin/hexes" hidden>Админка</a>
       <button id="start-game" class="ornate-link" type="button">Барония</button>
       <a id="user-status" class="ornate-link" href="cabinet.html#settings" title="Личный кабинет"></a>
     </nav>
-
     <!-- ▼ Выпадающее меню пользователя (CSS-only) ▼ -->
     <details class="user-menu">
         <summary class="user-menu__trigger" title="Меню пользователя">☰</summary>
@@ -41,6 +41,7 @@
         </div>
     </details>
     <!-- ▲ /user-menu ▲ -->
+    
 
     <button id="logout" type="button" hidden>Выйти</button>
 </header>
@@ -84,7 +85,7 @@
 				</div>
 				<button id="end-turn" class="end-turn" type="button" hidden>Конец хода</button>
 				<div id="skip-turn-controls" class="skip-turn-controls" hidden>
-					<button id="skip-turn" class="end-turn" type="button" disabled>Пропустить ход</button>
+					<button id="skip-turn" class="end-turn">Пропустить ход</button>
 					<span id="skip-countdown" aria-live="polite"></span>
 				</div>
 			</section>
