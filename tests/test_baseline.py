@@ -1,5 +1,6 @@
 import sys
 import unittest
+import importlib.util
 from pathlib import Path
 from unittest.mock import patch
 
@@ -8,6 +9,10 @@ sys.path.insert(0, str(ROOT / 'app/backend'))
 from import_csv import read_rows
 from main import app
 from fastapi.testclient import TestClient
+
+economy_spec = importlib.util.spec_from_file_location('economy_v040', ROOT / 'scripts/prepare-economy-v040.py')
+economy_v040 = importlib.util.module_from_spec(economy_spec)
+economy_spec.loader.exec_module(economy_v040)
 
 class BaselineTests(unittest.TestCase):
     def test_source_coordinates(self):
@@ -31,6 +36,36 @@ class BaselineTests(unittest.TestCase):
         self.assertNotIn("'Тип владельца'",migration)
         self.assertNotIn("'Владелец'",migration)
         self.assertNotIn("'ID территории'",migration)
+
+    def test_economy_v040_forest_resources(self):
+        rows = read_rows(ROOT / 'data/import/hex-initial-parameters.csv')
+        forests = ('Редколесье','Густой лес','Тайга')
+        woods = {'Дерево','Корабельный лес'}
+        forbidden = ('Степь','Холмы','Горы','Высокогорье')
+        forest_rows = [row for row in rows if any(name in row['Тип местности'] for name in forests)]
+        self.assertGreater(len(forest_rows), 0)
+        self.assertTrue(all(row['Основной ресурс'] in woods for row in forest_rows))
+        self.assertTrue(all(int(row['Богатство ресурса']) >= 1 for row in forest_rows))
+        self.assertFalse(any(row['Основной ресурс'] in woods and
+                             any(name in row['Тип местности'] for name in forbidden)
+                             for row in rows))
+        self.assertFalse(any(row['Основной ресурс'] in woods and
+                             not any(name in row['Тип местности'] for name in forests)
+                             for row in rows))
+        economy_v040.validate(rows)
+        for row in rows:
+            if row['Категория'] not in ('Суша','Побережье','Море'):
+                continue
+            movement, defense, fertility, depth, danger = economy_v040.expected_parameters(row)
+            self.assertEqual(row['Проходимость'], str(movement), row['ID'])
+            self.assertEqual(row['Защита'], str(defense), row['ID'])
+            self.assertEqual(row['Плодородие'], '' if fertility is None else str(fertility), row['ID'])
+            self.assertEqual(row['Глубина'], '' if depth is None else str(depth), row['ID'])
+            self.assertEqual(row['Опасность'], str(danger), row['ID'])
+        migration=(ROOT/'data/migrations/036_economy_v040_hex_resources.sql').read_text(encoding='utf-8')
+        self.assertNotIn('Владелец', migration)
+        self.assertNotIn('Тип владельца', migration)
+        self.assertNotIn('Название баронии', migration)
 
     def test_interface_and_invalid_updates(self):
         client = TestClient(app)

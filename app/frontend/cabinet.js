@@ -1,4 +1,8 @@
 "use strict";
+/**
+ * Личный кабинет: аккаунт, барония, армия, крестьяне и дипломатия.
+ * После успешных мутаций соответствующее состояние перечитывается из API.
+ */
 let csrf = '', state = null, armyState = {generals:[],catalogue:[]}, busy = false, abandoningId = null, selectedGeneralId = null;
 const status = document.querySelector('#cabinet-status');
 const dialog = document.querySelector('#abandon-dialog');
@@ -11,6 +15,7 @@ async function api(path, method='GET', body) {
   if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
   return result;
 }
+/** Заполняет семантический список `<dl>` парами «название — значение». */
 function lineList(element, items) {
   element.replaceChildren();
   for (const [term,value] of items) {
@@ -32,6 +37,7 @@ function hexValue(row,field) {
   }
   return row[field] === '' ? 'Нет данных' : row[field] ?? 'Нет данных';
 }
+/** Переключает ARIA-вкладки и при клавиатурной навигации переносит фокус. */
 function selectTab(name,focus=false) {
   const buttons=[...document.querySelectorAll('[role=tab]')];
   if (!buttons.some(button=>!button.hidden && button.id===`tab-${name}`)) name=state && !state.barony ? 'settings' : 'barony';
@@ -58,6 +64,7 @@ tabs.forEach(button=>{
 window.addEventListener('hashchange',()=>selectTab(location.hash.slice(1)));
 selectTab(location.hash.slice(1));
 
+/** Отображает данные аккаунта и баронии из загруженного состояния. */
 function renderCabinet() {
   document.querySelector('#account-form input[name="login"]')?.setAttribute('minlength','2');
   document.querySelector('#user-status').textContent=state.account.login;
@@ -134,6 +141,7 @@ document.querySelector('#peasant-transfer-form').addEventListener('submit',async
   try{await api('/api/cabinet/peasants/transfer','POST',data);await loadPeasants();document.querySelector('#peasant-transfer-status').textContent='Крестьяне направлены на гекс.';}
   catch(error){document.querySelector('#peasant-transfer-status').textContent=error.message;}
 });
+/** Перестраивает карточки генералов и доступные действия армии. */
 function renderArmy() {
   const list=document.querySelector('#generals-list'); list.replaceChildren();
   document.querySelector('#army-gold').textContent=`Казна: ${armyState.gold} золотых`;
@@ -176,6 +184,7 @@ function openGeneral(id) {
 document.querySelector('#hire-general').addEventListener('click',async()=>{if(busy)return;busy=true;try{await api('/api/cabinet/army/generals','POST',{});await loadArmy();status.textContent='Генерал нанят за 100 золотых.';}catch(error){status.textContent=error.message;}finally{busy=false;}});
 document.querySelector('#close-general').addEventListener('click',()=>document.querySelector('#general-dialog').close());
 document.querySelector('#hire-unit-form').addEventListener('submit',async event=>{event.preventDefault();const unitId=Number(document.querySelector('#unit-catalogue').value);if(!unitId)return;await api(`/api/cabinet/army/generals/${selectedGeneralId}/units`,'POST',{unit_id:unitId});await loadArmy();openGeneral(selectedGeneralId);});
+/** Блокирует форму на время мутации и единообразно выводит результат. */
 async function action(form,handler) {
   if (busy) return;
   busy=true; const button=form.querySelector('[type=submit]'); button.disabled=true; status.textContent='Сохранение…';

@@ -72,11 +72,11 @@ async def reset_baronies(request: Request):
         conn.execute('DELETE FROM barony_peasant_reserve WHERE user_id=ANY(%s)',(user_ids,))
         released=conn.execute('''UPDATE hexes SET data=(data - ARRAY['ID территории','Название территории','Название баронии','Цвет баронии','Герб баронии']) || %s,
             updated_at=now() WHERE data->>'Тип владельца'='Игрок' ''',
-            (Jsonb({'Тип владельца':'Ничейная территория','Владелец':'','Уровень гекса':'0','Постройка':'- нет -'}),)).rowcount
+            (Jsonb({'Тип владельца':'Ничейная территория','Владелец':'','Уровень гекса':'1','Постройка':'нет построек'}),)).rowcount
         for barony_id,user_id,name,territory_name,crest,color,q,r in baronies:
             patch={'Тип владельца':'Игрок','Владелец':str(user_id),'ID территории':str(barony_id),
                    'Название баронии':name,'Название территории':territory_name,
-                   'Герб баронии':crest,'Цвет баронии':color,'Уровень гекса':'0','Постройка':'- нет -'}
+                   'Герб баронии':crest,'Цвет баронии':color,'Уровень гекса':'1','Постройка':'нет построек'}
             conn.execute('UPDATE hexes SET data=data || %s,updated_at=now() WHERE q=%s AND r=%s',(Jsonb(patch),q,r))
         for user_id in user_ids:
             previous=gold_by_user.get(user_id,0)

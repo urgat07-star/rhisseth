@@ -54,6 +54,30 @@ class ArmyTests(unittest.TestCase):
             self.assertEqual(self.client.get('/admin/units').status_code,403)
             self.assertEqual(self.client.get('/api/admin/units').status_code,403)
 
+    def test_unit_price_with_predecessor_upgrades_existing_assignment(self):
+        class Result:
+            def __init__(self, one=None, many=None): self.one,self.many=one,many or []
+            def fetchone(self): return self.one
+            def fetchall(self): return self.many
+        conn=MagicMock()
+        def execute(sql,args=()):
+            if 'FROM player_generals WHERE id=' in sql:return Result((7,))
+            if 'FROM unit_catalog WHERE id=' in sql and 'purchasable' in sql:return Result((1,))
+            if 'FROM unit_upgrade_requirements' in sql:return Result((2,))
+            if 'FROM player_general_units' in sql and 'unit_id=' in sql:return Result((55,3))
+            if 'FROM unit_resource_costs' in sql:return Result(many=[('wood',1),('cloth',1)])
+            if 'SELECT gold FROM game_wallets' in sql:return Result((10,))
+            if 'SELECT resource_code,quantity FROM game_inventory' in sql:return Result(many=[('wood',5),('cloth',5)])
+            return Result()
+        conn.execute.side_effect=execute; self.connection(conn)
+        with patch('main.current_user',return_value=self.player):
+            response=self.client.post('/api/cabinet/army/generals/7/units',json={'unit_id':3},headers=self.headers)
+        self.assertEqual(response.status_code,200)
+        self.assertTrue(response.json()['upgraded'])
+        self.assertEqual(response.json()['slot'],3)
+        self.assertTrue(any('UPDATE player_general_units SET unit_id=' in call.args[0] for call in conn.execute.call_args_list))
+        self.assertFalse(any('INSERT INTO player_general_units' in call.args[0] for call in conn.execute.call_args_list))
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,4 +1,8 @@
 "use strict";
+/**
+ * Редактор справочника шаблонов генералов.
+ * `render` строит карточки, `open` — форму, `load` перечитывает API.
+ */
 let csrf='',generals=[],editing=null;
 const fields=['name','description','image_path','health','attack','defense','initiative','speed','logistics','skills','experience_per_level','max_level','max_attack_bonus','max_defense_bonus','active'];
 const numeric=['health','attack','defense','initiative','speed','logistics','experience_per_level','max_level','max_attack_bonus','max_defense_bonus'];

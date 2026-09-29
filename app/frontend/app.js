@@ -1,4 +1,8 @@
 "use strict";
+/**
+ * Интерактивная карта: SVG-гексы, создание баронии, стратегические армии,
+ * глобальный ход и тактический бой. См. `docs/frontend-javascript.md`.
+ */
 
 const RADIUS = 80;
 const HEX_WIDTH = Math.sqrt(3) * RADIUS;
@@ -16,6 +20,7 @@ const polygons = new Map();
 const rowsByKey = new Map();
 const cellKey = (q,r) => `${q},${r}`;
 const neighbors = [[1,0],[-1,0],[0,1],[0,-1],[1,-1],[-1,1]];
+/** Проверяет, образуют ли ключи осевых координат одну связанную область. */
 function connectedSelection(cells) {
   const remaining = new Set(cells);
   if (!remaining.size) return true;
@@ -74,6 +79,7 @@ function hexCorners(q, r) {
   });
 }
 
+/** Рисует внешние границы владений, исключая общие рёбра соседних гексов. */
 function redrawBaronyBoundaries() {
   const groups = new Map();
   const add = (id, color, key) => {
@@ -266,6 +272,7 @@ form.addEventListener("submit", async (event) => {
   }
 });
 
+/** Создаёт SVG-гексы и связывает мышь/клавиатуру с игровыми действиями. */
 function render(rows) {
   const fragment = document.createDocumentFragment();
   const byCoordinates = new Map(rows.map((row) => [`${Number(row.Q)},${Number(row.R)}`, row]));
@@ -348,6 +355,7 @@ function unitPosition(key) {
   const [q,r] = key.split(',').map(Number);
   return {x:HEX_WIDTH*(q+r/2), y:RADIUS*1.5*r};
 }
+/** Загружает армии, создаёт SVG-маркеры и восстанавливает активный бой. */
 async function createMapUnit() {
   const owned = mapRows.find(row=>row['Тип владельца']==='Игрок' && row['Владелец']===userId);
   const fallback = mapRows.find(row=>row['Категория'] && row['Категория']!=='Море') || mapRows[0];
@@ -449,6 +457,7 @@ function startSkipCountdown(skipAt,visible,ready){
   };
   update();skipCountdownTimer=setInterval(update,1000);
 }
+/** Синхронизирует календарь, голос игрока и доступность завершения хода. */
 async function refreshGameClock() {
   try {
     const response = await fetch(`${API_BASE}/game/clock`, {cache:'no-store'});
@@ -547,6 +556,7 @@ function battleAttackLog(event,units){
   const target=units.find(unit=>unit.id===details.target_id)?.name||`юнита №${details.target_id}`;
   return `Раунд ${event.round}: ${attacker} атаковал ${target}. Бросок атаки: ${details.attack_roll}. Бросок защиты: ${details.defense_roll}. Урон: ${details.damage}.`;
 }
+/** Отправляет команду боя и принимает подтверждённое сервером состояние. */
 async function battleCommand(path,payload) {
   const response=await fetch(`${API_BASE}${path}`,{method:'POST',headers:{'X-CSRF-Token':csrfToken,'Content-Type':'application/json'},body:JSON.stringify(payload)});
   const data=await response.json(); if (!response.ok) throw new Error(data.error||`HTTP ${response.status}`);
@@ -687,6 +697,7 @@ document.querySelector('#cancel-name').addEventListener('click', () => {
 document.addEventListener("keydown", (event) => { if (event.key === "Escape") closeCard(); });
 viewport.addEventListener("pointerdown", (event) => { if (!card.contains(event.target) && event.button === 0) closeCard(); });
 
+/** Загружает личность, карту и доступные игроку игровые подсистемы. */
 async function loadData() {
   const identityResponse = await fetch(`${API_BASE}/me`, { cache: "no-store" });
   if (identityResponse.status === 401) {

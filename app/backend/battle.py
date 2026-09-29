@@ -135,7 +135,7 @@ def _pay_raid(conn,battle):
                         (battle['target_q'],battle['target_r'])).fetchone()
     if not target or target[0].get('Тип владельца','Ничейная территория')!=battle['target_owner_type'] or str(target[0].get('Владелец') or '')!=battle['target_owner_id']:
         raise HTTPException(409,'Владелец гекса изменился во время боя')
-    level=max(0,min(7,_int(target[0].get('Уровень гекса'))))
+    level=max(1,min(8,_int(target[0].get('Уровень гекса')) or 1))
     balance=conn.execute('''SELECT gold,peasant_percent,peasant_nominal,morale_penalty
         FROM raid_balance WHERE building_level=%s''',(level,)).fetchone()
     if not balance:raise HTTPException(409,'Не задан баланс грабежа')
@@ -364,7 +364,7 @@ async def _start_battle(q:int,r:int,request:Request,purpose:str):
             raise HTTPException(409,'Цель должна соседствовать с владениями баронства')
         if purpose=='raid':
             last=conn.execute('SELECT last_turn FROM game_hex_raids WHERE q=%s AND r=%s',(q,r)).fetchone()
-            cooldown=conn.execute('SELECT cooldown_turns FROM raid_balance WHERE building_level=%s',(max(0,min(7,_int(target[0].get('Уровень гекса')))),)).fetchone()
+            cooldown=conn.execute('SELECT cooldown_turns FROM raid_balance WHERE building_level=%s',(max(1,min(8,_int(target[0].get('Уровень гекса')) or 1)),)).fetchone()
             if not cooldown:raise HTTPException(409,'Не задан баланс грабежа')
             if last and turn-last[0]<cooldown[0]:raise HTTPException(409,'Гекс ещё нельзя грабить повторно')
         if conn.execute("SELECT 1 FROM game_battles WHERE status='active' AND (general_id=%s OR (target_q=%s AND target_r=%s))",
@@ -374,7 +374,7 @@ async def _start_battle(q:int,r:int,request:Request,purpose:str):
             uc.attack,uc.defense,uc.armor,uc.attack_range,uc.speed,uc.initiative
             FROM player_general_units pgu JOIN unit_catalog uc ON uc.id=pgu.unit_id
             WHERE pgu.general_id=%s AND pgu.status='ready' ORDER BY pgu.slot FOR UPDATE OF pgu''',(general[0],)).fetchall()
-        building=max(0,min(7,_int(target[0].get('Уровень гекса'))))
+        building=max(1,min(8,_int(target[0].get('Уровень гекса')) or 1))
         budget=defense_budget(_int(target[0].get('Защита')),building)
         prefix='units/barbarians-%' if owner_type=='Ничейная территория' else 'units/unit-%'
         candidates=[dict(zip(('id','name','image_path','health','attack','defense','armor','attack_range','speed','initiative','combat_level'),row))
@@ -421,7 +421,7 @@ def raid_availability(q:int,r:int,request:Request):
             return {'available':False,'reason':'Гекс недоступен'}
         last=conn.execute('SELECT last_turn FROM game_hex_raids WHERE q=%s AND r=%s',(q,r)).fetchone()
         cooldown=conn.execute('SELECT cooldown_turns FROM raid_balance WHERE building_level=%s',
-            (max(0,min(7,_int(target[0].get('Уровень гекса')))),)).fetchone()
+            (max(1,min(8,_int(target[0].get('Уровень гекса')) or 1)),)).fetchone()
         if not cooldown:return {'available':False,'reason':'Не задан баланс грабежа'}
         available=not last or turn-last[0]>=cooldown[0]
         return {'available':available,'reason':'' if available else 'Гекс ещё нельзя грабить повторно'}
@@ -597,8 +597,8 @@ def destroy_after_raid(battle_id:int,request:Request):
                             (battle['target_q'],battle['target_r'])).fetchone()
         if not target or target[0].get('Тип владельца','Ничейная территория')!=battle['target_owner_type'] or str(target[0].get('Владелец') or '')!=battle['target_owner_id']:
             raise HTTPException(409,'Владелец гекса изменился')
-        old=max(0,min(7,_int(target[0].get('Уровень гекса'))))
-        if old==0:raise HTTPException(409,'На гексе нет постройки')
+        old=max(1,min(8,_int(target[0].get('Уровень гекса')) or 1))
+        if old==1:raise HTTPException(409,'На гексе нет постройки')
         new=old-1
         conn.execute('UPDATE hexes SET data=data || %s,updated_at=now() WHERE q=%s AND r=%s',
                      (Jsonb({'Уровень гекса':str(new),'Постройка':HEX_BUILDINGS[new]}),battle['target_q'],battle['target_r']))

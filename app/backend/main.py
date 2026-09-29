@@ -20,6 +20,7 @@ from battle import router as battle_router, start_capture_battle
 from movement import router as movement_router
 from peasants import router as peasants_router
 from river_links import router as river_links_router
+from admin_resources import router as admin_resources_router
 
 app = FastAPI(title='Rhisseth', docs_url=None, redoc_url=None)
 app.include_router(router)
@@ -35,6 +36,7 @@ app.include_router(battle_router)
 app.include_router(movement_router)
 app.include_router(peasants_router)
 app.include_router(river_links_router)
+app.include_router(admin_resources_router)
 
 @app.middleware('http')
 async def access_control(request: Request, call_next):
@@ -51,7 +53,7 @@ async def access_control(request: Request, call_next):
         request.state.user = user
         if (path in ('/admin','/admin/') or path.startswith(('/admin/users','/api/admin/users'))) and user['role_alias'] != 'admin':
             return JSONResponse({'error':'Доступ только для администраторов'},status_code=403)
-        if path.startswith(('/admin/hexes','/admin/units','/admin/generals','/api/admin/')) and user['role_alias'] not in ('admin','moderator'):
+        if path.startswith(('/admin/hexes','/admin/resources','/admin/units','/admin/generals','/api/admin/')) and user['role_alias'] not in ('admin','moderator'):
             return JSONResponse({'error':'Доступ только для администрации'},status_code=403)
         if request.method not in ('GET','HEAD'):
             import secrets
@@ -71,7 +73,7 @@ async def access_control(request: Request, call_next):
     return response
 EDITABLE = set(FIELDS)
 LIMITS = {'Проходимость': 5, 'Защита': 4, 'Плодородие': 5,
-          'Опасность': 5, 'Богатство ресурса': 5, 'Уровень гекса': 7}
+          'Опасность': 5, 'Богатство ресурса': 5, 'Уровень гекса': 8}
 
 @app.exception_handler(HTTPException)
 async def http_error(request, error):

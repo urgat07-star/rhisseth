@@ -1,4 +1,9 @@
 "use strict";
+/**
+ * Главная панель администрирования карты и игровых правил.
+ * Редактирует гексы, NPC-территории, календарь, речные связи и баланс игры.
+ * Обзор архитектуры находится в `docs/frontend-javascript.md`.
+ */
 const fields = ['Название','Название территории','Категория','Остров','Доля суши, %','Тип местности','Состав ландшафта','Дополнительный объект','Проходимость','Защита','Плодородие','Опасность','Основной ресурс','Богатство ресурса','Глубина','Течение','Комментарий','Тип владельца','Владелец'];
 const hiddenObjectFields = ['Уровень гекса','Постройка','Дорога','Водная переправа','Объекты гекса'];
 const editorFields = [...fields,...hiddenObjectFields];
@@ -11,9 +16,11 @@ async function request(url, options = {}) {
   if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
   return result;
 }
+/** Добавляет к изменяющему JSON-запросу CSRF и, если задана, ревизию гекса. */
 function mutation(url, payload, method='PUT', revision='') {
   return request(url,{method,headers:{'Content-Type':'application/json','X-CSRF-Token':csrf,...(revision?{'X-Hex-Revision':revision}:{})},body:JSON.stringify(payload)});
 }
+/** Перестраивает таблицу гексов с учётом поиска и текущего выбора. */
 function render() {
   const head = document.createElement('tr');
   for (const label of ['Выбрать','Действие','Q','R','Статус данных',...fields,'Имя владельца']) {const th=document.createElement('th');th.textContent=label;head.append(th);}
@@ -29,6 +36,7 @@ function render() {
     body.append(tr);
   }
 }
+/** Строит форму одного гекса и зависимый список допустимых владельцев. */
 function openEditor(row) {
   editing=row;form.replaceChildren();document.querySelector('#editor-title').textContent=`Гекс Q${row.Q} · R${row.R}`;
   for(const field of editorFields) {
@@ -42,8 +50,8 @@ function openEditor(row) {
       const empty=new Option('Выберите','');input.append(empty);
       options.forEach(v=>input.append(new Option(v,v)));input.value=row[field]||'';
     }
-    if(field==='Уровень гекса'){input.append(new Option('Выберите',''));['0 — нет','1 — Лагерь','2 — Поселение','3 — Деревня','4 — Форпост','5 — Крепость','6 — Город','7 — Столица'].forEach((v,i)=>input.append(new Option(v,String(i))));input.value=row[field]||'';}
-    if(field==='Постройка'){['','- нет -','Лагерь','Поселение','Деревня','Форпост','Крепость','Город','Столица'].forEach(v=>input.append(new Option(v||'Выберите',v)));input.value=row[field]||'';}
+    if(field==='Уровень гекса'){input.append(new Option('Выберите',''));['1 — нет построек','2 — Лагерь','3 — Поселение','4 — Деревня','5 — Крепость','6 — Замок','7 — Город','8 — Столица'].forEach((v,i)=>input.append(new Option(v,String(i+1))));input.value=row[field]||'';}
+    if(field==='Постройка'){['','нет построек','Лагерь','Поселение','Деревня','Крепость','Замок','Город','Столица'].forEach(v=>input.append(new Option(v||'Выберите',v)));input.value=row[field]||'';}
     if(field==='Дорога'){['','Нет','Да'].forEach(v=>input.append(new Option(v||'Выберите',v)));input.value=row[field]||'';}
     if(field==='Водная переправа'){['','Нет','Мост','Переправа'].forEach(v=>input.append(new Option(v||'Выберите',v)));input.value=row[field]||'';}
     label.append(input);
@@ -78,6 +86,7 @@ function openEditor(row) {
   const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Отмена';cancel.addEventListener('click',()=>document.querySelector('#editor').hidden=true);form.append(cancel);
   document.querySelector('#editor').hidden=false;document.querySelector('#editor').scrollIntoView({behavior:'smooth'});
 }
+/** Параллельно обновляет гексы и справочники владельцев, затем рисует таблицу. */
 async function reload() { [rows,ownerOptions]=await Promise.all([request('/api/hexes'),request('/api/admin/owners')]);render(); }
 form.addEventListener('submit',async event=>{
   event.preventDefault();if(busy||!editing)return;
@@ -123,6 +132,7 @@ async function refreshAdminClock() {
   document.querySelector('#clock-form').elements.namedItem('year').value=state.year;
   document.querySelector('#clock-form').elements.namedItem('season').value=state.season;
 }
+/** Загружает редактируемые параметры грабежа для каждого уровня постройки. */
 async function loadRaidBalance() {
   const data=await request('/api/admin/game/raid-balance');
   const container=document.querySelector('#raid-balance-rows');container.replaceChildren();
@@ -143,6 +153,7 @@ async function loadRaidBalance() {
     container.append(form);
   }
 }
+/** Рисует вручную заданные речные связи и кнопки их удаления. */
 async function loadRiverLinks(){
   const data=await request('/api/admin/game/river-links');const container=document.querySelector('#river-links');container.replaceChildren();
   for(const link of data.links){
