@@ -279,6 +279,8 @@ main { padding: clamp(12px, 2vw, 28px); }
 .hex-card dd { margin: 0; color: #f3f4eb; font-weight: 600; overflow-wrap: anywhere; }
 .rating { color: #dbc680; letter-spacing: 2px; white-space: nowrap; }
 .coordinates { margin: -8px 0 12px; color: #aeb5a7; font-size: 13px; }
+.hex-details-toggle { width: 100%; margin: 10px 0 7px; padding: 8px 11px; border: 1px solid #c2b47a; border-radius: 4px; background: #4d5134; color: #fff6d8; cursor: pointer; }
+.hex-details-toggle:hover { border-color: #ffcb29; background: #ae9a5a; color: #3b2f00; }
 
 .army-details-modal { width: min(850px, calc(100vw - 24px)); max-height: 88dvh; overflow: auto; box-sizing: border-box; padding: 24px; border: 1px solid #aa9560; border-radius: 10px; background: #111712; color: #eee6cf; }
 .army-details-modal::backdrop { background: #050806d9; backdrop-filter: blur(3px); }

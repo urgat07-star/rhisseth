@@ -63,7 +63,8 @@
 				<div class="hex-card-heading"><img id="card-crest" class="card-crest" alt="" hidden><h2 id="card-title">Q0 · R0</h2></div>
 				<p id="card-coordinates" class="coordinates"></p>
 				<dl id="hex-details"></dl>
-				<label class="hint"><input id="show-percentages" type="checkbox" checked> Показывать проценты</label>
+				<button id="toggle-hex-details" class="hex-details-toggle" type="button">Подробнее</button>
+				<label id="show-percentages-label" class="hint" hidden><input id="show-percentages" type="checkbox" checked> Показывать проценты</label>
 				<button id="edit-name" class="save" type="button" hidden>Редактировать название</button>
 				<button id="edit-territory-name" class="save" type="button" hidden>Название территории</button>
 				<form id="hex-form" hidden>
@@ -120,7 +121,7 @@
     </dialog>
 	
 	<footer id="data-status">Final V2 · подключение к PostgreSQL…</footer>
-    <script src="app.js?v=economy-army-details-20260929" defer></script>
+    <script src="app.js?v=compact-hex-details-20260929" defer></script>
 	<script>
     const pageModal = document.getElementById('page-modal');
     const pageModalFrame = document.getElementById('page-modal-frame');

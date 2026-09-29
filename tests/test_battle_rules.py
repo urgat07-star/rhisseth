@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'app/backend'))
-from battle_rules import damage,distance,reachable,encounter,defense_budget,choose_defenders
+from battle_rules import damage,distance,reachable,encounter,defense_budget,choose_defenders,defender_catalog_pattern
 from battle import _next_actor,_drive_ai
 from unittest.mock import MagicMock,patch
 
@@ -45,6 +45,14 @@ class BattleRuleTests(unittest.TestCase):
         selected=choose_defenders(units,7,random.Random(4))
         self.assertLessEqual(len(selected),5)
         self.assertLessEqual(sum(2**(unit['combat_level']-1) for unit in selected),7)
+
+    def test_defender_catalog_follows_owner_and_terrain(self):
+        self.assertEqual(defender_catalog_pattern('Игрок','Горы'),'units/unit-%')
+        self.assertEqual(defender_catalog_pattern('Компьютерное владение','Густой лес'),'units/unit-%')
+        self.assertEqual(defender_catalog_pattern('Ничейная территория','Побережье / Равнина'),'units/barbarians-002.webp')
+        self.assertEqual(defender_catalog_pattern('Ничейная территория','Густой лес'),'units/barbarians-001.webp')
+        self.assertEqual(defender_catalog_pattern('Ничейная территория','Холмы'),'units/barbarians-003.webp')
+        self.assertEqual(defender_catalog_pattern('Ничейная территория','Полупустыня'),'units/barbarians-004.webp')
 
     def test_initiative_bonus_and_alternating_tie(self):
         units=[{'id':1,'side':'attacker','initiative':2,'active':True,'health':5,'attacked':False,'attack_range':1,'moved':False},

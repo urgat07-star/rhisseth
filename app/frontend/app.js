@@ -72,6 +72,7 @@ const loading = document.querySelector("#loading");
 const card = document.querySelector("#hex-card");
 let selectedHex = null;
 let selectedRow = null;
+let cardDetailed = false;
 const form = document.querySelector("#hex-form");
 const saveStatus = document.querySelector("#save-status");
 
@@ -192,7 +193,8 @@ function positionCard(clientX, clientY) {
   card.style.top = `${Math.max(12, top)}px`;
 }
 
-function showCard(row, event, polygon) {
+function showCard(row, event, polygon, keepMode=false) {
+  if (!keepMode) cardDetailed=false;
   selectedHex?.classList.remove("selected");
   selectedHex = polygon;
   selectedRow = row;
@@ -216,20 +218,22 @@ function showCard(row, event, polygon) {
   form.elements[0].name = 'Название';
   const details = document.querySelector('#hex-details');
   details.replaceChildren();
-  const fields = [['Имя владельца','Владелец'],['Тип владельца','Владение'],['Название территории','Территория']];
-  if (row['Название баронии']) fields.push(['Название баронии','Барония']);
-  fields.push(['Категория','Категория'],['Тип местности','Ландшафт'],['Дополнительный объект','Объект']);
-  if (!creatingBarony) fields.push(
-    ['Уровень гекса','Уровень'],['Постройка','Основная постройка'],
-    ['Население','Население'],['Максимальное население','Предел населения'],
-    ['Годовой прирост населения','Прирост в год'],['Годовой налог','Налог в год'],
-    ['Плодородие','Плодородие'],['Годовой баланс еды','Еда в год'],['Правило еды','Расчёт еды'],['Покрытие дефицита','Дефицит еды'],
-    ['Проходимость','Проходимость'],['Защита','Защита'],['Опасность','Опасность'],
-    ['Основной ресурс','Ресурс'],['Богатство ресурса','Богатство'],
-    ['Глубина','Глубина'],['Течение','Течение'],['Дорога','Дорога'],['Водная переправа','Переправа'],
-    ['Объекты гекса','Объекты'],['Дополнительные постройки','Доп. постройки'],
-    ['Цена следующего уровня','Развитие'],['Мораль','Мораль'],['Комментарий','Комментарий']);
-  for (const [key,label] of fields) {
+  const compactFields=[['Имя владельца','Владелец',true],['Тип владельца','Владение'],['Название территории','Территория',true],
+    ['Тип местности','Ландшафт'],['Дополнительный объект','Объект',true],['Население','Население'],
+    ['Плодородие','Плодородие'],['Проходимость','Проходимость'],['Защита','Защита'],['Опасность','Опасность'],['Основной ресурс','Ресурс']];
+  const fullFields=[['Имя владельца','Владелец',true],['Тип владельца','Владение'],['Название территории','Территория',true],
+    ['Название баронии','Барония',true],['Категория','Категория'],['Тип местности','Ландшафт'],['Дополнительный объект','Объект',true],
+    ['Уровень гекса','Уровень'],['Постройка','Основная постройка'],['Население','Население'],['Максимальное население','Предел населения'],
+    ['Годовой прирост населения','Прирост в год'],['Годовой налог','Налог в год'],['Плодородие','Плодородие'],
+    ['Годовой баланс еды','Еда в год'],['Правило еды','Расчёт еды'],['Покрытие дефицита','Дефицит еды'],
+    ['Проходимость','Проходимость'],['Защита','Защита'],['Опасность','Опасность'],['Основной ресурс','Ресурс'],
+    ['Богатство ресурса','Богатство'],['Глубина','Глубина',true],['Течение','Течение',true],['Дорога','Дорога',true],
+    ['Водная переправа','Переправа',true],['Объекты гекса','Объекты',true],['Дополнительные постройки','Доп. постройки',true],
+    ['Цена следующего уровня','Развитие'],['Мораль','Мораль'],['Комментарий','Комментарий',true]];
+  const fields=cardDetailed?fullFields:compactFields;
+  const missing=value=>!String(value??'').trim() || ['нет владельца','нет данных','нет','- нет -','отсутствует'].includes(String(value).trim().toLocaleLowerCase());
+  for (const [key,label,optional] of fields) {
+    if (optional && missing(row[key])) continue;
     const line = document.createElement('div'), term = document.createElement('dt'), value = document.createElement('dd');
     term.textContent = label; value.textContent = row[key] || 'Нет данных';
     if (key === 'Тип местности' && row['Состав ландшафта']) {
@@ -237,6 +241,9 @@ function showCard(row, event, polygon) {
     }
     line.append(term,value); details.append(line);
   }
+  const detailsButton=document.querySelector('#toggle-hex-details');
+  detailsButton.hidden=creatingBarony;detailsButton.textContent=cardDetailed?'Скрыть подробности':'Подробнее';
+  document.querySelector('#show-percentages-label').hidden=!cardDetailed;
   saveStatus.textContent = "";
   saveStatus.classList.remove("error");
   card.hidden = false;
@@ -728,10 +735,15 @@ document.querySelector('#finish-battle')?.addEventListener('click',async()=>{
 });
 
 document.querySelector("#close-card").addEventListener("click", closeCard);
+document.querySelector('#toggle-hex-details').addEventListener('click',()=>{
+  if(!selectedRow||!selectedHex)return;cardDetailed=!cardDetailed;
+  const bounds=selectedHex.getBoundingClientRect();
+  showCard(selectedRow,{clientX:bounds.right,clientY:bounds.top},selectedHex,true);
+});
 document.querySelector('#show-percentages').checked = localStorage.getItem('rhisseth-show-percentages') !== 'false';
 document.querySelector('#show-percentages').addEventListener('change', event => {
   localStorage.setItem('rhisseth-show-percentages', String(event.target.checked));
-  if (selectedRow) showCard(selectedRow, {clientX:viewport.getBoundingClientRect().left+parseFloat(card.style.left),clientY:viewport.getBoundingClientRect().top+parseFloat(card.style.top)},selectedHex);
+  if (selectedRow) showCard(selectedRow, {clientX:viewport.getBoundingClientRect().left+parseFloat(card.style.left),clientY:viewport.getBoundingClientRect().top+parseFloat(card.style.top)},selectedHex,true);
 });
 document.querySelector('#edit-name').addEventListener('click', () => {
   editingTerritoryName = false;

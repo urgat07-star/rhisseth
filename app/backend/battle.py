@@ -5,7 +5,8 @@ from psycopg.types.json import Jsonb
 
 from db import connect
 from hex_rules import coordinates, HEX_BUILDINGS
-from battle_rules import NEIGHBORS, WALL_HEALTH, choose_defenders, damage, defense_budget, distance, reachable
+from battle_rules import (NEIGHBORS, WALL_HEALTH, choose_defenders, damage, defense_budget,
+                          defender_catalog_pattern, distance, reachable)
 from army import award_general_victory, home_hex
 from movement import movement_cost
 from game_clock import _clock
@@ -394,7 +395,7 @@ async def _start_battle(q:int,r:int,request:Request,purpose:str):
             WHERE pgu.general_id=%s AND pgu.status='ready' ORDER BY pgu.slot FOR UPDATE OF pgu''',(general[0],)).fetchall()
         building=max(1,min(8,_int(target[0].get('Уровень гекса')) or 1))
         budget=defense_budget(_int(target[0].get('Защита')),building)
-        prefix='units/barbarians-%' if owner_type=='Ничейная территория' else 'units/unit-%'
+        prefix=defender_catalog_pattern(owner_type,target[0].get('Тип местности'))
         candidates=[dict(zip(('id','name','image_path','health','attack','defense','armor','attack_range','speed','initiative','combat_level'),row))
                     for row in conn.execute('''SELECT id,name,image_path,health,attack,defense,armor,attack_range,speed,initiative,combat_level
                         FROM unit_catalog WHERE active AND image_path LIKE %s''',(prefix,)).fetchall()]
