@@ -20,8 +20,10 @@ class RaidConnection:
     def execute(self,sql,args=None):
         self.calls.append((sql,args))
         if sql.startswith('SELECT data FROM hexes'):
-            return Result(({'Тип владельца':'Игрок','Владелец':self.owner,'Уровень гекса':'0'},))
+            return Result(({'Тип владельца':'Игрок','Владелец':self.owner,'Уровень гекса':'0',
+                            'Основной ресурс':'Дерево','Богатство ресурса':'3'},))
         if 'FROM raid_balance' in sql:return Result((1,10,40,10))
+        if sql.startswith('SELECT code FROM game_resources'):return Result(('wood',))
         if sql.startswith('SELECT q,r FROM hexes'):
             return Result(many=[(0,0),(1,0),(2,0),(3,0),(4,0)])
         return Result()
@@ -45,7 +47,24 @@ class RaidTests(unittest.TestCase):
         _pay_raid(conn,self.battle('3'))
         grant=next(args for sql,args in conn.calls if sql.startswith('INSERT INTO barony_peasant_reserve'))
         self.assertEqual(grant,(2,4))
+        resource_grant=next(args for sql,args in conn.calls if sql.startswith('INSERT INTO game_inventory'))
+        self.assertEqual(resource_grant,(2,'wood',3))
+        ledger=next(args for sql,args in conn.calls if sql.startswith('INSERT INTO game_resource_ledger'))
+        self.assertEqual(ledger,(2,'wood',3,7))
         self.assertFalse(any(sql.startswith('INSERT INTO game_hex_morale') for sql,_ in conn.calls))
+
+    def test_hex_without_resource_does_not_create_resource_reward(self):
+        conn=RaidConnection('3')
+        original=conn.execute
+        def execute(sql,args=None):
+            if sql.startswith('SELECT data FROM hexes'):
+                conn.calls.append((sql,args))
+                return Result(({'Тип владельца':'Игрок','Владелец':'3','Уровень гекса':'1',
+                                'Основной ресурс':'Нет','Богатство ресурса':'0'},))
+            return original(sql,args)
+        conn.execute=execute
+        _pay_raid(conn,self.battle('3'))
+        self.assertFalse(any(sql.startswith('INSERT INTO game_inventory') for sql,_ in conn.calls))
 
     def test_winning_enemy_raid_can_destroy_one_building_level(self):
         conn=RaidConnection('3')

@@ -147,6 +147,24 @@ def _pay_raid(conn,battle):
         conn.execute('UPDATE game_wallets SET gold=gold+%s WHERE user_id=%s',(gold,battle['attacker_user_id']))
         conn.execute("INSERT INTO game_gold_ledger(user_id,amount,reason,related_general_id) VALUES (%s,%s,'raid',%s)",
                      (battle['attacker_user_id'],gold,battle['general_id']))
+    resource=None
+    resource_name=str(target[0].get('Основной ресурс') or '').strip()
+    resource_quantity=max(0,min(5,_int(target[0].get('Богатство ресурса'))))
+    if resource_quantity and resource_name.casefold() not in {'нет','- нет -','нет ресурса','отсутствует'}:
+        catalog_name={'киты':'Морской зверь'}.get(resource_name.casefold(),resource_name)
+        resource_row=conn.execute('SELECT code FROM game_resources WHERE lower(name)=lower(%s)',
+                                  (catalog_name,)).fetchone()
+        if resource_row:
+            resource_code=resource_row[0]
+            conn.execute('''INSERT INTO game_inventory(user_id,resource_code,quantity) VALUES (%s,%s,%s)
+                ON CONFLICT(user_id,resource_code) DO UPDATE
+                SET quantity=game_inventory.quantity+EXCLUDED.quantity''',
+                (battle['attacker_user_id'],resource_code,resource_quantity))
+            conn.execute("""INSERT INTO game_resource_ledger
+                (user_id,resource_code,amount,reason,related_general_id)
+                VALUES (%s,%s,%s,'raid',%s)""",
+                (battle['attacker_user_id'],resource_code,resource_quantity,battle['general_id']))
+            resource={'code':resource_code,'name':resource_name,'quantity':resource_quantity}
     peasants=0
     if battle['target_owner_type']!='Игрок' or battle['target_owner_id']!=str(battle['attacker_user_id']):
         peasants=max(1,round(nominal*percent/100))
@@ -163,7 +181,7 @@ def _pay_raid(conn,battle):
             conn.execute('''INSERT INTO game_hex_morale(q,r,morale) VALUES (%s,%s,%s)
                 ON CONFLICT(q,r) DO UPDATE SET morale=greatest(0,game_hex_morale.morale-%s)''',
                 (q,r,max(0,100-penalty),penalty))
-    _event(conn,battle,'raid_reward',{'gold':gold,'peasants':peasants})
+    _event(conn,battle,'raid_reward',{'gold':gold,'peasants':peasants,'resource':resource})
 
 
 def create_encounter_battle(conn,user_id,general_id,source,target,target_data,turn,kind):
