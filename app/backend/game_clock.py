@@ -1,11 +1,46 @@
 """Persistent seasonal clock; all changes are serialized on the clock row."""
 from datetime import timedelta
+from collections import defaultdict
 from fastapi import APIRouter, HTTPException, Request
 from db import connect
 
 router = APIRouter()
 SEASONS = ('Весна', 'Лето', 'Осень', 'Зима')
 PRESENCE_WINDOW_SECONDS = 90
+
+
+def _annual_resource_income(conn, year):
+    """Credit each autumn harvest once; food-like resources join total food."""
+    if not conn.execute("SELECT to_regclass('game_economy_years')").fetchone()[0]:
+        return
+    if not conn.execute('''INSERT INTO game_economy_years(year) VALUES (%s)
+        ON CONFLICT(year) DO NOTHING RETURNING year''',(year,)).fetchone():
+        return
+    catalogue={name:(code,is_food) for code,name,is_food in conn.execute(
+        'SELECT code,name,is_food FROM game_resources').fetchall()}
+    income=defaultdict(lambda:defaultdict(int))
+    for owner,data in conn.execute("""SELECT (data->>'Владелец')::integer,data FROM hexes
+        WHERE data->>'Тип владельца'='Игрок' AND data->>'Владелец'~'^[0-9]+$'""").fetchall():
+        name=str(data.get('Основной ресурс') or '').strip()
+        item=catalogue.get({'Киты':'Морской зверь'}.get(name,name))
+        try: quantity=max(0,int(data.get('Богатство ресурса') or 0))
+        except (TypeError,ValueError): quantity=0
+        if item and quantity:
+            code,is_food=item
+            income[owner]['food' if is_food else code]+=quantity
+    for user_id,resources in income.items():
+        for code,quantity in resources.items():
+            conn.execute('''INSERT INTO game_inventory(user_id,resource_code,quantity) VALUES (%s,%s,%s)
+                ON CONFLICT(user_id,resource_code) DO UPDATE
+                SET quantity=game_inventory.quantity+EXCLUDED.quantity''',(user_id,code,quantity))
+            conn.execute("""INSERT INTO game_resource_ledger(user_id,resource_code,amount,reason)
+                VALUES (%s,%s,%s,'annual_economy')""",(user_id,code,quantity))
+
+
+def _annual_turns(conn, old, new):
+    for turn in range(old+1,new+1):
+        if turn % 4 == 3:  # transition after the autumn turn
+            _annual_resource_income(conn,turn//4)
 
 
 def _turn_effects(conn, new_turn):
@@ -23,6 +58,7 @@ def _advance(conn, old, new, action, actor=None):
     conn.execute('DELETE FROM game_turn_votes')
     if new > old:
         _turn_effects(conn, new)
+        _annual_turns(conn,old,new)
     conn.execute('INSERT INTO game_clock_audit(actor_user_id,old_turn_number,new_turn_number,action) VALUES (%s,%s,%s,%s)', (actor, old, new, action))
 
 
@@ -36,6 +72,7 @@ def _clock(conn):
         conn.execute("UPDATE game_clock SET turn_number=%s,started_at=%s,ends_at=%s WHERE id=true", (new_turn, ends + (steps - 1) * (ends - started), ends + steps * (ends - started)))
         conn.execute('DELETE FROM game_turn_votes')
         _turn_effects(conn, new_turn)
+        _annual_turns(conn,turn,new_turn)
         conn.execute('INSERT INTO game_clock_audit(old_turn_number,new_turn_number,action) VALUES (%s,%s,%s)', (turn, new_turn, 'deadline'))
         turn, started, ends = conn.execute('SELECT turn_number,started_at,ends_at FROM game_clock WHERE id=true').fetchone()
     return turn, started, ends

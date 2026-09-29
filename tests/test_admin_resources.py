@@ -26,7 +26,7 @@ class AdminResourceTests(unittest.TestCase):
             self.assertEqual(self.client.get('/api/admin/resources').status_code,403)
 
     def test_catalogues_are_returned_separately(self):
-        result=MagicMock();result.fetchall.side_effect=[[('wood','Дерево','Лес','Строительство',True)],[('steel','Сталь','Железо + уголь','','Найм',True)]]
+        result=MagicMock();result.fetchall.side_effect=[[('wood','Дерево','Лес','Строительство',False,True)],[('steel','Сталь','Железо + уголь','','Найм',False,True)]]
         conn=MagicMock();conn.execute.return_value=result;self.connection(conn)
         with patch('main.current_user',return_value=self.admin):
             response=self.client.get('/api/admin/resources')
@@ -40,7 +40,7 @@ class AdminResourceTests(unittest.TestCase):
             bad=self.client.post('/api/admin/resources/produced',json={'code':'Steel'},headers=self.headers)
             good=self.client.patch('/api/admin/resources/produced/steel',json={
                 'name':'Сталь','ingredients':'Железо + уголь','required_building':'Кузница',
-                'purpose':'Найм','active':True},headers=self.headers)
+                'purpose':'Найм','is_food':False,'active':True},headers=self.headers)
         self.assertEqual(bad.status_code,400)
         self.assertEqual(good.status_code,200)
 

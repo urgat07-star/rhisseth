@@ -17,7 +17,7 @@ const levelTesting={
   7:{name:'Город',population:250,tax:'81–110',image:'structures/castle-008_1.png'},
   8:{name:'Столица',population:500,tax:'111–150',image:'structures/castle-008_2.png'}
 };
-let rows = [], ownerOptions = {}, csrf = '', editing = null, busy = false;
+let rows = [], ownerOptions = {}, resourceOptions = [], csrf = '', editing = null, busy = false;
 const selected = new Set(), status = document.querySelector('#admin-status'), form = document.querySelector('#admin-form');
 const key = row => `${row.Q},${row.R}`;
 async function request(url, options = {}) {
@@ -41,7 +41,7 @@ function render() {
     const tr=document.createElement('tr'), choice=document.createElement('td'), check=document.createElement('input');
     check.type='checkbox'; check.checked=selected.has(key(row)); check.setAttribute('aria-label',`Выбрать Q${row.Q} R${row.R}`);
     check.addEventListener('change',()=>check.checked?selected.add(key(row)):selected.delete(key(row)));choice.append(check);tr.append(choice);
-    const action=document.createElement('td'), edit=document.createElement('button');edit.textContent='Редактировать';edit.disabled=busy;edit.addEventListener('click',()=>openEditor(row));action.append(edit);tr.append(action);
+    const action=document.createElement('td'), edit=document.createElement('button'),capital=document.createElement('button');edit.textContent='Редактировать';edit.disabled=busy;edit.addEventListener('click',()=>openEditor(row));capital.textContent='До столицы';capital.disabled=busy||row['Уровень гекса']==='8';capital.addEventListener('click',async()=>{if(!confirm(`Повысить Q${row.Q} R${row.R} до уровня 8 — Столица?`))return;busy=true;try{await mutation(`/api/hexes/${row.Q}/${row.R}`,{'Уровень гекса':'8'},'PUT',row._revision);await reload();status.textContent=`Q${row.Q} R${row.R}: установлен уровень Столица`;}catch(error){status.textContent=error.message;}finally{busy=false;render();}});action.append(edit,capital);tr.append(action);
     for(const field of ['Q','R','Статус данных','Уровень гекса','Постройка','Годовой налог',...fields,'Имя владельца']) {const td=document.createElement('td');td.textContent=row[field]||'—';if(field==='Состав ландшафта'&&row[field]){try{td.textContent=JSON.parse(row[field]).map(p=>`${p.name} ${p.percent}%`).join(' / ');}catch{}}tr.append(td);}
     body.append(tr);
   }
@@ -52,13 +52,19 @@ function openEditor(row) {
   for(const field of editorFields) {
     const label=document.createElement('label');label.textContent=field;
     let input;
-    if (['Категория','Тип владельца','Владелец','Остров','Уровень гекса','Постройка','Дорога','Водная переправа'].includes(field)) input=document.createElement('select');
+    if (['Категория','Тип владельца','Владелец','Остров','Основной ресурс','Уровень гекса','Постройка','Дорога','Водная переправа'].includes(field)) input=document.createElement('select');
     else input=document.createElement(field==='Комментарий'?'textarea':'input');
     input.name=field;input.value=row[field]||'';input.maxLength=field==='Название'?200:4000;
     if(field==='Категория'||field==='Тип владельца'||field==='Остров') {
       const options=field==='Категория'?['Суша','Побережье','Море']:field==='Остров'?['Да','Нет']:['Ничейная территория','Игрок','Компьютерное владение'];
       const empty=new Option('Выберите','');input.append(empty);
       options.forEach(v=>input.append(new Option(v,v)));input.value=row[field]||'';
+    }
+    if(field==='Основной ресурс'){
+      input.append(new Option('Нет ресурса','Нет'));
+      resourceOptions.forEach(resource=>input.append(new Option(resource.name,resource.name)));
+      if(row[field]&&!Array.from(input.options).some(option=>option.value===row[field]))input.append(new Option(`${row[field]} (устаревшее значение)`,row[field]));
+      input.value=row[field]||'Нет';
     }
     if(field==='Уровень гекса'){input.append(new Option('Выберите',''));['1 — нет построек','2 — Лагерь','3 — Поселение','4 — Деревня','5 — Крепость','6 — Замок','7 — Город','8 — Столица'].forEach((v,i)=>input.append(new Option(v,String(i+1))));input.value=row[field]||'';}
     if(field==='Постройка'){['','нет построек','Лагерь','Поселение','Деревня','Крепость','Замок','Город','Столица'].forEach(v=>input.append(new Option(v||'Выберите',v)));input.value=row[field]||'';}
@@ -109,7 +115,7 @@ function openEditor(row) {
   document.querySelector('#editor').hidden=false;document.querySelector('#editor').scrollIntoView({behavior:'smooth'});
 }
 /** Параллельно обновляет гексы и справочники владельцев, затем рисует таблицу. */
-async function reload() { [rows,ownerOptions]=await Promise.all([request('/api/hexes'),request('/api/admin/owners')]);render(); }
+async function reload() { const resources=await request('/api/admin/resources');[rows,ownerOptions]=await Promise.all([request('/api/hexes'),request('/api/admin/owners')]);resourceOptions=resources.extractable.filter(item=>item.active);render(); }
 form.addEventListener('submit',async event=>{
   event.preventDefault();if(busy||!editing)return;
   const target=editing,payload=Object.fromEntries(new FormData(form));
@@ -164,6 +170,7 @@ async function loadRaidBalance() {
     for(const [field,label] of [['gold','Золото'],['peasant_percent','Крестьяне, %'],['peasant_nominal','Номинал крестьян'],['morale_penalty','Потеря морали'],['cooldown_turns','Повтор через ходов']]){
       const wrapper=document.createElement('label');wrapper.textContent=label+' ';
       const input=document.createElement('input');input.name=field;input.type='number';input.min='0';input.max=field.includes('percent')||field.includes('morale')||field.includes('cooldown')?'100':'1000000';input.value=row[field];input.required=true;
+      if(['gold','peasant_percent','peasant_nominal'].includes(field)){input.readOnly=true;wrapper.hidden=true;}
       wrapper.append(input);form.append(wrapper);
     }
     const save=document.createElement('button');save.type='submit';save.textContent='Сохранить';form.append(save);

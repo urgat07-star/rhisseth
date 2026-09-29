@@ -21,9 +21,9 @@ class RaidConnection:
         self.calls.append((sql,args))
         if sql.startswith('SELECT data FROM hexes'):
             return Result(({'Тип владельца':'Игрок','Владелец':self.owner,'Уровень гекса':'0',
-                            'Основной ресурс':'Дерево','Богатство ресурса':'3'},))
-        if 'FROM raid_balance' in sql:return Result((1,10,40,10))
-        if sql.startswith('SELECT code FROM game_resources'):return Result(('wood',))
+                            'Основной ресурс':'Лён','Богатство ресурса':'1','Плодородие':'2','Население':'1'},))
+        if 'FROM raid_balance' in sql:return Result((10,))
+        if sql.startswith('SELECT code,is_food FROM game_resources'):return Result(('flax',False))
         if sql.startswith('SELECT q,r FROM hexes'):
             return Result(many=[(0,0),(1,0),(2,0),(3,0),(4,0)])
         return Result()
@@ -42,15 +42,21 @@ class RaidTests(unittest.TestCase):
         self.assertEqual(penalties,[10,5,2.5,1.25])
         self.assertFalse(any(sql.startswith('INSERT INTO barony_peasant_reserve') for sql,_ in conn.calls))
 
-    def test_enemy_raid_grants_nominal_percentage_without_morale_loss(self):
+    def test_enemy_raid_uses_hex_economy_formula_and_reduces_population(self):
         conn=RaidConnection('3')
         _pay_raid(conn,self.battle('3'))
         grant=next(args for sql,args in conn.calls if sql.startswith('INSERT INTO barony_peasant_reserve'))
-        self.assertEqual(grant,(2,4))
-        resource_grant=next(args for sql,args in conn.calls if sql.startswith('INSERT INTO game_inventory'))
-        self.assertEqual(resource_grant,(2,'wood',3))
-        ledger=next(args for sql,args in conn.calls if sql.startswith('INSERT INTO game_resource_ledger'))
-        self.assertEqual(ledger,(2,'wood',3,7))
+        self.assertEqual(grant,(2,1))
+        inventory=[args for sql,args in conn.calls if sql.startswith('INSERT INTO game_inventory')]
+        self.assertIn((2,'flax',1),inventory)
+        self.assertIn((2,2),inventory)
+        ledgers=[args for sql,args in conn.calls if sql.startswith('INSERT INTO game_resource_ledger')]
+        self.assertIn((2,'flax',1,7),ledgers)
+        self.assertIn((2,2,7),ledgers)
+        gold=next(args for sql,args in conn.calls if sql.startswith('UPDATE game_wallets'))
+        self.assertEqual(gold,(1,2))
+        population=next(args for sql,args in conn.calls if sql.startswith('UPDATE hexes'))
+        self.assertEqual(population[0].obj['Население'],'0')
         self.assertFalse(any(sql.startswith('INSERT INTO game_hex_morale') for sql,_ in conn.calls))
 
     def test_hex_without_resource_does_not_create_resource_reward(self):

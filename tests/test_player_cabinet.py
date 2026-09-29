@@ -33,11 +33,15 @@ class PlayerCabinetTests(unittest.TestCase):
     def test_economy_summary_uses_hex_population_and_omits_no_resource(self):
         conn=MagicMock()
         conn.execute.side_effect=[MagicMock(fetchone=lambda:(17,)),MagicMock(fetchone=lambda:(9,)),
+            MagicMock(fetchone=lambda:(3,)),
+            MagicMock(fetchall=lambda:[('Дерево',12,False),('Лён',4,False)]),
             MagicMock(fetchall=lambda:[({'Население':'2','Основной ресурс':'Нет'},),
-                                       ({'Население':'4','Основной ресурс':'Дерево'},),
-                                       ({'Основной ресурс':'Лён'},)])]
+                                       ({'Население':'4','Основной ресурс':'Дерево','Богатство ресурса':'3'},),
+                                       ({'Основной ресурс':'Лён','Богатство ресурса':'2'},)])]
         result=economy_summary(conn,2)
-        self.assertEqual(result,{'gold':17,'food':9,'population':7,'resources':{'Дерево':1,'Лён':1}})
+        self.assertEqual(result,{'gold':17,'food':9,'population':10,'resources':{
+            'Дерево':{'quantity':12,'annual_growth':3,'hexes':1},
+            'Лён':{'quantity':4,'annual_growth':2,'hexes':1}}})
 
     def test_confirmation_and_extra_fields_rejected_before_database(self):
         with patch('main.current_user',return_value=self.user),patch('player_cabinet.connect',side_effect=AssertionError('Invalid request reached DB')):

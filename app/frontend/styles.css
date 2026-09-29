@@ -31,6 +31,7 @@ a { color: #e0d49f; }
   align-items: center;
   justify-content: space-evenly;
   gap: 24px;
+  flex-wrap: wrap;
   border-bottom: 1px solid #75806a55;
   background: #111711e8;
 }
@@ -641,7 +642,7 @@ th { position: sticky; top: 0; background: #252b24; }
 .admin-nav a:hover,
 .admin-nav a[aria-current=page] { background: linear-gradient(#70532d, #353021 45%, #564023); }
 
-.admin-nav { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: flex-end; }
+.admin-nav { display: flex; flex: 1 1 620px; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: flex-end; }
 .admin-nav a { min-width: 145px; min-height: 42px; font-size: 14px; }
 
 

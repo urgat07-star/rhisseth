@@ -137,10 +137,13 @@ def _pay_raid(conn,battle):
     if not target or target[0].get('Тип владельца','Ничейная территория')!=battle['target_owner_type'] or str(target[0].get('Владелец') or '')!=battle['target_owner_id']:
         raise HTTPException(409,'Владелец гекса изменился во время боя')
     level=max(1,min(8,_int(target[0].get('Уровень гекса')) or 1))
-    balance=conn.execute('''SELECT gold,peasant_percent,peasant_nominal,morale_penalty
+    balance=conn.execute('''SELECT morale_penalty
         FROM raid_balance WHERE building_level=%s''',(level,)).fetchone()
     if not balance:raise HTTPException(409,'Не задан баланс грабежа')
-    gold,percent,nominal,morale=balance
+    morale=balance[0]
+    richness=max(0,min(5,_int(target[0].get('Богатство ресурса'))))
+    fertility=max(0,min(5,_int(target[0].get('Плодородие'))))
+    gold=richness
     conn.execute('''INSERT INTO game_hex_raids(q,r,last_turn) VALUES (%s,%s,%s)
         ON CONFLICT(q,r) DO UPDATE SET last_turn=EXCLUDED.last_turn''',
         (battle['target_q'],battle['target_r'],battle['created_turn']))
@@ -150,13 +153,13 @@ def _pay_raid(conn,battle):
                      (battle['attacker_user_id'],gold,battle['general_id']))
     resource=None
     resource_name=str(target[0].get('Основной ресурс') or '').strip()
-    resource_quantity=max(0,min(5,_int(target[0].get('Богатство ресурса'))))
+    resource_quantity=richness
     if resource_quantity and resource_name.casefold() not in {'нет','- нет -','нет ресурса','отсутствует'}:
         catalog_name={'киты':'Морской зверь'}.get(resource_name.casefold(),resource_name)
-        resource_row=conn.execute('SELECT code FROM game_resources WHERE lower(name)=lower(%s)',
+        resource_row=conn.execute('SELECT code,is_food FROM game_resources WHERE lower(name)=lower(%s)',
                                   (catalog_name,)).fetchone()
         if resource_row:
-            resource_code=resource_row[0]
+            resource_code='food' if resource_row[1] else resource_row[0]
             conn.execute('''INSERT INTO game_inventory(user_id,resource_code,quantity) VALUES (%s,%s,%s)
                 ON CONFLICT(user_id,resource_code) DO UPDATE
                 SET quantity=game_inventory.quantity+EXCLUDED.quantity''',
@@ -165,13 +168,26 @@ def _pay_raid(conn,battle):
                 (user_id,resource_code,amount,reason,related_general_id)
                 VALUES (%s,%s,%s,'raid',%s)""",
                 (battle['attacker_user_id'],resource_code,resource_quantity,battle['general_id']))
-            resource={'code':resource_code,'name':resource_name,'quantity':resource_quantity}
+            resource={'code':resource_code,'name':'Еда' if resource_row[1] else resource_name,'quantity':resource_quantity}
+    food=fertility
+    if food:
+        conn.execute('''INSERT INTO game_inventory(user_id,resource_code,quantity) VALUES (%s,'food',%s)
+            ON CONFLICT(user_id,resource_code) DO UPDATE
+            SET quantity=game_inventory.quantity+EXCLUDED.quantity''',(battle['attacker_user_id'],food))
+        conn.execute("""INSERT INTO game_resource_ledger
+            (user_id,resource_code,amount,reason,related_general_id)
+            VALUES (%s,'food',%s,'raid',%s)""",
+            (battle['attacker_user_id'],food,battle['general_id']))
     peasants=0
     if battle['target_owner_type']!='Игрок' or battle['target_owner_id']!=str(battle['attacker_user_id']):
-        peasants=max(1,round(nominal*percent/100))
-        conn.execute('''INSERT INTO barony_peasant_reserve(user_id,quantity) VALUES (%s,%s)
-            ON CONFLICT(user_id) DO UPDATE SET quantity=barony_peasant_reserve.quantity+EXCLUDED.quantity''',
-            (battle['attacker_user_id'],peasants))
+        population=max(0,_int(target[0].get('Население'),1))
+        peasants=min(population,max(1,population//3)) if population else 0
+        if peasants:
+            conn.execute('''INSERT INTO barony_peasant_reserve(user_id,quantity) VALUES (%s,%s)
+                ON CONFLICT(user_id) DO UPDATE SET quantity=barony_peasant_reserve.quantity+EXCLUDED.quantity''',
+                (battle['attacker_user_id'],peasants))
+            conn.execute('''UPDATE hexes SET data=data || %s,updated_at=now() WHERE q=%s AND r=%s''',
+                (Jsonb({'Население':str(population-peasants)}),battle['target_q'],battle['target_r']))
     else:
         cells=conn.execute('''SELECT q,r FROM hexes WHERE data->>'Тип владельца'='Игрок'
             AND data->>'Владелец'=%s''',(str(battle['attacker_user_id']),)).fetchall()
@@ -182,7 +198,7 @@ def _pay_raid(conn,battle):
             conn.execute('''INSERT INTO game_hex_morale(q,r,morale) VALUES (%s,%s,%s)
                 ON CONFLICT(q,r) DO UPDATE SET morale=greatest(0,game_hex_morale.morale-%s)''',
                 (q,r,max(0,100-penalty),penalty))
-    _event(conn,battle,'raid_reward',{'gold':gold,'peasants':peasants,'resource':resource})
+    _event(conn,battle,'raid_reward',{'gold':gold,'food':food,'peasants':peasants,'resource':resource})
 
 
 def create_encounter_battle(conn,user_id,general_id,source,target,target_data,turn,kind):

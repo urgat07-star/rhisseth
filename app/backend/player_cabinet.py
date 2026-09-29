@@ -52,18 +52,35 @@ def statistics(rows):
 def economy_summary(conn, user_id):
     gold=conn.execute('SELECT gold FROM game_wallets WHERE user_id=%s',(user_id,)).fetchone()
     food=conn.execute("SELECT quantity FROM game_inventory WHERE user_id=%s AND resource_code='food'",(user_id,)).fetchone()
+    reserve=conn.execute('SELECT quantity FROM barony_peasant_reserve WHERE user_id=%s',(user_id,)).fetchone()
+    inventory_rows=conn.execute('''SELECT r.name,i.quantity,r.is_food FROM game_inventory i
+        JOIN game_resources r ON r.code=i.resource_code WHERE i.user_id=%s''',(user_id,)).fetchall()
+    inventory={name:quantity for name,quantity,is_food in inventory_rows if not is_food and name!='Еда'}
+    food_names={name for name,quantity,is_food in inventory_rows if is_food}
     rows=[row[0] for row in conn.execute("""SELECT data FROM hexes
         WHERE data->>'Тип владельца'='Игрок' AND data->>'Владелец'=%s ORDER BY r,q""",
         (str(user_id),)).fetchall()]
-    resources=Counter(row['Основной ресурс'].strip() for row in rows
-                      if row.get('Основной ресурс') and row['Основной ресурс'].strip().casefold() not in
-                      ('нет','- нет -','нет ресурса','отсутствует'))
+    resource_hexes=Counter()
+    resource_growth=Counter()
+    for row in rows:
+        name=str(row.get('Основной ресурс') or '').strip()
+        if not name or name.casefold() in ('нет','- нет -','нет ресурса','отсутствует'):
+            continue
+        resource_hexes[name]+=1
+        try: resource_growth[name]+=max(0,int(row.get('Богатство ресурса') or 0))
+        except (ValueError,TypeError): pass
+    inventory_aliases={'Киты':'Морской зверь'}
+    all_names=set(inventory)|set(resource_hexes)
+    resources={name:{'quantity':inventory.get(inventory_aliases.get(name,name),0),
+                     'annual_growth':resource_growth[name],'hexes':resource_hexes[name]}
+               for name in sorted(all_names) if name not in food_names and
+               (inventory.get(inventory_aliases.get(name,name),0)>0 or resource_hexes[name]>0)}
     population=0
     for row in rows:
         try: population+=max(0,int(row.get('Население') or 1))
         except (ValueError,TypeError): population+=1
     return {'gold':gold[0] if gold else 0,'food':food[0] if food else 0,
-            'population':population,'resources':dict(sorted(resources.items()))}
+            'population':population+(reserve[0] if reserve else 0),'resources':resources}
 
 
 @router.get('/api/cabinet/economy')
