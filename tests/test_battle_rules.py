@@ -49,10 +49,10 @@ class BattleRuleTests(unittest.TestCase):
     def test_defender_catalog_follows_owner_and_terrain(self):
         self.assertEqual(defender_catalog_pattern('Игрок','Горы'),'units/unit-%')
         self.assertEqual(defender_catalog_pattern('Компьютерное владение','Густой лес'),'units/unit-%')
-        self.assertEqual(defender_catalog_pattern('Ничейная территория','Побережье / Равнина'),'units/barbarians-002.webp')
-        self.assertEqual(defender_catalog_pattern('Ничейная территория','Густой лес'),'units/barbarians-001.webp')
-        self.assertEqual(defender_catalog_pattern('Ничейная территория','Холмы'),'units/barbarians-003.webp')
-        self.assertEqual(defender_catalog_pattern('Ничейная территория','Полупустыня'),'units/barbarians-004.webp')
+        self.assertEqual(defender_catalog_pattern('Ничейная территория','Побережье / Равнина'),'units/unit-%')
+        self.assertEqual(defender_catalog_pattern('Ничейная территория','Густой лес'),'units/unit-%')
+        self.assertEqual(defender_catalog_pattern('Ничейная территория','Холмы'),'units/unit-%')
+        self.assertEqual(defender_catalog_pattern('Ничейная территория','Полупустыня'),'units/unit-%')
 
     def test_initiative_bonus_and_alternating_tie(self):
         units=[{'id':1,'side':'attacker','initiative':2,'active':True,'health':5,'attacked':False,'attack_range':1,'moved':False},

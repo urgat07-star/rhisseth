@@ -54,7 +54,7 @@ class GameCaptureTests(unittest.TestCase):
                                     'Категория':'Суша','Проходимость':'1','Защита':'0','Уровень гекса':'0'},))
                 if 'FROM player_general_units pgu JOIN unit_catalog' in sql:return Result(many=[])
                 if 'FROM unit_catalog WHERE active' in sql:
-                    return Result(many=[(1,'Варвар','units/barbarians-001.webp',5,1,1,0,1,1,1,1)])
+                    return Result(many=[(1,'Ополченец','units/unit-001.webp',5,1,1,0,1,1,1,1)])
                 if 'INSERT INTO game_battles' in sql:return Result((22,))
                 return Result()
         conn=Connection()
@@ -66,6 +66,8 @@ class GameCaptureTests(unittest.TestCase):
             connect.return_value.__enter__.return_value=conn
             response=self.client.post('/api/game/hexes/0/0/capture',headers=self.headers,json={'general_id':7})
         self.assertEqual(response.status_code,200)
+        defender_query=next(args for sql,args in conn.calls if 'FROM unit_catalog WHERE active' in sql)
+        self.assertEqual(defender_query,('units/unit-%',))
         self.assertFalse(any(sql.startswith('UPDATE hexes') for sql,_ in conn.calls))
         self.assertTrue(any(sql.startswith('INSERT INTO game_battles') for sql,_ in conn.calls))
 

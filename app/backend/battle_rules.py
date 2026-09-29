@@ -9,19 +9,12 @@ WALL_HEALTH={4:5,5:7,6:9,7:12,8:12}
 
 
 def defender_catalog_pattern(owner_type, terrain):
-    """Select the approved garrison family for capture and raid battles."""
-    if owner_type != 'Ничейная территория':
-        return 'units/unit-%'
-    names={part.strip().casefold() for part in str(terrain or '').split('/')}
-    if names & {'горы','высокогорье','холмы','предгорья'}:
-        return 'units/barbarians-003.webp'  # Горцы
-    if names & {'редколесье','густой лес','тайга','болото'}:
-        return 'units/barbarians-001.webp'  # Лесные дикари
-    if names & {'пустыня','полупустыня','саванна','вулканическая земля'}:
-        return 'units/barbarians-004.webp'  # Дикари южных земель
-    if names & {'равнина','луг','степь','тундра','речная долина'}:
-        return 'units/barbarians-002.webp'  # Кочевники
-    return 'units/barbarians-%'
+    """Province raids and captures use regular units for every owner type.
+
+    Barbarian templates are reserved for a future explicit invasion event and
+    must not be selected as an ordinary provincial garrison.
+    """
+    return 'units/unit-%'
 
 
 def distance(a,b):
