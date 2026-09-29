@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'app/backend'))
 from fastapi.testclient import TestClient
 from main import app
-from player_cabinet import statistics
+from player_cabinet import statistics, economy_summary
 
 
 class PlayerCabinetTests(unittest.TestCase):
@@ -21,13 +21,23 @@ class PlayerCabinetTests(unittest.TestCase):
 
     def test_statistics_respect_zero_and_missing_values(self):
         result=statistics([{'Категория':'Суша','Плодородие':'0','Основной ресурс':'Дерево'},
-                           {'Категория':'Побережье','Плодородие':'4','Остров':'Да'},
+                           {'Категория':'Побережье','Плодородие':'4','Остров':'Да','Основной ресурс':'Нет'},
                            {'Плодородие':'NaN'},{'Плодородие':'99'}])
         self.assertEqual(result['hex_count'],4)
         self.assertEqual(result['islands'],1)
         self.assertEqual(result['ratings']['Плодородие']['mean'],2)
         self.assertEqual(result['ratings']['Плодородие']['missing'],2)
         self.assertIsNone(result['ratings']['Защита']['mean'])
+        self.assertEqual(result['resources'],{'Дерево':1})
+
+    def test_economy_summary_uses_hex_population_and_omits_no_resource(self):
+        conn=MagicMock()
+        conn.execute.side_effect=[MagicMock(fetchone=lambda:(17,)),MagicMock(fetchone=lambda:(9,)),
+            MagicMock(fetchall=lambda:[({'Население':'2','Основной ресурс':'Нет'},),
+                                       ({'Население':'4','Основной ресурс':'Дерево'},),
+                                       ({'Основной ресурс':'Лён'},)])]
+        result=economy_summary(conn,2)
+        self.assertEqual(result,{'gold':17,'food':9,'population':7,'resources':{'Дерево':1,'Лён':1}})
 
     def test_confirmation_and_extra_fields_rejected_before_database(self):
         with patch('main.current_user',return_value=self.user),patch('player_cabinet.connect',side_effect=AssertionError('Invalid request reached DB')):
@@ -112,8 +122,16 @@ class PlayerCabinetTests(unittest.TestCase):
         self.assertTrue(any(c.args[0].startswith('DELETE FROM user_sessions') for c in conn.execute.call_args_list))
 
     def test_read_returns_only_current_players_barony(self):
-        conn=MagicMock();conn.execute.return_value.fetchone.side_effect=[('player','player@example.invalid'),(7,'Барония','Барон','gerb_1.png','#b51f24')]
-        conn.execute.return_value.fetchall.return_value=[({'Q':'0','R':'0','Плодородие':'0'},)]
+        conn=MagicMock()
+        def execute(sql,args=None):
+            result=MagicMock()
+            if sql.startswith('SELECT user_login'):result.fetchone.return_value=('player','player@example.invalid')
+            elif sql.startswith('SELECT id,name,title'):result.fetchone.return_value=(7,'Барония','Барон','gerb_1.png','#b51f24')
+            elif sql.startswith('SELECT gold'):result.fetchone.return_value=(10,)
+            elif sql.startswith('SELECT quantity'):result.fetchone.return_value=(4,)
+            elif 'SELECT data FROM hexes' in sql:result.fetchall.return_value=[({'Q':'0','R':'0','Плодородие':'0','Население':'1'},)]
+            return result
+        conn.execute.side_effect=execute
         with patch('main.current_user',return_value=self.user),patch('player_cabinet.connect') as connect:
             connect.return_value.__enter__.return_value=conn
             response=self.client.get('/api/cabinet')

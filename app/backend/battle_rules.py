@@ -3,9 +3,9 @@ from collections import deque
 
 NEIGHBORS=((1,0),(-1,0),(0,1),(0,-1),(1,-1),(-1,1))
 BATTLE_SIZE=8
-BUILDING_POWER={0:0,1:1,2:2,3:2,4:3,5:4,6:5,7:10}
-BUILDING_DANGER={0:0,1:0,2:0,3:0,4:1,5:2,6:3,7:0}
-WALL_HEALTH={4:5,5:7,6:9,7:12}
+BUILDING_POWER={1:0,2:1,3:2,4:2,5:4,6:3,7:5,8:10}
+BUILDING_DANGER={1:0,2:0,3:0,4:0,5:2,6:1,7:3,8:0}
+WALL_HEALTH={4:5,5:7,6:9,7:12,8:12}
 
 
 def distance(a,b):
@@ -34,7 +34,7 @@ def damage(attack,defense,armor,attack_roll,defense_roll):
 
 
 def encounter(roll,danger,building_level,owner_relation):
-    if owner_relation=='own' and building_level==7:return None
+    if owner_relation=='own' and building_level==8:return None
     modifier=BUILDING_DANGER.get(building_level,0)
     total=roll+danger+(-modifier if owner_relation=='own' else modifier)
     if total<=5:return None

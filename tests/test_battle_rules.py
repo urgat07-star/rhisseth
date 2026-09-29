@@ -36,7 +36,7 @@ class BattleRuleTests(unittest.TestCase):
     def test_encounter_respects_building_and_capital(self):
         self.assertEqual(encounter(6,0,0,'neutral'),'animals')
         self.assertIsNone(encounter(6,0,4,'neutral'))
-        self.assertIsNone(encounter(6,5,7,'own'))
+        self.assertIsNone(encounter(6,5,8,'own'))
         self.assertEqual(encounter(6,2,0,'enemy'),'bandits')
 
     def test_defender_budget_and_cap(self):

@@ -83,6 +83,7 @@ main { padding: clamp(12px, 2vw, 28px); }
 .hex-hit.barony-chosen, .hex-hit.barony-chosen:hover, .hex-hit.barony-chosen:focus { fill: var(--barony-color); fill-opacity: .14; stroke: none; }
 .hex-hit.barony-available { cursor: pointer; }
 .hex-hit.barony-unavailable { cursor: not-allowed; fill: #000; fill-opacity: .18; }
+.hex-building { pointer-events: none; filter: drop-shadow(0 3px 3px #000c); }
 
 .barony-emblem { pointer-events: none; filter: drop-shadow(0 2px 2px #000b); }
 .barony-boundary { fill: none; stroke-width: 5; vector-effect: non-scaling-stroke; stroke-linecap: round; pointer-events: none; filter: drop-shadow(0 0 2px color-mix(in srgb, currentColor 55%, transparent)); }
@@ -351,6 +352,40 @@ footer code { color: #9da493; }
 .cabinet-page dd { margin: 0; }
 .cabinet-page summary { cursor: pointer; overflow-wrap: anywhere; }
 .cabinet-page h3 { margin: 8px 0; }
+.economy-panel {
+  position: relative;
+  overflow: hidden;
+  min-height: 650px;
+  background: #101711 url('economic_fon.webp') center / cover no-repeat;
+  color: #f0e7c5;
+  border-color: #9b8956;
+}
+.economy-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(7,13,9,.94), rgba(9,14,10,.82) 60%, rgba(9,14,10,.58));
+  pointer-events: none;
+}
+.economy-content { position: relative; z-index: 1; max-width: 780px; }
+.economy-totals { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; margin: 16px 0; }
+.economy-totals > div,
+.economy-resource-list > div {
+  border: 1px solid #c2b47a;
+  border-radius: 7px;
+  background: rgba(9,17,11,.88);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.025), 0 2px 7px #0008;
+}
+.economy-totals > div { display: grid; gap: 4px; padding: 12px 16px; text-align: center; }
+.economy-totals span { color: #d6c891; }
+.economy-totals strong { color: #fff4bd; font-size: 1.45rem; }
+.economy-block { margin: 14px 0; padding: 14px; border: 1px solid #786c43; border-radius: 8px; background: rgba(7,13,9,.82); }
+.cabinet-page .economy-resource-list { display: grid; gap: 6px; margin-top: 10px; }
+.cabinet-page .economy-resource-list > div { grid-template-columns: minmax(0,1fr) auto; padding: 9px 12px; border-bottom: 1px solid #c2b47a; }
+.economy-resource-list > div:hover,
+.economy-resource-list > div:focus-within { border-color: #e6d18a; background: rgba(39,48,28,.94); }
+.economy-resource-list dt { font-weight: 700; }
+.economy-resource-list dd { color: #fff4bd; font-weight: 700; }
 
 .barony-danger { margin-top: 28px; border-top: 1px solid #bd5b55; padding-top: 12px; }
 .danger-button { padding: 10px 14px; border: 1px solid #db8275; border-radius: 4px; background: #792e27; color: #fff; cursor: pointer; margin-top: 12px; }

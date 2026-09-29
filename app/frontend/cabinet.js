@@ -1,4 +1,8 @@
 "use strict";
+/**
+ * Личный кабинет: аккаунт, барония, армия, крестьяне и дипломатия.
+ * После успешных мутаций соответствующее состояние перечитывается из API.
+ */
 let csrf = '', state = null, armyState = {generals:[],catalogue:[]}, busy = false, abandoningId = null, selectedGeneralId = null;
 const status = document.querySelector('#cabinet-status');
 const dialog = document.querySelector('#abandon-dialog');
@@ -11,6 +15,7 @@ async function api(path, method='GET', body) {
   if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
   return result;
 }
+/** Заполняет семантический список `<dl>` парами «название — значение». */
 function lineList(element, items) {
   element.replaceChildren();
   for (const [term,value] of items) {
@@ -32,6 +37,7 @@ function hexValue(row,field) {
   }
   return row[field] === '' ? 'Нет данных' : row[field] ?? 'Нет данных';
 }
+/** Переключает ARIA-вкладки и при клавиатурной навигации переносит фокус. */
 function selectTab(name,focus=false) {
   const buttons=[...document.querySelectorAll('[role=tab]')];
   if (!buttons.some(button=>!button.hidden && button.id===`tab-${name}`)) name=state && !state.barony ? 'settings' : 'barony';
@@ -58,6 +64,7 @@ tabs.forEach(button=>{
 window.addEventListener('hashchange',()=>selectTab(location.hash.slice(1)));
 selectTab(location.hash.slice(1));
 
+/** Отображает данные аккаунта и баронии из загруженного состояния. */
 function renderCabinet() {
   document.querySelector('#account-form input[name="login"]')?.setAttribute('minlength','2');
   document.querySelector('#user-status').textContent=state.account.login;
@@ -81,10 +88,15 @@ function renderCabinet() {
   document.querySelector('#cabinet-crest').src=`crests/${currentCrest}`;
   document.querySelector('#cabinet-cells').textContent=barony.hexes.map(row=>`Q${row.Q} R${row.R}`).join(' · ') || 'Нет принадлежащих вам гексов';
   const stats=barony.statistics;
+  const economy=state.economy||{gold:0,food:0,population:0,resources:{}};
+  document.querySelector('#economy-gold').textContent=economy.gold;
+  document.querySelector('#economy-food').textContent=economy.food;
+  document.querySelector('#economy-population').textContent=economy.population;
   document.querySelector('#barony-totals').replaceChildren(statCard('Владение',[['Гексов',stats.hex_count],['Островных гексов',stats.islands],['Гексов с объектами',stats.objects]]));
-  for (const [id,key] of [['category-stats','categories'],['landscape-stats','landscapes'],['resource-stats','resources']]) {
+  for (const [id,key] of [['category-stats','categories'],['landscape-stats','landscapes']]) {
     const entries=Object.entries(stats[key]); lineList(document.getElementById(id),entries.length ? entries : [['Описание','Нет данных']]);
   }
+  lineList(document.querySelector('#resource-stats'),Object.entries(economy.resources));
   document.querySelector('#rating-stats').replaceChildren(...Object.entries(stats.ratings).map(([field,value])=>statCard(field,[['Среднее',value.mean===null ? null : `${value.mean} / ${value.maximum}`],['Диапазон',value.min===null ? null : `${value.min}–${value.max}`],['Известно гексов',value.known],['Нет данных',value.missing]])));
   document.querySelector('#barony-hexes').replaceChildren(...barony.hexes.map(row=>{
     const details=document.createElement('details'), summary=document.createElement('summary'), dl=document.createElement('dl');
@@ -134,12 +146,13 @@ document.querySelector('#peasant-transfer-form').addEventListener('submit',async
   try{await api('/api/cabinet/peasants/transfer','POST',data);await loadPeasants();document.querySelector('#peasant-transfer-status').textContent='Крестьяне направлены на гекс.';}
   catch(error){document.querySelector('#peasant-transfer-status').textContent=error.message;}
 });
+/** Перестраивает карточки генералов и доступные действия армии. */
 function renderArmy() {
   const list=document.querySelector('#generals-list'); list.replaceChildren();
   document.querySelector('#army-gold').textContent=`Казна: ${armyState.gold} золотых`;
   document.querySelector('#hire-general').disabled=armyState.gold<100;
   const inventory=document.querySelector('#inventory-stats');inventory.replaceChildren();
-  for(const [name,value] of [['Золото',armyState.gold],...Object.entries(armyState.inventory||{}).map(([code,quantity])=>[({wood:'Дерево',cloth:'Ткань',bronze:'Бронза',leather:'Кожа',iron:'Железо',horse:'Лошади'})[code]||code,quantity])]){
+  for(const [name,value] of Object.entries(armyState.inventory||{}).map(([code,quantity])=>[({food:'Еда',wood:'Дерево',cloth:'Ткань',bronze:'Бронза',leather:'Кожа',iron:'Железо',horse:'Лошади'})[code]||code,quantity])){
     const term=document.createElement('dt'),definition=document.createElement('dd');term.textContent=name;definition.textContent=value;inventory.append(term,definition);
   }
   if (!armyState.generals.length) { const empty=document.createElement('p'); empty.textContent='Генералы пока не наняты.'; list.append(empty); return; }
@@ -176,6 +189,7 @@ function openGeneral(id) {
 document.querySelector('#hire-general').addEventListener('click',async()=>{if(busy)return;busy=true;try{await api('/api/cabinet/army/generals','POST',{});await loadArmy();status.textContent='Генерал нанят за 100 золотых.';}catch(error){status.textContent=error.message;}finally{busy=false;}});
 document.querySelector('#close-general').addEventListener('click',()=>document.querySelector('#general-dialog').close());
 document.querySelector('#hire-unit-form').addEventListener('submit',async event=>{event.preventDefault();const unitId=Number(document.querySelector('#unit-catalogue').value);if(!unitId)return;await api(`/api/cabinet/army/generals/${selectedGeneralId}/units`,'POST',{unit_id:unitId});await loadArmy();openGeneral(selectedGeneralId);});
+/** Блокирует форму на время мутации и единообразно выводит результат. */
 async function action(form,handler) {
   if (busy) return;
   busy=true; const button=form.querySelector('[type=submit]'); button.disabled=true; status.textContent='Сохранение…';

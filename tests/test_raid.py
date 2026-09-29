@@ -64,7 +64,7 @@ class RaidTests(unittest.TestCase):
             response=TestClient(app).post('/api/game/battles/1/destroy',headers={'X-CSRF-Token':'test'})
         self.assertEqual(response.status_code,200)
         self.assertEqual(response.json()['new_level'],1)
-        self.assertEqual(response.json()['building'],'Лагерь')
+        self.assertEqual(response.json()['building'],'нет построек')
         patch_hex=next(args[0].obj for sql,args in conn.calls if sql.startswith('UPDATE hexes'))
         self.assertEqual(patch_hex['Уровень гекса'],'1')
 

@@ -1,7 +1,7 @@
 from pathlib import Path
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse, FileResponse, Response
-from hex_rules import (FIELDS, CATEGORIES, HEX_BUILDINGS, coordinates, public_row,
+from hex_rules import (FIELDS, CATEGORIES, HEX_BUILDINGS, LEVEL_POPULATION_LIMITS, coordinates, public_row,
                        category_from_share, connected, validate_terrain_category)
 from fastapi.staticfiles import StaticFiles
 from psycopg.types.json import Jsonb
@@ -20,6 +20,8 @@ from battle import router as battle_router, start_capture_battle
 from movement import router as movement_router
 from peasants import router as peasants_router
 from river_links import router as river_links_router
+from admin_resources import router as admin_resources_router
+from admin_buildings import router as admin_buildings_router
 
 app = FastAPI(title='Rhisseth', docs_url=None, redoc_url=None)
 app.include_router(router)
@@ -35,6 +37,8 @@ app.include_router(battle_router)
 app.include_router(movement_router)
 app.include_router(peasants_router)
 app.include_router(river_links_router)
+app.include_router(admin_resources_router)
+app.include_router(admin_buildings_router)
 
 @app.middleware('http')
 async def access_control(request: Request, call_next):
@@ -51,7 +55,7 @@ async def access_control(request: Request, call_next):
         request.state.user = user
         if (path in ('/admin','/admin/') or path.startswith(('/admin/users','/api/admin/users'))) and user['role_alias'] != 'admin':
             return JSONResponse({'error':'Доступ только для администраторов'},status_code=403)
-        if path.startswith(('/admin/hexes','/admin/units','/admin/generals','/api/admin/')) and user['role_alias'] not in ('admin','moderator'):
+        if path.startswith(('/admin/hexes','/admin/resources','/admin/buildings','/admin/units','/admin/generals','/api/admin/')) and user['role_alias'] not in ('admin','moderator'):
             return JSONResponse({'error':'Доступ только для администрации'},status_code=403)
         if request.method not in ('GET','HEAD'):
             import secrets
@@ -71,7 +75,7 @@ async def access_control(request: Request, call_next):
     return response
 EDITABLE = set(FIELDS)
 LIMITS = {'Проходимость': 5, 'Защита': 4, 'Плодородие': 5,
-          'Опасность': 5, 'Богатство ресурса': 5, 'Уровень гекса': 7}
+          'Опасность': 5, 'Богатство ресурса': 5, 'Уровень гекса': 8, 'Население': 500}
 
 @app.exception_handler(HTTPException)
 async def http_error(request, error):
@@ -258,6 +262,10 @@ async def update(q: int, r: int, request: Request):
         value = payload.get(key, '')
         if value and (not value.isascii() or not value.isdigit() or not 0 <= int(value) <= maximum):
             raise HTTPException(400, f'{key}: требуется целое число 0–{maximum}')
+    if payload.get('Население'):
+        level = int(payload.get('Уровень гекса') or 1)
+        if int(payload['Население']) > LEVEL_POPULATION_LIMITS[level]:
+            raise HTTPException(400, 'Население превышает максимум текущего уровня территории')
     with connect() as conn:
         conn.execute('SELECT pg_advisory_xact_lock(%s,%s)',(q,r))
         previous = conn.execute('SELECT data FROM hexes WHERE q=%s AND r=%s FOR UPDATE', (q,r)).fetchone()

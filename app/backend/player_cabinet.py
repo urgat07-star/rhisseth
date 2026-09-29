@@ -29,7 +29,9 @@ async def payload(request):
 
 def statistics(rows):
     categories=Counter(row.get('Категория') or 'Нет данных' for row in rows)
-    resources=Counter(row['Основной ресурс'] for row in rows if row.get('Основной ресурс'))
+    resources=Counter(row['Основной ресурс'].strip() for row in rows
+                      if row.get('Основной ресурс') and row['Основной ресурс'].strip().casefold() not in
+                      ('нет','- нет -','нет ресурса','отсутствует'))
     landscapes=Counter(row['Тип местности'] for row in rows if row.get('Тип местности'))
     ratings={}
     for field,maximum in RATINGS.items():
@@ -46,6 +48,29 @@ def statistics(rows):
             'landscapes':dict(landscapes),'islands':sum(row.get('Остров')=='Да' for row in rows),
             'objects':sum(bool(row.get('Дополнительный объект')) for row in rows),'ratings':ratings}
 
+
+def economy_summary(conn, user_id):
+    gold=conn.execute('SELECT gold FROM game_wallets WHERE user_id=%s',(user_id,)).fetchone()
+    food=conn.execute("SELECT quantity FROM game_inventory WHERE user_id=%s AND resource_code='food'",(user_id,)).fetchone()
+    rows=[row[0] for row in conn.execute("""SELECT data FROM hexes
+        WHERE data->>'Тип владельца'='Игрок' AND data->>'Владелец'=%s ORDER BY r,q""",
+        (str(user_id),)).fetchall()]
+    resources=Counter(row['Основной ресурс'].strip() for row in rows
+                      if row.get('Основной ресурс') and row['Основной ресурс'].strip().casefold() not in
+                      ('нет','- нет -','нет ресурса','отсутствует'))
+    population=0
+    for row in rows:
+        try: population+=max(0,int(row.get('Население') or 1))
+        except (ValueError,TypeError): population+=1
+    return {'gold':gold[0] if gold else 0,'food':food[0] if food else 0,
+            'population':population,'resources':dict(sorted(resources.items()))}
+
+
+@router.get('/api/cabinet/economy')
+def economy(request: Request):
+    with connect() as conn:
+        return economy_summary(conn,request.state.user['user_id'])
+
 @router.get('/api/cabinet')
 def cabinet(request: Request):
     user_id=request.state.user['user_id']
@@ -58,8 +83,9 @@ def cabinet(request: Request):
             cells=[public_row(item[0]) for item in conn.execute("SELECT data FROM hexes WHERE data->>'Тип владельца'='Игрок' AND data->>'Владелец'=%s AND data->>'ID территории'=%s ORDER BY r,q",(str(user_id),str(row[0]))).fetchall()]
             barony=dict(zip(('id','name','title','crest','color'),row))
             barony.update(hexes=cells,statistics=statistics(cells))
+        economy_data=economy_summary(conn,user_id)
     return {'account':dict(zip(('login','email'),account)), 'barony':barony,
-            'crests':CRESTS,'hex_fields':FIELDS}
+            'economy':economy_data,'crests':CRESTS,'hex_fields':FIELDS}
 
 @router.patch('/api/cabinet/account')
 async def account(request: Request):

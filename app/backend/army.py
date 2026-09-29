@@ -21,14 +21,17 @@ async def body(request):
     return data
 
 def catalogue(conn, active_only=True):
-    where=' WHERE active' if active_only else ''
-    rows=conn.execute(f'SELECT id,{",".join(UNIT_FIELDS)} FROM unit_catalog{where} ORDER BY id').fetchall()
-    return [dict(zip(('id',*UNIT_FIELDS),row)) for row in rows]
+    where=' WHERE u.active' if active_only else ''
+    rows=conn.execute(f'''SELECT u.id,{",".join(f"u.{field}" for field in UNIT_FIELDS)},
+        r.predecessor_unit_id,p.name FROM unit_catalog u
+        LEFT JOIN unit_upgrade_requirements r ON r.unit_id=u.id
+        LEFT JOIN unit_catalog p ON p.id=r.predecessor_unit_id{where} ORDER BY u.id''').fetchall()
+    return [dict(zip(('id',*UNIT_FIELDS,'upgrade_from_unit_id','upgrade_from_name'),row)) for row in rows]
 
 
 def home_hex(conn, user_id):
     row=conn.execute('''SELECT q,r FROM hexes WHERE data->>'Тип владельца'='Игрок'
-        AND data->>'Владелец'=%s AND data->>'Уровень гекса'='7' ORDER BY q,r LIMIT 1''',(str(user_id),)).fetchone()
+        AND data->>'Владелец'=%s AND data->>'Уровень гекса'='8' ORDER BY q,r LIMIT 1''',(str(user_id),)).fetchone()
     if row: return row
     row=conn.execute('''SELECT s.q,s.r FROM barony_start_hexes s JOIN player_baronies b ON b.id=s.barony_id
         WHERE b.user_id=%s ORDER BY s.position LIMIT 1''',(user_id,)).fetchone()
@@ -120,9 +123,18 @@ async def hire_unit(general_id: int, request: Request):
         general=conn.execute("SELECT id FROM player_generals WHERE id=%s AND user_id=%s AND status='active' FOR UPDATE",(general_id,request.state.user['user_id'])).fetchone()
         if not general: raise HTTPException(404,'Генерал не найден')
         if not conn.execute('SELECT 1 FROM unit_catalog WHERE id=%s AND active AND purchasable',(data['unit_id'],)).fetchone(): raise HTTPException(404,'Военный юнит недоступен')
-        used={row[0] for row in conn.execute('SELECT slot FROM player_general_units WHERE general_id=%s',(general_id,)).fetchall()}
-        slot=next((value for value in range(1,6) if value not in used),None)
-        if slot is None: raise HTTPException(409,'В армии уже пять юнитов')
+        requirement=conn.execute('SELECT predecessor_unit_id FROM unit_upgrade_requirements WHERE unit_id=%s',(data['unit_id'],)).fetchone()
+        upgraded_assignment=None
+        if requirement:
+            upgraded_assignment=conn.execute('''SELECT id,slot FROM player_general_units
+                WHERE general_id=%s AND unit_id=%s AND status='active' ORDER BY slot LIMIT 1 FOR UPDATE''',
+                (general_id,requirement[0])).fetchone()
+            if not upgraded_assignment: raise HTTPException(409,'Для апгрейда отсутствует требуемый предыдущий юнит')
+            slot=upgraded_assignment[1]
+        else:
+            used={row[0] for row in conn.execute('SELECT slot FROM player_general_units WHERE general_id=%s',(general_id,)).fetchall()}
+            slot=next((value for value in range(1,6) if value not in used),None)
+            if slot is None: raise HTTPException(409,'В армии уже пять юнитов')
         costs=dict(conn.execute('SELECT resource_code,quantity FROM unit_resource_costs WHERE unit_id=%s',(data['unit_id'],)).fetchall())
         if not costs: raise HTTPException(409,'Цена юнита не установлена')
         wallet=conn.execute('SELECT gold FROM game_wallets WHERE user_id=%s FOR UPDATE',(request.state.user['user_id'],)).fetchone()
@@ -131,8 +143,13 @@ async def hire_unit(general_id: int, request: Request):
                                     (request.state.user['user_id'],)).fetchall())
         if any(inventory.get(code,0)<amount for code,amount in costs.items() if code!='gold'):
             raise HTTPException(409,'Недостаточно ресурсов для найма юнита')
-        conn.execute('''INSERT INTO player_general_units(general_id,unit_id,slot,current_health)
-            SELECT %s,id,%s,health FROM unit_catalog WHERE id=%s''',(general_id,slot,data['unit_id']))
+        if upgraded_assignment:
+            conn.execute('''UPDATE player_general_units SET unit_id=%s,
+                current_health=(SELECT health FROM unit_catalog WHERE id=%s),status='active',recover_turn=NULL
+                WHERE id=%s''',(data['unit_id'],data['unit_id'],upgraded_assignment[0]))
+        else:
+            conn.execute('''INSERT INTO player_general_units(general_id,unit_id,slot,current_health)
+                SELECT %s,id,%s,health FROM unit_catalog WHERE id=%s''',(general_id,slot,data['unit_id']))
         for code,amount in costs.items():
             if code=='gold':
                 conn.execute('UPDATE game_wallets SET gold=gold-%s WHERE user_id=%s',(amount,request.state.user['user_id']))
@@ -143,7 +160,7 @@ async def hire_unit(general_id: int, request: Request):
                              (amount,request.state.user['user_id'],code))
                 conn.execute("INSERT INTO game_resource_ledger(user_id,resource_code,amount,reason,related_general_id) VALUES (%s,%s,%s,'hire_unit',%s)",
                              (request.state.user['user_id'],code,-amount,general_id))
-    return {'hired':True,'slot':slot}
+    return {'hired':True,'upgraded':bool(upgraded_assignment),'slot':slot}
 
 @router.delete('/api/cabinet/army/generals/{general_id}/units/{assignment_id}')
 def dismiss_unit(general_id: int, assignment_id: int, request: Request):
@@ -214,34 +231,47 @@ def admin_units():
 async def edit_unit(unit_id: int, request: Request):
     data=await body(request)
     editable_fields=tuple(field for field in UNIT_FIELDS if field!='health')
-    if set(data)!=set(editable_fields): raise HTTPException(400,'Передайте все редактируемые поля юнита')
+    if set(data)!=set(editable_fields)|{'upgrade_from_unit_id'}: raise HTTPException(400,'Передайте все редактируемые поля юнита')
     for key in ('name','troop_type','description','image_path','price','building','note'):
         if not isinstance(data[key],str) or len(data[key])>4000: raise HTTPException(400,f'Некорректное поле: {key}')
     for key in ('armor','defense','attack','attack_range','speed','initiative','morale'):
         if type(data[key]) is not int or not 0<=data[key]<=100: raise HTTPException(400,f'{key}: число 0–100')
     if type(data['combat_level']) is not int or not 1<=data['combat_level']<=5:raise HTTPException(400,'Уровень юнита: число 1–5')
+    if data['upgrade_from_unit_id'] is not None and (type(data['upgrade_from_unit_id']) is not int or data['upgrade_from_unit_id']<1 or data['upgrade_from_unit_id']==unit_id): raise HTTPException(400,'Некорректный предыдущий юнит')
     if type(data['active']) is not bool or not data['name'].strip() or not data['troop_type'].strip(): raise HTTPException(400,'Заполните название, тип и активность')
     if not data['image_path'].startswith('units/') or not data['image_path'].endswith('.webp'): raise HTTPException(400,'Изображение должно находиться в units/*.webp')
     values=[data[field].strip() if isinstance(data[field],str) else data[field] for field in editable_fields]
     with connect() as conn:
         row=conn.execute(f'''UPDATE unit_catalog SET {','.join(f'{field}=%s' for field in editable_fields)},updated_at=now() WHERE id=%s RETURNING id''',(*values,unit_id)).fetchone()
         if not row: raise HTTPException(404,'Юнит не найден')
+        conn.execute('DELETE FROM unit_upgrade_requirements WHERE unit_id=%s',(unit_id,))
+        if data['upgrade_from_unit_id'] is not None:
+            try: conn.execute('INSERT INTO unit_upgrade_requirements(unit_id,predecessor_unit_id) VALUES (%s,%s)',(unit_id,data['upgrade_from_unit_id']))
+            except Exception as error:
+                if 'foreign key' in str(error).lower(): raise HTTPException(400,'Предыдущий юнит не найден')
+                raise
     return {'saved':True}
 
 @router.post('/api/admin/units')
 async def create_unit(request: Request):
     data=await body(request)
     fields=UNIT_FIELDS
-    if set(data)!=set(fields): raise HTTPException(400,'Передайте все поля нового юнита')
+    if set(data)!=set(fields)|{'upgrade_from_unit_id'}: raise HTTPException(400,'Передайте все поля нового юнита')
     for key in ('name','troop_type','description','image_path','price','building','note'):
         if not isinstance(data[key],str) or len(data[key])>4000: raise HTTPException(400,f'Некорректное поле: {key}')
     if type(data['health']) is not int or not 1<=data['health']<=10000: raise HTTPException(400,'health: число 1–10000')
     for key in ('armor','defense','attack','attack_range','speed','initiative','morale'):
         if type(data[key]) is not int or not 0<=data[key]<=100: raise HTTPException(400,f'{key}: число 0–100')
     if type(data['combat_level']) is not int or not 1<=data['combat_level']<=5:raise HTTPException(400,'Уровень юнита: число 1–5')
+    if data['upgrade_from_unit_id'] is not None and (type(data['upgrade_from_unit_id']) is not int or data['upgrade_from_unit_id']<1): raise HTTPException(400,'Некорректный предыдущий юнит')
     if type(data['active']) is not bool or not data['name'].strip() or not data['troop_type'].strip(): raise HTTPException(400,'Заполните название, тип и активность')
     if not data['image_path'].startswith('units/') or not data['image_path'].endswith('.webp'): raise HTTPException(400,'Изображение должно находиться в units/*.webp')
     values=[data[field].strip() if isinstance(data[field],str) else data[field] for field in fields]
     with connect() as conn:
         row=conn.execute(f'''INSERT INTO unit_catalog ({','.join(fields)}) VALUES ({','.join('%s' for _ in fields)}) RETURNING id''',values).fetchone()
+        if data['upgrade_from_unit_id'] is not None:
+            try: conn.execute('INSERT INTO unit_upgrade_requirements(unit_id,predecessor_unit_id) VALUES (%s,%s)',(row[0],data['upgrade_from_unit_id']))
+            except Exception as error:
+                if 'foreign key' in str(error).lower(): raise HTTPException(400,'Предыдущий юнит не найден')
+                raise
     return {'created':True,'id':row[0]}

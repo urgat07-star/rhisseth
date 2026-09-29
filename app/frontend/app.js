@@ -1,4 +1,8 @@
 "use strict";
+/**
+ * Интерактивная карта: SVG-гексы, создание баронии, стратегические армии,
+ * глобальный ход и тактический бой. См. `docs/frontend-javascript.md`.
+ */
 
 const RADIUS = 80;
 const HEX_WIDTH = Math.sqrt(3) * RADIUS;
@@ -16,6 +20,16 @@ const polygons = new Map();
 const rowsByKey = new Map();
 const cellKey = (q,r) => `${q},${r}`;
 const neighbors = [[1,0],[-1,0],[0,1],[0,-1],[1,-1],[-1,1]];
+const HEX_BUILDING_IMAGES={
+  2:{src:'structures/castle-002_1.png',width:50,height:34},
+  3:{src:'structures/castle-003_1.png',width:60,height:48},
+  4:{src:'structures/castle-004_2.png',width:80,height:70},
+  5:{src:'structures/castle-005_2.png',width:80,height:56},
+  6:{src:'structures/castle-007.png',width:100,height:94},
+  7:{src:'structures/castle-008_1.png',width:120,height:100},
+  8:{src:'structures/castle-008_2.png',width:120,height:114}
+};
+/** Проверяет, образуют ли ключи осевых координат одну связанную область. */
 function connectedSelection(cells) {
   const remaining = new Set(cells);
   if (!remaining.size) return true;
@@ -74,6 +88,7 @@ function hexCorners(q, r) {
   });
 }
 
+/** Рисует внешние границы владений, исключая общие рёбра соседних гексов. */
 function redrawBaronyBoundaries() {
   const groups = new Map();
   const add = (id, color, key) => {
@@ -266,8 +281,10 @@ form.addEventListener("submit", async (event) => {
   }
 });
 
+/** Создаёт SVG-гексы и связывает мышь/клавиатуру с игровыми действиями. */
 function render(rows) {
-  const fragment = document.createDocumentFragment();
+  overlay.querySelectorAll('.hex-building').forEach(image=>image.remove());
+  const fragment = document.createDocumentFragment(),structures=document.createDocumentFragment();
   const byCoordinates = new Map(rows.map((row) => [`${Number(row.Q)},${Number(row.R)}`, row]));
   const visibleRows = [];
   // Include every cell intersecting the image, independent of legacy terrain labels.
@@ -279,6 +296,17 @@ function render(rows) {
     }
   }
   visibleRows.forEach((row) => {
+    const building=HEX_BUILDING_IMAGES[Number(row['Уровень гекса'])];
+    if(building){
+      const cx=HEX_WIDTH*(Number(row.Q)+Number(row.R)/2),cy=RADIUS*1.5*Number(row.R);
+      const image=document.createElementNS('http://www.w3.org/2000/svg','image');
+      image.setAttribute('class','hex-building');image.setAttribute('href',building.src);
+      image.setAttribute('width',building.width);image.setAttribute('height',building.height);
+      image.setAttribute('x',cx-building.width/2);image.setAttribute('y',cy-building.height/2);
+      image.setAttribute('preserveAspectRatio','xMidYMid meet');
+      image.setAttribute('aria-label',row['Постройка']||`Постройка уровня ${row['Уровень гекса']}`);
+      structures.appendChild(image);
+    }
     const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
     polygon.setAttribute("points", polygonPoints(Number(row.Q), Number(row.R)));
     polygon.setAttribute("class", "hex-hit");
@@ -303,6 +331,7 @@ function render(rows) {
     fragment.appendChild(polygon);
   });
   mapRows = visibleRows;
+  overlay.appendChild(structures);
   overlay.appendChild(fragment);
   redrawBaronyBoundaries();
 }
@@ -316,15 +345,10 @@ const endTurnButton = document.querySelector('#end-turn');
 const battleModal = document.querySelector('#battle-modal');
 
 async function refreshGameResources() {
-  const [armyResponse, peasantsResponse] = await Promise.all([
-    fetch(`${API_BASE}/cabinet/army`, {cache:'no-store'}),
-    fetch(`${API_BASE}/cabinet/peasants`, {cache:'no-store'})
-  ]);
-  if (!armyResponse.ok || !peasantsResponse.ok) throw new Error('Не удалось загрузить ресурсы');
-  const [army, peasants] = await Promise.all([armyResponse.json(), peasantsResponse.json()]);
-  const food = Number(army.inventory?.food || 0);
-  const population = (peasants.hexes || []).reduce((sum, hex) => sum + Number(hex.quantity || 0), 0);
-  document.querySelector('#game-resources').textContent = `Злато:${army.gold}  Пища:${food}  Холопы:${population}`;
+  const response=await fetch(`${API_BASE}/cabinet/economy`,{cache:'no-store'});
+  if(!response.ok)throw new Error('Не удалось загрузить ресурсы');
+  const economy=await response.json();
+  document.querySelector('#game-resources').textContent=`Золото: ${economy.gold} · Еда: ${economy.food} · Холопы: ${economy.population}`;
 }
 
 function adjacentKeys(key) {
@@ -348,6 +372,7 @@ function unitPosition(key) {
   const [q,r] = key.split(',').map(Number);
   return {x:HEX_WIDTH*(q+r/2), y:RADIUS*1.5*r};
 }
+/** Загружает армии, создаёт SVG-маркеры и восстанавливает активный бой. */
 async function createMapUnit() {
   const owned = mapRows.find(row=>row['Тип владельца']==='Игрок' && row['Владелец']===userId);
   const fallback = mapRows.find(row=>row['Категория'] && row['Категория']!=='Море') || mapRows[0];
@@ -449,6 +474,7 @@ function startSkipCountdown(skipAt,visible,ready){
   };
   update();skipCountdownTimer=setInterval(update,1000);
 }
+/** Синхронизирует календарь, голос игрока и доступность завершения хода. */
 async function refreshGameClock() {
   try {
     const response = await fetch(`${API_BASE}/game/clock`, {cache:'no-store'});
@@ -547,6 +573,7 @@ function battleAttackLog(event,units){
   const target=units.find(unit=>unit.id===details.target_id)?.name||`юнита №${details.target_id}`;
   return `Раунд ${event.round}: ${attacker} атаковал ${target}. Бросок атаки: ${details.attack_roll}. Бросок защиты: ${details.defense_roll}. Урон: ${details.damage}.`;
 }
+/** Отправляет команду боя и принимает подтверждённое сервером состояние. */
 async function battleCommand(path,payload) {
   const response=await fetch(`${API_BASE}${path}`,{method:'POST',headers:{'X-CSRF-Token':csrfToken,'Content-Type':'application/json'},body:JSON.stringify(payload)});
   const data=await response.json(); if (!response.ok) throw new Error(data.error||`HTTP ${response.status}`);
@@ -687,6 +714,7 @@ document.querySelector('#cancel-name').addEventListener('click', () => {
 document.addEventListener("keydown", (event) => { if (event.key === "Escape") closeCard(); });
 viewport.addEventListener("pointerdown", (event) => { if (!card.contains(event.target) && event.button === 0) closeCard(); });
 
+/** Загружает личность, карту и доступные игроку игровые подсистемы. */
 async function loadData() {
   const identityResponse = await fetch(`${API_BASE}/me`, { cache: "no-store" });
   if (identityResponse.status === 401) {

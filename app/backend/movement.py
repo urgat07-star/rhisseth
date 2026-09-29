@@ -67,7 +67,7 @@ async def move_general(general_id:int,request:Request):
         conn.execute('''UPDATE player_generals SET previous_q=q,previous_r=r,q=%s,r=%s,
             logistics_left=logistics_left-%s,last_moved_turn=%s WHERE id=%s''',(q,r,cost,turn,general_id))
         result={'moved':True,'q':q,'r':r,'logistics_left':general[3]-cost,'cost':cost,'crossing':crossing}
-        level=max(0,min(7,int(target[0].get('Уровень гекса') or 0)))
+        level=max(1,min(8,int(target[0].get('Уровень гекса') or 1)))
         try:danger=int(target[0].get('Опасность') or 0)
         except (TypeError,ValueError):danger=0
         roll=random.randint(1,6)

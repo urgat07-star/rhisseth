@@ -1,4 +1,8 @@
 'use strict';
+/**
+ * Управление пользователями: поиск, пагинация, изменение учётных данных и
+ * удаление аккаунтов. Мутации защищены CSRF-токеном из `/api/me`.
+ */
 const $ = s => document.querySelector(s);
 const labels = {admin:'Администраторы',moderator:'Модераторы',user:'Пользователи'};
 let csrf='', page=1, selected=null, loading=false;
@@ -9,6 +13,7 @@ async function api(url, options={}) {
   if(!response.ok) throw new Error(result.error || 'Не удалось выполнить запрос');
   return result;
 }
+/** Загружает текущую страницу пользователей и полностью перестраивает таблицу. */
 async function load() {
   if(loading) return;
   loading=true; $('#status').textContent='Загрузка…'; $('#prev').disabled=$('#next').disabled=true;
