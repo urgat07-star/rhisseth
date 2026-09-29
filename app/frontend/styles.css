@@ -83,6 +83,7 @@ main { padding: clamp(12px, 2vw, 28px); }
 .hex-hit.barony-chosen, .hex-hit.barony-chosen:hover, .hex-hit.barony-chosen:focus { fill: var(--barony-color); fill-opacity: .14; stroke: none; }
 .hex-hit.barony-available { cursor: pointer; }
 .hex-hit.barony-unavailable { cursor: not-allowed; fill: #000; fill-opacity: .18; }
+.hex-building { pointer-events: none; filter: drop-shadow(0 3px 3px #000c); }
 
 .barony-emblem { pointer-events: none; filter: drop-shadow(0 2px 2px #000b); }
 .barony-boundary { fill: none; stroke-width: 5; vector-effect: non-scaling-stroke; stroke-linecap: round; pointer-events: none; filter: drop-shadow(0 0 2px color-mix(in srgb, currentColor 55%, transparent)); }

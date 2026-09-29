@@ -7,6 +7,8 @@ DELETE FROM raid_balance WHERE building_level=0;
 DELETE FROM hex_building_levels WHERE level=0;
 ALTER TABLE hex_building_levels DROP CONSTRAINT IF EXISTS hex_building_levels_level_check;
 ALTER TABLE hex_building_levels ADD CONSTRAINT hex_building_levels_level_check CHECK (level BETWEEN 1 AND 8);
+ALTER TABLE hex_building_levels ADD COLUMN image_path text NOT NULL DEFAULT ''
+    CHECK (length(image_path) <= 500);
 
 -- Preserve existing building meaning before changing the numeric catalogue.
 UPDATE hexes SET data = data || jsonb_build_object(
@@ -19,19 +21,20 @@ UPDATE hexes SET data = data || jsonb_build_object(
 
 UPDATE hex_building_levels SET name='legacy-' || level || '-' || name;
 INSERT INTO hex_building_levels
- (level,name,upkeep,population_limit,structure,defense,feature,resource_multiplier)
+ (level,name,upkeep,population_limit,structure,defense,feature,resource_multiplier,image_path)
 VALUES
- (1,'нет построек',NULL,3,'нет построек',NULL,'Первый экономический уровень',0),
- (2,'Лагерь',NULL,15,'Лагерь',NULL,'Экономические параметры economy v0.4.0',0),
- (3,'Поселение',1,40,'Поселение',NULL,'Экономические параметры economy v0.4.0',2),
- (4,'Деревня',2,80,'Деревня',2,'Защитники получают +1 защиты',3),
- (5,'Крепость',6,120,'Крепость',3,'Для захвата нужны осадные орудия',0),
- (6,'Замок',4,170,'Замок',2,'Военные параметры требуют отдельной балансировки',0),
- (7,'Город',8,250,'Город',3,'Для захвата нужны осадные орудия; +2 защиты',4),
- (8,'Столица',10,500,'Столица',4,'Особые правила столицы уточняются',5)
+ (1,'нет построек',NULL,3,'нет построек',NULL,'Первый экономический уровень',0,''),
+ (2,'Лагерь',NULL,15,'Лагерь',NULL,'Экономические параметры economy v0.4.0',0,'structures/castle-002_1.png'),
+ (3,'Поселение',1,40,'Поселение',NULL,'Экономические параметры economy v0.4.0',2,'structures/castle-003_1.png'),
+ (4,'Деревня',2,80,'Деревня',2,'Защитники получают +1 защиты',3,'structures/castle-004_2.png'),
+ (5,'Крепость',6,120,'Крепость',3,'Для захвата нужны осадные орудия',0,'structures/castle-005_2.png'),
+ (6,'Замок',4,170,'Замок',2,'Военные параметры требуют отдельной балансировки',0,'structures/castle-007.png'),
+ (7,'Город',8,250,'Город',3,'Для захвата нужны осадные орудия; +2 защиты',4,'structures/castle-008_1.png'),
+ (8,'Столица',10,500,'Столица',4,'Особые правила столицы уточняются',5,'structures/castle-008_2.png')
 ON CONFLICT (level) DO UPDATE SET name=EXCLUDED.name,upkeep=EXCLUDED.upkeep,
  population_limit=EXCLUDED.population_limit,structure=EXCLUDED.structure,
- defense=EXCLUDED.defense,feature=EXCLUDED.feature,resource_multiplier=EXCLUDED.resource_multiplier;
+ defense=EXCLUDED.defense,feature=EXCLUDED.feature,resource_multiplier=EXCLUDED.resource_multiplier,
+ image_path=EXCLUDED.image_path;
 
 CREATE TABLE territory_level_economy (
  level smallint PRIMARY KEY REFERENCES hex_building_levels(level),

@@ -20,6 +20,15 @@ const polygons = new Map();
 const rowsByKey = new Map();
 const cellKey = (q,r) => `${q},${r}`;
 const neighbors = [[1,0],[-1,0],[0,1],[0,-1],[1,-1],[-1,1]];
+const HEX_BUILDING_IMAGES={
+  2:{src:'structures/castle-002_1.png',width:50,height:34},
+  3:{src:'structures/castle-003_1.png',width:60,height:48},
+  4:{src:'structures/castle-004_2.png',width:80,height:70},
+  5:{src:'structures/castle-005_2.png',width:80,height:56},
+  6:{src:'structures/castle-007.png',width:100,height:94},
+  7:{src:'structures/castle-008_1.png',width:120,height:100},
+  8:{src:'structures/castle-008_2.png',width:120,height:114}
+};
 /** Проверяет, образуют ли ключи осевых координат одну связанную область. */
 function connectedSelection(cells) {
   const remaining = new Set(cells);
@@ -274,7 +283,8 @@ form.addEventListener("submit", async (event) => {
 
 /** Создаёт SVG-гексы и связывает мышь/клавиатуру с игровыми действиями. */
 function render(rows) {
-  const fragment = document.createDocumentFragment();
+  overlay.querySelectorAll('.hex-building').forEach(image=>image.remove());
+  const fragment = document.createDocumentFragment(),structures=document.createDocumentFragment();
   const byCoordinates = new Map(rows.map((row) => [`${Number(row.Q)},${Number(row.R)}`, row]));
   const visibleRows = [];
   // Include every cell intersecting the image, independent of legacy terrain labels.
@@ -286,6 +296,17 @@ function render(rows) {
     }
   }
   visibleRows.forEach((row) => {
+    const building=HEX_BUILDING_IMAGES[Number(row['Уровень гекса'])];
+    if(building){
+      const cx=HEX_WIDTH*(Number(row.Q)+Number(row.R)/2),cy=RADIUS*1.5*Number(row.R);
+      const image=document.createElementNS('http://www.w3.org/2000/svg','image');
+      image.setAttribute('class','hex-building');image.setAttribute('href',building.src);
+      image.setAttribute('width',building.width);image.setAttribute('height',building.height);
+      image.setAttribute('x',cx-building.width/2);image.setAttribute('y',cy-building.height/2);
+      image.setAttribute('preserveAspectRatio','xMidYMid meet');
+      image.setAttribute('aria-label',row['Постройка']||`Постройка уровня ${row['Уровень гекса']}`);
+      structures.appendChild(image);
+    }
     const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
     polygon.setAttribute("points", polygonPoints(Number(row.Q), Number(row.R)));
     polygon.setAttribute("class", "hex-hit");
@@ -310,6 +331,7 @@ function render(rows) {
     fragment.appendChild(polygon);
   });
   mapRows = visibleRows;
+  overlay.appendChild(structures);
   overlay.appendChild(fragment);
   redrawBaronyBoundaries();
 }
