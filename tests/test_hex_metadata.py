@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, patch
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'app/backend'))
 from fastapi.testclient import TestClient
 from main import app
+from main import hexes as load_hexes
 from hex_rules import coordinates, connected, category_from_share, validate_terrain_category
 
 class HexMetadataTests(unittest.TestCase):
@@ -33,6 +34,21 @@ class HexMetadataTests(unittest.TestCase):
         with patch('main.current_user',return_value=self.player),patch('main.connect',side_effect=AssertionError('Forbidden read')):
             for url in ('/admin/hexes','/api/admin/owners','/api/admin/hexes/export'):
                 self.assertEqual(self.client.get(url).status_code,403)
+
+    def test_map_hexes_support_schema_before_economy_migrations(self):
+        result=MagicMock()
+        result.fetchall.side_effect=[
+            [({'Q':'0','R':'0','Категория':'Суша','Тип местности':'Равнина','Плодородие':'3',
+               'Уровень гекса':'2','Постройка':'Лагерь','Население':'2'},)],
+            [],[],[],[]
+        ]
+        conn=MagicMock();conn.execute.return_value=result
+        with patch('main.connect') as connect,patch('main.coordinates',return_value=[(0,0)]):
+            connect.return_value.__enter__.return_value=conn
+            rows=load_hexes()
+        self.assertEqual(rows[0]['Максимальное население'],'15')
+        self.assertEqual(rows[0]['Годовой налог'],'1–5')
+        self.assertEqual(rows[0]['Дополнительные постройки'],'Нет')
 
     def test_invalid_categories_water_and_landscape_rejected(self):
         invalid=[{'Категория':'Вне полотна'},{'Пресная вода':'1'}, {'Доля суши, %':'NaN'},

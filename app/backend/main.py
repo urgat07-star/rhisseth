@@ -98,16 +98,28 @@ def hexes():
         players = dict(conn.execute('SELECT user_id,user_login FROM users').fetchall())
         territories = {str(t[0]): f'{t[2]} {t[1]}' for t in conn.execute('SELECT id,name,kind FROM territories').fetchall()}
         morale = {(q,r):value for q,r,value in conn.execute('SELECT q,r,morale FROM game_hex_morale').fetchall()}
+        available_tables={row[0] for row in conn.execute('''SELECT table_name FROM information_schema.tables
+            WHERE table_schema=current_schema() AND table_name IN
+            ('territory_level_economy','hex_additional_buildings','additional_building_catalog')''').fetchall()}
+        fallback_levels={
+            1:(3,1,1,0,0,0,0,0),2:(15,1,3,1,5,50,15,0),3:(40,1,6,6,10,120,40,0),
+            4:(80,1,12,11,25,150,100,0),5:(120,3,15,26,50,300,150,0),
+            6:(170,3,20,51,80,300,300,0),7:(250,5,40,81,110,500,400,30),
+            8:(500,5,50,111,150,1000,500,100)}
+        level_rows=(conn.execute('''SELECT level,population_limit,population_growth_min,population_growth_max,
+                tax_min,tax_max,wood_cost,stone_cost,marble_cost FROM territory_level_economy''').fetchall()
+            if 'territory_level_economy' in available_tables else
+            [(level,*values) for level,values in fallback_levels.items()])
         level_rules = {level:{'population_limit':population_limit,'growth_min':growth_min,
             'growth_max':growth_max,'tax_min':tax_min,'tax_max':tax_max,'wood':wood,'stone':stone,
-            'marble':marble} for level,population_limit,growth_min,growth_max,tax_min,tax_max,wood,stone,marble
-            in conn.execute('''SELECT level,population_limit,population_growth_min,population_growth_max,
-                tax_min,tax_max,wood_cost,stone_cost,marble_cost FROM territory_level_economy''').fetchall()}
+            'marble':marble} for level,population_limit,growth_min,growth_max,tax_min,tax_max,wood,stone,marble in level_rows}
         additional_buildings = {}
-        for q,r,name,building_level,effect,note in conn.execute('''SELECT h.q,h.r,c.name,h.building_level,
+        building_rows=(conn.execute('''SELECT h.q,h.r,c.name,h.building_level,
                 CASE h.building_level WHEN 1 THEN c.level_1_effect WHEN 2 THEN c.level_2_effect ELSE c.level_3_effect END,c.note
             FROM hex_additional_buildings h JOIN additional_building_catalog c ON c.code=h.building_code
-            ORDER BY h.q,h.r,c.name''').fetchall():
+            ORDER BY h.q,h.r,c.name''').fetchall()
+            if {'hex_additional_buildings','additional_building_catalog'} <= available_tables else [])
+        for q,r,name,building_level,effect,note in building_rows:
             additional_buildings.setdefault((q,r),[]).append(
                 f'{name} (уровень {building_level})' + (f': {effect}' if effect else '') + (f'. {note}' if note else ''))
     by_coordinate = {(int(row[0]['Q']), int(row[0]['R'])): public_row(row[0]) for row in rows}
