@@ -219,7 +219,16 @@ function showCard(row, event, polygon) {
   const fields = [['Имя владельца','Владелец'],['Тип владельца','Владение'],['Название территории','Территория']];
   if (row['Название баронии']) fields.push(['Название баронии','Барония']);
   fields.push(['Категория','Категория'],['Тип местности','Ландшафт'],['Дополнительный объект','Объект']);
-  if (!creatingBarony) fields.push(['Проходимость','Проходимость'],['Защита','Защита'],['Плодородие','Плодородие'],['Опасность','Опасность'],['Основной ресурс','Ресурс'],['Богатство ресурса','Богатство'],['Мораль','Мораль'],['Комментарий','Комментарий']);
+  if (!creatingBarony) fields.push(
+    ['Уровень гекса','Уровень'],['Постройка','Основная постройка'],
+    ['Население','Население'],['Максимальное население','Предел населения'],
+    ['Годовой прирост населения','Прирост в год'],['Годовой налог','Налог в год'],
+    ['Плодородие','Плодородие'],['Годовой баланс еды','Еда в год'],['Правило еды','Расчёт еды'],['Покрытие дефицита','Дефицит еды'],
+    ['Проходимость','Проходимость'],['Защита','Защита'],['Опасность','Опасность'],
+    ['Основной ресурс','Ресурс'],['Богатство ресурса','Богатство'],
+    ['Глубина','Глубина'],['Течение','Течение'],['Дорога','Дорога'],['Водная переправа','Переправа'],
+    ['Объекты гекса','Объекты'],['Дополнительные постройки','Доп. постройки'],
+    ['Цена следующего уровня','Развитие'],['Мораль','Мораль'],['Комментарий','Комментарий']);
   for (const [key,label] of fields) {
     const line = document.createElement('div'), term = document.createElement('dt'), value = document.createElement('dd');
     term.textContent = label; value.textContent = row[key] || 'Нет данных';
@@ -343,6 +352,44 @@ const turnLabel = document.querySelector('#turn-label');
 const hexActions = document.querySelector('#hex-actions');
 const endTurnButton = document.querySelector('#end-turn');
 const battleModal = document.querySelector('#battle-modal');
+const armyDetailsModal = document.querySelector('#army-details-modal');
+
+function showArmyDetails(general) {
+  if (!general || !armyDetailsModal) return;
+  document.querySelector('#army-details-title').textContent=`Армия «${general.name}»`;
+  const statusLabels={active:'В строю',captured:'В плену',recovering:'Восстанавливается',dismissed:'Расформирована'};
+  document.querySelector('#army-details-summary').textContent=
+    `Состояние: ${statusLabels[general.status]||general.status||'Неизвестно'} · Гекс Q${general.q}, R${general.r} · `+
+    `Уровень ${general.level} · Опыт ${general.experience} · Атака ${general.attack} · Защита ${general.defense} · `+
+    `Логистика ${general.logistics_left}/${general.logistics}`;
+  const units=document.querySelector('#army-details-units'); units.replaceChildren();
+  if (!general.units.length) {
+    const empty=document.createElement('p'); empty.className='army-details-empty'; empty.textContent='В армии нет бойцов.'; units.append(empty);
+  }
+  general.units.forEach(unit=>{
+    const card=document.createElement('article'); card.className=`army-details-unit${unit.status!=='active'?' is-inactive':''}`;
+    const image=document.createElement('img'); image.src=unit.image_path; image.alt=unit.name;
+    const title=document.createElement('h3'); title.textContent=unit.name;
+    const health=document.createElement('p'); health.textContent=`Здоровье: ${unit.current_health}/${unit.max_health}`;
+    const condition=document.createElement('p'); condition.textContent=`Состояние: ${statusLabels[unit.status]||unit.status||'Неизвестно'}`;
+    const stats=document.createElement('p'); stats.textContent=`Атака ${unit.attack} · Защита ${unit.defense} · Дальность ${unit.attack_range} · Скорость ${unit.speed}`;
+    card.append(image,title,health,condition,stats); units.append(card);
+  });
+  armyDetailsModal.showModal();
+}
+
+function bindMapArmyEvents(image,generalId) {
+  image.setAttribute('tabindex','0');
+  image.addEventListener('contextmenu',event=>{
+    event.preventDefault(); event.stopPropagation();
+    showArmyDetails(game.armies.find(item=>item.id===generalId));
+  });
+  image.addEventListener('keydown',event=>{
+    if (event.key==='ContextMenu' || (event.shiftKey && event.key==='F10')) {
+      event.preventDefault(); showArmyDetails(game.armies.find(item=>item.id===generalId));
+    }
+  });
+}
 
 async function refreshGameResources() {
   const response=await fetch(`${API_BASE}/cabinet/economy`,{cache:'no-store'});
@@ -391,7 +438,7 @@ async function createMapUnit() {
   game.armies.forEach((general,index)=>{
     general.unitKey=Number.isInteger(general.q)&&Number.isInteger(general.r)?cellKey(general.q,general.r):game.unitKey;
     const image=document.createElementNS('http://www.w3.org/2000/svg','image'); image.id=`player-unit-${general.id}`; image.setAttribute('class','map-unit');
-    image.setAttribute('href',general.icon); image.setAttribute('width','82'); image.setAttribute('height','82'); image.setAttribute('aria-label',`Генерал ${general.name}, юнитов: ${general.units.length}`); image.setAttribute('tabindex','0');
+    image.setAttribute('href',general.icon); image.setAttribute('width','82'); image.setAttribute('height','82'); image.setAttribute('aria-label',`Генерал ${general.name}, юнитов: ${general.units.length}`); bindMapArmyEvents(image,general.id);
     image.addEventListener('click',event=>{event.stopPropagation();if(game.player!==1){setGameMessage('Ваш ход уже завершён. Дождитесь остальных игроков или используйте «Пропустить ход», когда кнопка станет доступна.');return;}const current=game.armies.find(item=>item.id===general.id);if(!current)return;document.querySelectorAll('.map-unit').forEach(item=>item.classList.remove('selected'));game.general=current;game.armyUnits=current.units;game.unitKey=current.unitKey;game.selected=true;image.classList.add('selected');paintMoveTargets();setGameMessage(`Армия «${current.name}»: выберите соседний гекс.`);});
     layer.append(image); positionGeneralImage(general,index,false);
   });
@@ -407,7 +454,7 @@ async function syncArmies(fresh){
   const active=fresh.filter(item=>item.status==='active'), selectedId=game.general?.id; game.armies=active;
   document.querySelectorAll('.map-unit').forEach(image=>{if(!active.some(general=>image.id===`player-unit-${general.id}`))image.remove();});
   const layer=document.querySelector('.map-unit-layer'); if(!layer)return;
-  active.forEach((general,index)=>{general.unitKey=cellKey(Number(general.q),Number(general.r));let image=document.getElementById(`player-unit-${general.id}`);if(!image){image=document.createElementNS('http://www.w3.org/2000/svg','image');image.id=`player-unit-${general.id}`;image.setAttribute('class','map-unit');image.setAttribute('width','82');image.setAttribute('height','82');image.addEventListener('click',event=>{event.stopPropagation();if(game.player!==1)return;document.querySelectorAll('.map-unit').forEach(item=>item.classList.remove('selected'));game.general=game.armies.find(item=>item.id===general.id)||general;game.armyUnits=game.general.units;game.unitKey=game.general.unitKey;game.selected=true;image.classList.add('selected');paintMoveTargets();setGameMessage(`Армия «${game.general.name}»: выберите соседний гекс.`);});layer.append(image);}image.setAttribute('href',general.icon);image.setAttribute('aria-label',`Генерал ${general.name}, юнитов: ${general.units.length}`);positionGeneralImage(general,index,false);});
+  active.forEach((general,index)=>{general.unitKey=cellKey(Number(general.q),Number(general.r));let image=document.getElementById(`player-unit-${general.id}`);if(!image){image=document.createElementNS('http://www.w3.org/2000/svg','image');image.id=`player-unit-${general.id}`;image.setAttribute('class','map-unit');image.setAttribute('width','82');image.setAttribute('height','82');image.addEventListener('click',event=>{event.stopPropagation();if(game.player!==1)return;document.querySelectorAll('.map-unit').forEach(item=>item.classList.remove('selected'));game.general=game.armies.find(item=>item.id===general.id)||general;game.armyUnits=game.general.units;game.unitKey=game.general.unitKey;game.selected=true;image.classList.add('selected');paintMoveTargets();setGameMessage(`Армия «${game.general.name}»: выберите соседний гекс.`);});bindMapArmyEvents(image,general.id);layer.append(image);}image.setAttribute('href',general.icon);image.setAttribute('aria-label',`Генерал ${general.name}, юнитов: ${general.units.length}`);positionGeneralImage(general,index,false);});
   game.general=active.find(general=>general.id===selectedId)||active[0]||null;if(game.general){game.unitKey=game.general.unitKey;game.armyUnits=game.general.units;}updateGeneralTurnCount();
 }
 function moveUnitImage(key,animate=true) {

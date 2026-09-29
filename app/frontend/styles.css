@@ -280,6 +280,18 @@ main { padding: clamp(12px, 2vw, 28px); }
 .rating { color: #dbc680; letter-spacing: 2px; white-space: nowrap; }
 .coordinates { margin: -8px 0 12px; color: #aeb5a7; font-size: 13px; }
 
+.army-details-modal { width: min(850px, calc(100vw - 24px)); max-height: 88dvh; overflow: auto; box-sizing: border-box; padding: 24px; border: 1px solid #aa9560; border-radius: 10px; background: #111712; color: #eee6cf; }
+.army-details-modal::backdrop { background: #050806d9; backdrop-filter: blur(3px); }
+.army-details-modal h2 { margin: 0 38px 8px 0; color: #f2df9c; font-family: Georgia, serif; }
+.army-details-summary { margin: 0 0 18px; color: #d6cfb8; line-height: 1.5; }
+.army-details-units { display: grid; grid-template-columns: repeat(auto-fit,minmax(170px,1fr)); gap: 14px; margin-bottom: 18px; }
+.army-details-unit { min-width: 0; padding: 10px; border: 1px solid #756846; border-radius: 7px; background: #0b0e0b; }
+.army-details-unit.is-inactive { opacity: .6; filter: grayscale(.7); }
+.army-details-unit img { display: block; width: 100%; height: 130px; object-fit: contain; background: #070a07; border-radius: 4px; }
+.army-details-unit h3 { margin: 9px 0 5px; color: #f2df9c; }
+.army-details-unit p { margin: 3px 0; font-size: 13px; }
+.army-details-empty { grid-column: 1/-1; color: #aeb5a7; }
+
 
 /* ============================================================
    8. HEX-FORM (редактирование гекса)
@@ -431,6 +443,9 @@ th { position: sticky; top: 0; background: #252b24; }
 .admin-editor form { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 .admin-editor label { display: grid; gap: 4px; font-size: 13px; }
 .admin-editor input, .admin-editor select, .admin-editor textarea { width: 100%; }
+.hex-level-preview { grid-column: 1/-1; display: flex; align-items: center; gap: 18px; min-height: 90px; padding: 10px 14px; border: 1px solid #756846; border-radius: 6px; background: #111712; }
+.hex-level-preview p { flex: 1; margin: 0; color: #f2df9c; }
+.hex-level-preview img { width: 130px; height: 100px; object-fit: contain; filter: drop-shadow(0 4px 4px #000b); }
 
 .unit-editor-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .unit-editor-form label { display: grid; gap: 4px; }

@@ -7,6 +7,16 @@
 const fields = ['Название','Название территории','Категория','Остров','Доля суши, %','Тип местности','Состав ландшафта','Дополнительный объект','Проходимость','Защита','Плодородие','Опасность','Основной ресурс','Богатство ресурса','Глубина','Течение','Комментарий','Тип владельца','Владелец'];
 const hiddenObjectFields = ['Уровень гекса','Постройка','Дорога','Водная переправа','Объекты гекса'];
 const editorFields = [...fields,...hiddenObjectFields];
+const levelTesting={
+  1:{name:'нет построек',population:3,tax:'0',image:''},
+  2:{name:'Лагерь',population:15,tax:'1–5',image:'structures/castle-002_1.png'},
+  3:{name:'Поселение',population:40,tax:'6–10',image:'structures/castle-003_1.png'},
+  4:{name:'Деревня',population:80,tax:'11–25',image:'structures/castle-004_2.png'},
+  5:{name:'Крепость',population:120,tax:'26–50',image:'structures/castle-005_2.png'},
+  6:{name:'Замок',population:170,tax:'51–80',image:'structures/castle-007.png'},
+  7:{name:'Город',population:250,tax:'81–110',image:'structures/castle-008_1.png'},
+  8:{name:'Столица',population:500,tax:'111–150',image:'structures/castle-008_2.png'}
+};
 let rows = [], ownerOptions = {}, csrf = '', editing = null, busy = false;
 const selected = new Set(), status = document.querySelector('#admin-status'), form = document.querySelector('#admin-form');
 const key = row => `${row.Q},${row.R}`;
@@ -23,7 +33,7 @@ function mutation(url, payload, method='PUT', revision='') {
 /** Перестраивает таблицу гексов с учётом поиска и текущего выбора. */
 function render() {
   const head = document.createElement('tr');
-  for (const label of ['Выбрать','Действие','Q','R','Статус данных',...fields,'Имя владельца']) {const th=document.createElement('th');th.textContent=label;head.append(th);}
+  for (const label of ['Выбрать','Действие','Q','R','Статус данных','Уровень гекса','Постройка','Годовой налог',...fields,'Имя владельца']) {const th=document.createElement('th');th.textContent=label;head.append(th);}
   document.querySelector('#columns').replaceChildren(head);
   const body = document.querySelector('#rows'); body.replaceChildren();
   const query = document.querySelector('#search').value.toLocaleLowerCase();
@@ -32,7 +42,7 @@ function render() {
     check.type='checkbox'; check.checked=selected.has(key(row)); check.setAttribute('aria-label',`Выбрать Q${row.Q} R${row.R}`);
     check.addEventListener('change',()=>check.checked?selected.add(key(row)):selected.delete(key(row)));choice.append(check);tr.append(choice);
     const action=document.createElement('td'), edit=document.createElement('button');edit.textContent='Редактировать';edit.disabled=busy;edit.addEventListener('click',()=>openEditor(row));action.append(edit);tr.append(action);
-    for(const field of ['Q','R','Статус данных',...fields,'Имя владельца']) {const td=document.createElement('td');td.textContent=row[field]||'—';if(field==='Состав ландшафта'&&row[field]){try{td.textContent=JSON.parse(row[field]).map(p=>`${p.name} ${p.percent}%`).join(' / ');}catch{}}tr.append(td);}
+    for(const field of ['Q','R','Статус данных','Уровень гекса','Постройка','Годовой налог',...fields,'Имя владельца']) {const td=document.createElement('td');td.textContent=row[field]||'—';if(field==='Состав ландшафта'&&row[field]){try{td.textContent=JSON.parse(row[field]).map(p=>`${p.name} ${p.percent}%`).join(' / ');}catch{}}tr.append(td);}
     body.append(tr);
   }
 }
@@ -81,6 +91,18 @@ function openEditor(row) {
     input.disabled=type==='Ничейная территория'||type==='Компьютерное владение';
   };
   form.elements.namedItem('Тип владельца').addEventListener('change',refreshOwners);refreshOwners();
+  const levelInput=form.elements.namedItem('Уровень гекса'),buildingInput=form.elements.namedItem('Постройка');
+  buildingInput.disabled=true;
+  const preview=document.createElement('section');preview.className='hex-level-preview';
+  const previewText=document.createElement('p'),previewImage=document.createElement('img');previewImage.alt='Предпросмотр постройки выбранного уровня';
+  preview.append(previewText,previewImage);form.insertBefore(preview,form.firstChild);
+  const refreshLevelPreview=()=>{
+    const selected=levelTesting[Number(levelInput.value)]||levelTesting[1];
+    buildingInput.value=selected.name;
+    previewText.textContent=`${levelInput.value||1} — ${selected.name}. Максимум населения: ${selected.population}. Годовой налог: ${selected.tax} золота.`;
+    previewImage.hidden=!selected.image;previewImage.src=selected.image||'';
+  };
+  levelInput.addEventListener('change',refreshLevelPreview);refreshLevelPreview();
   if(row['Тип владельца']==='Компьютерное владение') form.elements.namedItem('Тип владельца').disabled=true;
   const save=document.createElement('button');save.type='submit';save.textContent='Подтвердить изменения';form.append(save);
   const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Отмена';cancel.addEventListener('click',()=>document.querySelector('#editor').hidden=true);form.append(cancel);

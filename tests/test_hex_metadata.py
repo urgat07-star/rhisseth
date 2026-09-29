@@ -43,7 +43,7 @@ class HexMetadataTests(unittest.TestCase):
                  {'Категория':'Суша','Тип местности':'Открытое море'},
                  {'Категория':'Суша','Тип местности':'Равнина','Водная переправа':'Мост'},
                  {'Категория':'Побережье','Тип местности':'Побережье / Равнина','Дорога':'Да'},
-                 {'Уровень гекса':'3','Постройка':'Город'},
+                 {'Уровень гекса':'0'}, {'Уровень гекса':'9'},
                  {'Тип владельца':'Игрок'}, {'Владелец':'2'}, {'Название территории':'x'*201}]
         with patch('main.current_user',return_value=self.admin),patch('main.connect',side_effect=AssertionError('Invalid update')):
             for data in invalid:
@@ -88,5 +88,19 @@ class HexMetadataTests(unittest.TestCase):
             payload=conn.execute.call_args.args[1][3].obj
             self.assertEqual(payload['Тип местности'],'Лес / Река')
             self.assertEqual(payload['Название'],'Горы')
+
+    def test_admin_level_automatically_selects_building(self):
+        conn=MagicMock()
+        conn.execute.return_value.fetchone.side_effect=[
+            ({'Q':'0','R':'0','Категория':'Суша','Тип местности':'Равнина','Уровень гекса':'1','Постройка':'нет построек'},),
+            ({'Q':'0','R':'0','Категория':'Суша','Тип местности':'Равнина','Уровень гекса':'5','Постройка':'Крепость'},)
+        ]
+        with patch('main.current_user',return_value=self.admin),patch('main.connect') as connect:
+            connect.return_value.__enter__.return_value=conn
+            response=self.client.put('/api/hexes/0/0',json={'Уровень гекса':'5','Постройка':'Лагерь'},headers=self.headers)
+        self.assertEqual(response.status_code,200)
+        saved=conn.execute.call_args.args[1][3].obj
+        self.assertEqual(saved['Уровень гекса'],'5')
+        self.assertEqual(saved['Постройка'],'Крепость')
 
 if __name__=='__main__':unittest.main()

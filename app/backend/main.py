@@ -98,13 +98,48 @@ def hexes():
         players = dict(conn.execute('SELECT user_id,user_login FROM users').fetchall())
         territories = {str(t[0]): f'{t[2]} {t[1]}' for t in conn.execute('SELECT id,name,kind FROM territories').fetchall()}
         morale = {(q,r):value for q,r,value in conn.execute('SELECT q,r,morale FROM game_hex_morale').fetchall()}
+        level_rules = {level:{'population_limit':population_limit,'growth_min':growth_min,
+            'growth_max':growth_max,'tax_min':tax_min,'tax_max':tax_max,'wood':wood,'stone':stone,
+            'marble':marble} for level,population_limit,growth_min,growth_max,tax_min,tax_max,wood,stone,marble
+            in conn.execute('''SELECT level,population_limit,population_growth_min,population_growth_max,
+                tax_min,tax_max,wood_cost,stone_cost,marble_cost FROM territory_level_economy''').fetchall()}
+        additional_buildings = {}
+        for q,r,name,building_level,effect,note in conn.execute('''SELECT h.q,h.r,c.name,h.building_level,
+                CASE h.building_level WHEN 1 THEN c.level_1_effect WHEN 2 THEN c.level_2_effect ELSE c.level_3_effect END,c.note
+            FROM hex_additional_buildings h JOIN additional_building_catalog c ON c.code=h.building_code
+            ORDER BY h.q,h.r,c.name''').fetchall():
+            additional_buildings.setdefault((q,r),[]).append(
+                f'{name} (уровень {building_level})' + (f': {effect}' if effect else '') + (f'. {note}' if note else ''))
     by_coordinate = {(int(row[0]['Q']), int(row[0]['R'])): public_row(row[0]) for row in rows}
     result = [by_coordinate.get((q,r), {'Q':str(q),'R':str(r), 'Тип владельца':'Ничейная территория','Владелец':'','_revision':'missing'}) for q,r in coordinates()]
     for row in result:
-        row['Мораль'] = str(morale.get((int(row['Q']),int(row['R'])),100))
+        coordinate=(int(row['Q']),int(row['R']))
+        row['Мораль'] = str(morale.get(coordinate,100))
         row.setdefault('Статус данных', 'Параметры из существующей БД' if row.get('Категория') in CATEGORIES else 'Требует описания')
         owner = row.get('Владелец','')
         row['Имя владельца'] = (players.get(int(owner),'Неизвестный игрок') if owner.isdigit() else 'Нет владельца') if row.get('Тип владельца')=='Игрок' else territories.get(owner,'Нет владельца')
+        try: level=max(1,min(8,int(row.get('Уровень гекса') or 1)))
+        except (TypeError,ValueError): level=1
+        rule=level_rules.get(level)
+        if rule:
+            row['Максимальное население']=str(rule['population_limit'])
+            row['Годовой прирост населения']=str(rule['growth_min']) if rule['growth_min']==rule['growth_max'] else f"{rule['growth_min']}–{rule['growth_max']}"
+            row['Годовой налог']=str(rule['tax_min']) if rule['tax_min']==rule['tax_max'] else f"{rule['tax_min']}–{rule['tax_max']}"
+            next_rule=level_rules.get(level+1)
+            costs=[f'{value} {name}' for name,value in (('дерева',next_rule['wood']),('камня',next_rule['stone']),('мрамора',next_rule['marble'])) if value] if next_rule else []
+            row['Цена следующего уровня']='; '.join(costs) if costs else ('Максимальный уровень' if level==8 else 'Не задана')
+        try: population=max(0,int(row.get('Население') or 1))
+        except (TypeError,ValueError): population=1
+        try: fertility=max(0,int(row.get('Плодородие') or 0))
+        except (TypeError,ValueError): fertility=0
+        terrain_parts={part.strip().casefold() for part in str(row.get('Тип местности') or '').split('/')}
+        mountain=bool(terrain_parts & {'горы','высокогорье'})
+        neutral=row.get('Тип владельца')!='Игрок'
+        food=3 if mountain and neutral else fertility*population-population
+        row['Годовой баланс еды']=str(food)
+        row['Правило еды']='3 еды для нейтральных гор' if mountain and neutral else f'{fertility} × {population} − {population}'
+        row['Покрытие дефицита']='Из федерального запаса; при нехватке население сокращается' if food<0 else 'Дефицита нет'
+        row['Дополнительные постройки']='; '.join(additional_buildings.get(coordinate,[])) or 'Нет'
     return result
 
 @app.get('/admin/hexes')
@@ -242,10 +277,13 @@ async def update(q: int, r: int, request: Request):
         raise HTTPException(400, 'Дорога разрешена только на суше')
     if payload.get('Водная переправа') in ('Мост','Переправа') and effective_terrain and 'Река' not in (payload.get('Дополнительный объект','') + ' ' + effective_terrain) and 'Озеро' not in effective_terrain:
         raise HTTPException(400, 'Мост или переправа требуют реки либо озера')
-    if (payload.get('Уровень гекса','').isascii() and payload.get('Уровень гекса','').isdigit()
-            and int(payload['Уровень гекса']) in HEX_BUILDINGS and payload.get('Постройка')
-            and payload['Постройка'] != HEX_BUILDINGS[int(payload['Уровень гекса'])]):
-        raise HTTPException(400, 'Постройка не соответствует уровню гекса')
+    if 'Уровень гекса' in payload:
+        level_text=payload['Уровень гекса']
+        if not level_text.isascii() or not level_text.isdigit() or int(level_text) not in HEX_BUILDINGS:
+            raise HTTPException(400, 'Уровень гекса: целое число от 1 до 8')
+        # The level is the source of truth. Administrators do not need to keep
+        # the legacy building-name field synchronized manually.
+        payload['Постройка']=HEX_BUILDINGS[int(level_text)]
     owner_type = payload.get('Тип владельца')
     if owner_type is not None:
         if owner_type not in ('Игрок','Компьютерное владение','Ничейная территория') or 'Владелец' not in payload:
@@ -299,8 +337,6 @@ async def update(q: int, r: int, request: Request):
         level_text = payload.get('Уровень гекса')
         if level_text:
             expected_building = HEX_BUILDINGS[int(level_text)]
-            if payload.get('Постройка') not in (None, '', expected_building):
-                raise HTTPException(400, 'Постройка не соответствует уровню гекса')
             payload['Постройка'] = expected_building
         if payload.get('Категория') in CATEGORIES and (payload.get('Тип местности') or previous and previous[0].get('Тип местности')):
             payload['Статус данных']='Описание заполнено'

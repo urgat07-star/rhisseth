@@ -41,6 +41,7 @@ INSERT INTO extractable_resources(code,name,typical_locations,purpose) VALUES
 ('coal','Уголь','Холмы, горы','Производство'),
 ('flax','Лён','Равнина, луг, степь','Производство ткани'),
 ('horses','Лошади','Равнина, луг, степь','Найм конницы'),
+('sheep','Овцы','Равнина, луг, степь, холмы','Еда, шерсть'),
 ('redwood','Красное дерево','Редколесье, густой лес','Торговля'),
 ('pearls','Жемчуг','Побережье, шельф, рифы','Торговля'),
 ('corals','Кораллы','Галечный берег, рифы','Торговля'),
@@ -55,9 +56,6 @@ INSERT INTO extractable_resources(code,name,typical_locations,purpose) VALUES
 ('sulfur','Сера','Вулканическая земля','Производство'),
 ('obsidian','Обсидиан','Вулканическая земля','Торговля');
 
-INSERT INTO extractable_resources(code,name,typical_locations,purpose) VALUES
-('livestock','Скот','Территории выше Поселения; только после постройки профильного здания','Еда, кожа, шерсть');
-
 INSERT INTO produced_resources(code,name,ingredients,required_building,purpose) VALUES
 ('wine','Вино','Виноград','','Еда, торговля'),
 ('sauces','Соусы','Водоросли + рыба/моллюски/морской зверь','','Еда, торговля'),
@@ -66,7 +64,8 @@ INSERT INTO produced_resources(code,name,ingredients,required_building,purpose) 
 ('steel','Сталь','Железо + уголь','','Найм'),
 ('cloth','Ткань','Лён/другое волокно','','Найм'),
 ('leather','Кожа/мех','Скот или дичь','','Найм, торговля'),
-('wool','Шерсть','Скот','','Производство ткани');
+('wool','Шерсть','Скот','','Производство ткани'),
+('livestock','Скот','','Пастбище или Ферма','Еда, кожа, шерсть');
 
 CREATE TABLE unit_upgrade_requirements (
     unit_id integer PRIMARY KEY REFERENCES unit_catalog(id) ON DELETE CASCADE,
