@@ -55,8 +55,10 @@ INSERT INTO extractable_resources(code,name,typical_locations,purpose) VALUES
 ('sulfur','Сера','Вулканическая земля','Производство'),
 ('obsidian','Обсидиан','Вулканическая земля','Торговля');
 
+INSERT INTO extractable_resources(code,name,typical_locations,purpose) VALUES
+('livestock','Скот','Территории выше Поселения; только после постройки профильного здания','Еда, кожа, шерсть');
+
 INSERT INTO produced_resources(code,name,ingredients,required_building,purpose) VALUES
-('livestock','Скот','Корм, пастбище','','Еда, кожа, шерсть'),
 ('wine','Вино','Виноград','','Еда, торговля'),
 ('sauces','Соусы','Водоросли + рыба/моллюски/морской зверь','','Еда, торговля'),
 ('glass','Стекло','Песок + уголь','','Строительство, торговля'),

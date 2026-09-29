@@ -88,10 +88,15 @@ function renderCabinet() {
   document.querySelector('#cabinet-crest').src=`crests/${currentCrest}`;
   document.querySelector('#cabinet-cells').textContent=barony.hexes.map(row=>`Q${row.Q} R${row.R}`).join(' · ') || 'Нет принадлежащих вам гексов';
   const stats=barony.statistics;
+  const economy=state.economy||{gold:0,food:0,population:0,resources:{}};
+  document.querySelector('#economy-gold').textContent=economy.gold;
+  document.querySelector('#economy-food').textContent=economy.food;
+  document.querySelector('#economy-population').textContent=economy.population;
   document.querySelector('#barony-totals').replaceChildren(statCard('Владение',[['Гексов',stats.hex_count],['Островных гексов',stats.islands],['Гексов с объектами',stats.objects]]));
-  for (const [id,key] of [['category-stats','categories'],['landscape-stats','landscapes'],['resource-stats','resources']]) {
+  for (const [id,key] of [['category-stats','categories'],['landscape-stats','landscapes']]) {
     const entries=Object.entries(stats[key]); lineList(document.getElementById(id),entries.length ? entries : [['Описание','Нет данных']]);
   }
+  lineList(document.querySelector('#resource-stats'),Object.entries(economy.resources));
   document.querySelector('#rating-stats').replaceChildren(...Object.entries(stats.ratings).map(([field,value])=>statCard(field,[['Среднее',value.mean===null ? null : `${value.mean} / ${value.maximum}`],['Диапазон',value.min===null ? null : `${value.min}–${value.max}`],['Известно гексов',value.known],['Нет данных',value.missing]])));
   document.querySelector('#barony-hexes').replaceChildren(...barony.hexes.map(row=>{
     const details=document.createElement('details'), summary=document.createElement('summary'), dl=document.createElement('dl');
@@ -147,7 +152,7 @@ function renderArmy() {
   document.querySelector('#army-gold').textContent=`Казна: ${armyState.gold} золотых`;
   document.querySelector('#hire-general').disabled=armyState.gold<100;
   const inventory=document.querySelector('#inventory-stats');inventory.replaceChildren();
-  for(const [name,value] of [['Золото',armyState.gold],...Object.entries(armyState.inventory||{}).map(([code,quantity])=>[({wood:'Дерево',cloth:'Ткань',bronze:'Бронза',leather:'Кожа',iron:'Железо',horse:'Лошади'})[code]||code,quantity])]){
+  for(const [name,value] of Object.entries(armyState.inventory||{}).map(([code,quantity])=>[({food:'Еда',wood:'Дерево',cloth:'Ткань',bronze:'Бронза',leather:'Кожа',iron:'Железо',horse:'Лошади'})[code]||code,quantity])){
     const term=document.createElement('dt'),definition=document.createElement('dd');term.textContent=name;definition.textContent=value;inventory.append(term,definition);
   }
   if (!armyState.generals.length) { const empty=document.createElement('p'); empty.textContent='Генералы пока не наняты.'; list.append(empty); return; }

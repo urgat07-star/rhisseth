@@ -323,15 +323,10 @@ const endTurnButton = document.querySelector('#end-turn');
 const battleModal = document.querySelector('#battle-modal');
 
 async function refreshGameResources() {
-  const [armyResponse, peasantsResponse] = await Promise.all([
-    fetch(`${API_BASE}/cabinet/army`, {cache:'no-store'}),
-    fetch(`${API_BASE}/cabinet/peasants`, {cache:'no-store'})
-  ]);
-  if (!armyResponse.ok || !peasantsResponse.ok) throw new Error('Не удалось загрузить ресурсы');
-  const [army, peasants] = await Promise.all([armyResponse.json(), peasantsResponse.json()]);
-  const food = Number(army.inventory?.food || 0);
-  const population = (peasants.hexes || []).reduce((sum, hex) => sum + Number(hex.quantity || 0), 0);
-  document.querySelector('#game-resources').textContent = `Злато:${army.gold}  Пища:${food}  Холопы:${population}`;
+  const response=await fetch(`${API_BASE}/cabinet/economy`,{cache:'no-store'});
+  if(!response.ok)throw new Error('Не удалось загрузить ресурсы');
+  const economy=await response.json();
+  document.querySelector('#game-resources').textContent=`Золото: ${economy.gold} · Еда: ${economy.food} · Холопы: ${economy.population}`;
 }
 
 function adjacentKeys(key) {

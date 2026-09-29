@@ -3,20 +3,25 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'app/backend'))
-from economy_rules import generated_food, grow_population
+from economy_rules import generated_food, grow_population, settle_federal_food
 
 
 class EconomyRuleTests(unittest.TestCase):
-    def test_food_uses_level_population_and_fertility(self):
-        self.assertEqual(generated_food(4, 80, 3, 40), 24)
-        self.assertEqual(generated_food(1, 3, 2, 3), 2)
-
-    def test_q7r14_food_examples_round_up(self):
-        self.assertEqual(generated_food(1, 3, 3, 2), 5)   # 9 / 2 = 4.5
-        self.assertEqual(generated_food(2, 15, 3, 12), 8)  # 90 / 12 = 7.5
+    def test_food_is_fertility_times_population_minus_population(self):
+        self.assertEqual(generated_food(3, 2), 4)
+        self.assertEqual(generated_food(0, 2), -2)
 
     def test_empty_territory_does_not_generate_food(self):
-        self.assertEqual(generated_food(5, 120, 4, 0), 0)
+        self.assertEqual(generated_food(4, 0), 0)
+
+    def test_neutral_mountain_has_fixed_food(self):
+        self.assertEqual(generated_food(0, 1, mountain=True, neutral=True), 3)
+        self.assertEqual(generated_food(0, 1, mountain=True, neutral=False), -1)
+
+    def test_federal_shortage_reduces_population(self):
+        self.assertEqual(settle_federal_food(-5, 2, 4),
+                         {'federal_food': 0, 'population': 1, 'famine_loss': 3})
+        self.assertEqual(settle_federal_food(-8, 0, 3)['population'], 0)
 
     def test_population_grows_after_food_and_stops_at_level_limit(self):
         class FixedRandom:

@@ -1,16 +1,26 @@
 """Pure economy v0.4.0 formulas."""
-import math
 
 
-def generated_food(province_level, population_limit, fertility, current_population):
-    """Calculate food at the end of the autumn turn from maximum and current population."""
-    level = max(1, int(province_level))
-    maximum = max(0, int(population_limit))
+def generated_food(fertility, current_population, *, mountain=False, neutral=False):
+    """Annual food delta; neutral mountains receive a fixed subsistence supply."""
     people = max(0, int(current_population))
     soil = max(0, int(fertility))
-    if people == 0:
-        return 0
-    return math.ceil(level * maximum * soil / people)
+    if mountain and neutral:
+        return 3
+    return soil * people - people
+
+
+def settle_federal_food(food_delta, federal_food, current_population, extra_consumption=0):
+    """Apply production/consumption to the federal stock; uncovered deficit causes famine."""
+    net = int(food_delta) - max(0, int(extra_consumption))
+    stock = max(0, int(federal_food))
+    people = max(0, int(current_population))
+    if net >= 0:
+        return {'federal_food': stock + net, 'population': people, 'famine_loss': 0}
+    shortage = max(0, -net - stock)
+    return {'federal_food': max(0, stock + net),
+            'population': max(0, people - shortage),
+            'famine_loss': min(people, shortage)}
 
 
 def grow_population(current_population, population_limit, growth_min, growth_max, rng):

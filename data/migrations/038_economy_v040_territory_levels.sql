@@ -2,6 +2,7 @@
 -- All playable and neutral hexes use levels 1..8; the level participates in formulas.
 UPDATE hexes SET data=data || jsonb_build_object('Уровень гекса','1','Постройка','нет построек')
 WHERE COALESCE(data->>'Уровень гекса','0')='0';
+UPDATE hexes SET data=data || jsonb_build_object('Население','1');
 DELETE FROM raid_balance WHERE building_level=0;
 DELETE FROM hex_building_levels WHERE level=0;
 ALTER TABLE hex_building_levels DROP CONSTRAINT IF EXISTS hex_building_levels_level_check;
@@ -54,7 +55,7 @@ VALUES
  (5,120,3,15,26,50,300,150,0,'Крепость'),
  (6,170,3,20,51,80,300,300,0,'Замок'),
  (7,250,5,40,81,110,500,400,30,'Город'),
- (8,500,5,50,110,150,1000,500,100,'Столица');
+ (8,500,5,50,111,150,1000,500,100,'Столица');
 
 INSERT INTO raid_balance (building_level,gold,peasant_percent,morale_penalty,cooldown_turns,peasant_nominal)
 SELECT 8,gold,peasant_percent,morale_penalty,cooldown_turns,peasant_nominal
@@ -63,13 +64,14 @@ FROM raid_balance WHERE building_level=7 ON CONFLICT (building_level) DO NOTHING
 COMMENT ON TABLE territory_level_economy IS
  'Economy v0.4.0, Google sheet «Уровень гексов», fetched 2026-09-28';
 
-CREATE FUNCTION economy_generated_food(province_level integer, population_limit integer,
-    fertility integer, current_population integer)
-RETURNS numeric LANGUAGE sql IMMUTABLE STRICT AS $$
-    SELECT CASE WHEN current_population <= 0 THEN 0
-        ELSE CEIL((GREATEST(province_level,1)::numeric * GREATEST(population_limit,0)
-            * GREATEST(fertility,0)) / current_population)
+CREATE FUNCTION economy_generated_food(fertility integer, current_population integer,
+    is_mountain boolean, is_neutral boolean)
+RETURNS integer LANGUAGE sql IMMUTABLE STRICT AS $$
+    SELECT CASE
+        WHEN is_mountain AND is_neutral THEN 3
+        ELSE GREATEST(fertility,0) * GREATEST(current_population,0)
+             - GREATEST(current_population,0)
     END
 $$;
-COMMENT ON FUNCTION economy_generated_food(integer,integer,integer,integer) IS
- 'v0.4.0 autumn: ceil((level * maximum population for level * fertility)/current hex population)';
+COMMENT ON FUNCTION economy_generated_food(integer,integer,boolean,boolean) IS
+ 'v0.4.0 annual food delta: fertility * current population - current population; neutral mountains receive 3';
