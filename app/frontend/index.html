@@ -106,6 +106,13 @@
 		</div>
 	</dialog>
 	<dialog id="battle-unit-details" aria-labelledby="battle-unit-details-title"><h3 id="battle-unit-details-title"></h3><div id="battle-unit-details-body"></div><button type="button" onclick="this.closest('dialog').close()">Закрыть</button></dialog>
+	<dialog id="army-details-modal" class="army-details-modal" aria-labelledby="army-details-title">
+		<button class="close" type="button" aria-label="Закрыть" onclick="this.closest('dialog').close()">×</button>
+		<h2 id="army-details-title">Армия</h2>
+		<p id="army-details-summary" class="army-details-summary"></p>
+		<div id="army-details-units" class="army-details-units"></div>
+		<button class="save" type="button" onclick="this.closest('dialog').close()">Закрыть</button>
+	</dialog>
 
     <dialog id="page-modal" class="page-modal" aria-label="Окно Rhisseth">
         <button id="close-page-modal" class="close page-modal__close" type="button" aria-label="Закрыть">×</button>
@@ -113,7 +120,7 @@
     </dialog>
 	
 	<footer id="data-status">Final V2 · подключение к PostgreSQL…</footer>
-    <script src="app.js?v=battle-sidebar-20260928" defer></script>
+    <script src="app.js?v=economy-army-details-20260929" defer></script>
 	<script>
     const pageModal = document.getElementById('page-modal');
     const pageModalFrame = document.getElementById('page-modal-frame');

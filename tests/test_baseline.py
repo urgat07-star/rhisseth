@@ -39,6 +39,7 @@ class BaselineTests(unittest.TestCase):
 
     def test_economy_v040_forest_resources(self):
         rows = read_rows(ROOT / 'data/import/hex-initial-parameters.csv')
+        self.assertFalse(any(row['Основной ресурс']=='Скот' for row in rows))
         forests = ('Редколесье','Густой лес','Тайга')
         woods = {'Дерево','Корабельный лес'}
         forbidden = ('Степь','Холмы','Горы','Высокогорье')
@@ -63,6 +64,7 @@ class BaselineTests(unittest.TestCase):
             self.assertEqual(row['Глубина'], '' if depth is None else str(depth), row['ID'])
             self.assertEqual(row['Опасность'], str(danger), row['ID'])
         migration=(ROOT/'data/migrations/036_economy_v040_hex_resources.sql').read_text(encoding='utf-8')
+        self.assertNotIn('"Основной ресурс":"Скот"', migration)
         self.assertNotIn('Владелец', migration)
         self.assertNotIn('Тип владельца', migration)
         self.assertNotIn('Название баронии', migration)
