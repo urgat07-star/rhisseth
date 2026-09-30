@@ -100,6 +100,20 @@ class BattleRuleTests(unittest.TestCase):
         self.assertTrue(units[1]['attacked'])
         self.assertEqual(_next_actor(battle,units)[0],'attacker')
 
+    def test_partial_movement_archer_finishes_action_before_phalanx_turn(self):
+        battle={'round_number':1,'last_side':''}
+        units=[
+            {'id':1,'side':'attacker','initiative':4,'active':True,'health':10,'attacked':False,
+             'attack_range':3,'moved':True,'movement_spent':1,'speed':3},
+            {'id':2,'side':'attacker','initiative':1,'active':True,'health':10,'attacked':False,
+             'attack_range':2,'moved':False,'movement_spent':0,'speed':1},
+        ]
+        side,eligible=_next_actor(battle,units)
+        self.assertEqual((side,[unit['id'] for unit in eligible]),('attacker',[1]))
+        units[0]['attacked']=True
+        side,eligible=_next_actor(battle,units)
+        self.assertEqual((side,[unit['id'] for unit in eligible]),('attacker',[2]))
+
     def test_ai_attacks_equally_weak_target_from_longest_range(self):
         battle={'id':9,'round_number':3,'last_side':'','status':'active'}
         units=[{'id':1,'side':'attacker','is_general':False,'initiative':1,'active':True,'health':5,'attacked':False,

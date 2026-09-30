@@ -663,10 +663,18 @@ function battleAttackLog(event,units){
   result.append(rolls,damage);row.append(action,result);return row;
 }
 /** Отправляет команду боя и принимает подтверждённое сервером состояние. */
-async function battleCommand(path,payload) {
+async function battleCommand(path,payload,preserveUnitId=null) {
   const response=await fetch(`${API_BASE}${path}`,{method:'POST',headers:{'X-CSRF-Token':csrfToken,'Content-Type':'application/json'},body:JSON.stringify(payload)});
   const data=await response.json(); if (!response.ok) throw new Error(data.error||`HTTP ${response.status}`);
-  game.battle=data; game.selectedUnit=null; renderBattle();
+  game.battle=data;
+  game.selectedUnit=preserveUnitId&&data.eligible_unit_ids.includes(preserveUnitId)
+    ? data.units.find(unit=>unit.id===preserveUnitId)||null
+    : null;
+  renderBattle();
+  if(game.selectedUnit){
+    const remaining=Math.max(0,Number(game.selectedUnit.speed||0)-Number(game.selectedUnit.movement_spent||0));
+    document.querySelector('#battle-status').textContent=`${game.selectedUnit.name}: осталось движения — ${remaining}. Можно выбрать цель для выстрела или продолжить движение.`;
+  }
 }
 async function openBattle(_enemy,purpose='capture') {
   if (!game.general || !game.pendingRow) return;
@@ -748,7 +756,8 @@ async function battleMove(x,y) {
     if(x!==0||game.battle.units.some(unit=>unit.id!==game.selectedUnit.id&&unit.health>0&&unit.x===x&&unit.y===y))return;
     game.selectedUnit.x=x;game.selectedUnit.y=y;game.selectedUnit=null;renderBattle();return;
   }
-  try {await battleCommand(`/game/battles/${game.battle.battle.id}/units/${game.selectedUnit.id}/move`,{x,y,round:game.battle.battle.round_number});}
+  const movingUnitId=game.selectedUnit.id;
+  try {await battleCommand(`/game/battles/${game.battle.battle.id}/units/${movingUnitId}/move`,{x,y,round:game.battle.battle.round_number},movingUnitId);}
   catch(error){document.querySelector('#battle-status').textContent=error.message;}
 }
 document.querySelector('#battle-deploy')?.addEventListener('click',async()=>{
