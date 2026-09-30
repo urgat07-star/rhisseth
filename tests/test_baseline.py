@@ -82,5 +82,10 @@ class BaselineTests(unittest.TestCase):
             self.assertEqual(client.put('/api/hexes/0/0', content='invalid',headers={'X-CSRF-Token':'test'}).status_code, 400)
             self.assertEqual(client.put('/api/hexes/0/0', content='x' * 64001,headers={'X-CSRF-Token':'test'}).status_code, 413)
 
+    def test_finished_battle_selects_next_unused_general(self):
+        script=(ROOT/'app/frontend/app.js').read_text(encoding='utf-8')
+        self.assertIn("const nextGeneral=game.armies.find(general=>general.last_moved_turn!==currentGlobalTurn)",script)
+        self.assertIn("if(nextGeneral)selectGeneral(nextGeneral.id)",script)
+
 if __name__ == '__main__':
     unittest.main()

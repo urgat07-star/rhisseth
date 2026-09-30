@@ -4,8 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Rhisseth — личный кабинет</title>
-    <link rel="stylesheet" href="styles.css?v=player-cabinet-1">
-    <link rel="stylesheet" href="styles.css?v=batell-0.3.2">
+    <link rel="stylesheet" href="styles.css?v=army-hire-catalogues-20260930">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Infant:ital,wght@0,300..700;1,300..700&family=Libertinus+Sans:ital,wght@0,400;0,700;1,400&family=Monomakh&display=swap" rel="stylesheet">
@@ -65,8 +64,9 @@
       </div>
     </section>
     <section id="panel-army" class="player-panel" role="tabpanel" aria-labelledby="tab-army" hidden>
-      <div class="army-heading"><div><h2>Армии</h2><p>Генерал представляет армию на глобальной карте и может командовать отрядом из 1–5 юнитов.</p><p id="army-gold"></p></div><button id="hire-general" class="save" type="button">Нанять генерала — 100 золотых</button></div>
-      <div id="generals-list" class="generals-list"></div>
+      <div class="army-heading"><div><h2>Ваши генералы</h2><p>Нажмите на генерала, чтобы посмотреть состав армии и нанять бойцов.</p><p id="army-gold"></p></div></div>
+      <div id="generals-list" class="generals-list hired-generals"></div>
+      <section class="army-hire-section"><h2>Найм генерала</h2><p class="hint">Недоступные кандидаты перечёркнуты; под карточкой указано, чего не хватает.</p><div id="general-catalogue" class="hire-catalogue"></div></section>
     </section>
     <section id="panel-economy" class="player-panel economy-panel" role="tabpanel" aria-labelledby="tab-economy" hidden><div class="economy-content"><h2>Экономика</h2><div class="economy-totals" aria-label="Общие показатели"><div><span>Золото</span><strong id="economy-gold">0</strong></div><div><span>ИТОГО ЕДЫ</span><strong id="economy-food">0</strong></div><div><span>Холопы</span><strong id="economy-population">0</strong></div></div><section class="economy-block"><h3>Ресурсы земель</h3><p class="hint">Федеральный запас и годовой прирост по ресурсам, находящимся на гексах баронии.</p><dl id="resource-stats" class="economy-resource-list"></dl></section><section class="economy-block"><h3>Федеральные запасы</h3><dl id="inventory-stats" class="economy-resource-list"></dl></section><section class="economy-block"><h3>Резерв крестьян</h3><p id="peasant-reserve"></p><form id="peasant-transfer-form"><label>Q <input name="q" type="number" required></label><label>R <input name="r" type="number" required></label><label>Количество <input name="quantity" type="number" min="1" required></label><button type="submit">Отправить на свой гекс</button></form><p id="peasant-transfer-status" role="status"></p><ul id="peasant-hexes"></ul></section><section class="economy-block"><h3>Торговля и налоги</h3><p>Торговля и налоги ещё в разработке.</p></section></div></section>
     <section id="panel-diplomacy" class="player-panel" role="tabpanel" aria-labelledby="tab-diplomacy" hidden><h2>Дипломатия</h2><p>Выкуп пленного генерала: 100 золотых.</p><div id="captive-generals"></div></section>
@@ -89,10 +89,15 @@
       <button id="close-general" class="close" type="button" aria-label="Закрыть">×</button>
       <h2 id="general-title">Армия генерала</h2><p id="general-count"></p>
       <div id="general-units" class="general-units"></div>
-      <form id="hire-unit-form"><label>Добавить солдата<select id="unit-catalogue" name="unit_id" required></select></label><button class="save" type="submit">Нанять юнита</button></form>
+      <button id="open-unit-hire" class="save" type="button">Нанять или улучшить юнита</button>
+    </dialog>
+    <dialog id="unit-hire-dialog" class="general-dialog hire-dialog" aria-labelledby="unit-hire-title">
+      <button id="close-unit-hire" class="close" type="button" aria-label="Закрыть">×</button>
+      <h2 id="unit-hire-title">Найм юнитов</h2><p id="unit-hire-status" role="status" aria-live="polite"></p>
+      <div id="unit-hire-catalogue" class="hire-catalogue"></div>
     </dialog>
   </main>
 
-  <script src="cabinet.js?v=batell-0.3-1" defer></script>
+  <script src="cabinet.js?v=army-hire-catalogues-20260930" defer></script>
 </body>
 </html>

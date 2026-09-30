@@ -446,7 +446,7 @@ async function createMapUnit() {
     general.unitKey=Number.isInteger(general.q)&&Number.isInteger(general.r)?cellKey(general.q,general.r):game.unitKey;
     const image=document.createElementNS('http://www.w3.org/2000/svg','image'); image.id=`player-unit-${general.id}`; image.setAttribute('class','map-unit');
     image.setAttribute('href',general.icon); image.setAttribute('width','82'); image.setAttribute('height','82'); image.setAttribute('aria-label',`Генерал ${general.name}, юнитов: ${general.units.length}`); bindMapArmyEvents(image,general.id);
-    image.addEventListener('click',event=>{event.stopPropagation();if(game.player!==1){setGameMessage('Ваш ход уже завершён. Дождитесь остальных игроков или используйте «Пропустить ход», когда кнопка станет доступна.');return;}const current=game.armies.find(item=>item.id===general.id);if(!current)return;document.querySelectorAll('.map-unit').forEach(item=>item.classList.remove('selected'));game.general=current;game.armyUnits=current.units;game.unitKey=current.unitKey;game.selected=true;image.classList.add('selected');paintMoveTargets();setGameMessage(`Армия «${current.name}»: выберите соседний гекс.`);});
+    image.addEventListener('click',event=>{event.stopPropagation();if(!selectGeneral(general.id)&&game.player!==1)setGameMessage('Ваш ход уже завершён. Дождитесь остальных игроков или используйте «Пропустить ход», когда кнопка станет доступна.');});
     layer.append(image); positionGeneralImage(general,index,false);
   });
   const activeResponse=await fetch(`${API_BASE}/game/active-battle`,{cache:'no-store'});
@@ -457,11 +457,19 @@ async function createMapUnit() {
 }
 function positionGeneralImage(general,index,animate=true) { const image=document.querySelector(`#player-unit-${general.id}`) || document.getElementById(`player-unit-${general.id}`); if(!image)return; const {x,y}=unitPosition(general.unitKey);if(!animate)image.style.transition='none';image.setAttribute('x',(x-41+index*24).toFixed(2));image.setAttribute('y',(y-55).toFixed(2));if(!animate)requestAnimationFrame(()=>image.style.removeProperty('transition')); }
 function resetGeneralSelection(){game.selected=false;game.pendingRow=null;hexActions.hidden=true;document.querySelectorAll('.map-unit').forEach(item=>item.classList.remove('selected'));paintMoveTargets();}
+function selectGeneral(generalId){
+  if(game.player!==1)return false;
+  const current=game.armies.find(item=>item.id===generalId);if(!current)return false;
+  document.querySelectorAll('.map-unit').forEach(item=>item.classList.remove('selected'));
+  game.general=current;game.armyUnits=current.units;game.unitKey=current.unitKey;game.selected=true;
+  document.getElementById(`player-unit-${current.id}`)?.classList.add('selected');
+  paintMoveTargets();setGameMessage(`Армия «${current.name}»: выберите соседний гекс.`);return true;
+}
 async function syncArmies(fresh){
   const active=fresh.filter(item=>item.status==='active'), selectedId=game.general?.id; game.armies=active;
   document.querySelectorAll('.map-unit').forEach(image=>{if(!active.some(general=>image.id===`player-unit-${general.id}`))image.remove();});
   const layer=document.querySelector('.map-unit-layer'); if(!layer)return;
-  active.forEach((general,index)=>{general.unitKey=cellKey(Number(general.q),Number(general.r));let image=document.getElementById(`player-unit-${general.id}`);if(!image){image=document.createElementNS('http://www.w3.org/2000/svg','image');image.id=`player-unit-${general.id}`;image.setAttribute('class','map-unit');image.setAttribute('width','82');image.setAttribute('height','82');image.addEventListener('click',event=>{event.stopPropagation();if(game.player!==1)return;document.querySelectorAll('.map-unit').forEach(item=>item.classList.remove('selected'));game.general=game.armies.find(item=>item.id===general.id)||general;game.armyUnits=game.general.units;game.unitKey=game.general.unitKey;game.selected=true;image.classList.add('selected');paintMoveTargets();setGameMessage(`Армия «${game.general.name}»: выберите соседний гекс.`);});bindMapArmyEvents(image,general.id);layer.append(image);}image.setAttribute('href',general.icon);image.setAttribute('aria-label',`Генерал ${general.name}, юнитов: ${general.units.length}`);positionGeneralImage(general,index,false);});
+  active.forEach((general,index)=>{general.unitKey=cellKey(Number(general.q),Number(general.r));let image=document.getElementById(`player-unit-${general.id}`);if(!image){image=document.createElementNS('http://www.w3.org/2000/svg','image');image.id=`player-unit-${general.id}`;image.setAttribute('class','map-unit');image.setAttribute('width','82');image.setAttribute('height','82');image.addEventListener('click',event=>{event.stopPropagation();selectGeneral(general.id);});bindMapArmyEvents(image,general.id);layer.append(image);}image.setAttribute('href',general.icon);image.setAttribute('aria-label',`Генерал ${general.name}, юнитов: ${general.units.length}`);positionGeneralImage(general,index,false);});
   game.general=active.find(general=>general.id===selectedId)||active[0]||null;if(game.general){game.unitKey=game.general.unitKey;game.armyUnits=game.general.units;}updateGeneralTurnCount();
 }
 function moveUnitImage(key,animate=true) {
@@ -754,8 +762,11 @@ document.querySelector('#finish-battle')?.addEventListener('click',async()=>{
     const army=await fetch(`${API_BASE}/game/armies`,{cache:'no-store'});if(army.ok){
       const fresh=(await army.json()).generals.filter(item=>item.status==='active');
       resetGeneralSelection(); await syncArmies(fresh);
+      const nextGeneral=game.armies.find(general=>general.last_moved_turn!==currentGlobalTurn);
+      if(nextGeneral)selectGeneral(nextGeneral.id);
     }
-    await refreshGameClock();setGameMessage('Бой завершён. Карта обновлена.');
+    await refreshGameClock();
+    if(!game.selected)setGameMessage('Бой завершён. Карта обновлена. Все генералы уже выполнили действия в этом ходу.');
   }catch(error){setGameMessage(`Не удалось обновить карту: ${error.message}`);}
 });
 

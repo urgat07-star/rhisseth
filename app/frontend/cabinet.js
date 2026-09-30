@@ -3,7 +3,7 @@
  * Личный кабинет: аккаунт, барония, армия, крестьяне и дипломатия.
  * После успешных мутаций соответствующее состояние перечитывается из API.
  */
-let csrf = '', state = null, armyState = {generals:[],catalogue:[]}, busy = false, abandoningId = null, selectedGeneralId = null;
+let csrf = '', state = null, armyState = {generals:[],catalogue:[],general_catalogue:[]}, busy = false, abandoningId = null, selectedGeneralId = null;
 const status = document.querySelector('#cabinet-status');
 const dialog = document.querySelector('#abandon-dialog');
 const defaults = ['#b51f24','#2355aa','#257346','#50545b','#dec78a'];
@@ -147,16 +147,30 @@ document.querySelector('#peasant-transfer-form').addEventListener('submit',async
   try{await api('/api/cabinet/peasants/transfer','POST',data);await loadPeasants();document.querySelector('#peasant-transfer-status').textContent='Крестьяне направлены на гекс.';}
   catch(error){document.querySelector('#peasant-transfer-status').textContent=error.message;}
 });
+const resourceNames={gold:'золото',food:'еда',wood:'дерево',cloth:'ткань',bronze:'бронза',leather:'кожа',iron:'железо',horse:'лошади'};
+function missingCost(cost){return Object.entries(cost||{}).filter(([code,amount])=>(code==='gold'?armyState.gold:Number(armyState.inventory?.[code]||0))<amount).map(([code,amount])=>`${resourceNames[code]||code}: ${amount-(code==='gold'?armyState.gold:Number(armyState.inventory?.[code]||0))}`);}
+function costText(cost){const entries=Object.entries(cost||{});return entries.length?entries.map(([code,amount])=>`${amount} ${resourceNames[code]||code}`).join(' · '):'Цена не установлена';}
+function hireCard(item,kind,missing,onHire){
+  const card=document.createElement('article');card.className=`hire-card${missing.length?' unavailable':''}`;
+  const img=document.createElement('img');img.src=kind==='general'?item.image_path:item.image_path;img.alt=item.name;
+  const title=document.createElement('h3');title.textContent=item.name;
+  const stats=document.createElement('p');stats.className='hire-card-stats';stats.textContent=kind==='general'
+    ?`Жизни ${item.health} · атака ${item.attack} · защита ${item.defense} · инициатива ${item.initiative} · скорость ${item.speed}`
+    :`Жизни ${item.health} · атака ${item.attack} · защита ${item.defense} · броня ${item.armor} · дальность ${item.attack_range}`;
+  const price=document.createElement('p');price.className='hire-card-price';price.textContent=costText(kind==='general'?{gold:armyState.general_price}:item.cost);
+  const reason=document.createElement('p');reason.className='hire-card-missing';reason.textContent=missing.length?`Не хватает: ${missing.join(' · ')}`:'Доступен для найма';
+  const button=document.createElement('button');button.type='button';button.className='save';button.textContent=kind==='general'?'Нанять генерала':item.upgrade_from_name?`Улучшить из «${item.upgrade_from_name}»`:'Нанять юнита';button.disabled=missing.length>0;button.addEventListener('click',onHire);
+  card.append(img,title,stats,price,reason,button);return card;
+}
 /** Перестраивает карточки генералов и доступные действия армии. */
 function renderArmy() {
   const list=document.querySelector('#generals-list'); list.replaceChildren();
   document.querySelector('#army-gold').textContent=`Казна: ${armyState.gold} золотых`;
-  document.querySelector('#hire-general').disabled=armyState.gold<100;
   const inventory=document.querySelector('#inventory-stats');inventory.replaceChildren();
   for(const [name,value] of Object.entries(armyState.inventory||{}).map(([code,quantity])=>[({food:'Еда',wood:'Дерево',cloth:'Ткань',bronze:'Бронза',leather:'Кожа',iron:'Железо',horse:'Лошади'})[code]||code,quantity])){
     const term=document.createElement('dt'),definition=document.createElement('dd');term.textContent=name;definition.textContent=value;inventory.append(term,definition);
   }
-  if (!armyState.generals.length) { const empty=document.createElement('p'); empty.textContent='Генералы пока не наняты.'; list.append(empty); return; }
+  if (!armyState.generals.length) { const empty=document.createElement('p'); empty.textContent='Генералы пока не наняты.'; list.append(empty); }
   armyState.generals.forEach(general=>{
     const card=document.createElement('article'); card.className='general-card'; card.tabIndex=0;
     const img=document.createElement('img'); img.src=general.icon; img.alt=`Генерал ${general.name}`;
@@ -167,6 +181,17 @@ function renderArmy() {
     const open=()=>openGeneral(general.id); card.addEventListener('click',open); card.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();open();}});
     card.append(img,info,fire); list.append(card);
   });
+  const catalogue=document.querySelector('#general-catalogue');catalogue.replaceChildren();
+  (armyState.general_catalogue||[]).forEach(general=>{
+    const missing=[];
+    if(armyState.generals.length>=10)missing.push('достигнут предел 10 генералов');
+    missing.push(...missingCost({gold:armyState.general_price}));
+    catalogue.append(hireCard(general,'general',missing,async()=>{
+      if(busy)return;busy=true;
+      try{await api('/api/cabinet/army/generals','POST',{catalog_id:general.id});await loadArmy();status.textContent=`Генерал нанят. Потрачено: ${armyState.general_price} золотых.`;}
+      catch(error){status.textContent=`Найм не выполнен: ${error.message}`;}finally{busy=false;}
+    }));
+  });
 }
 function openGeneral(id) {
   const general=armyState.generals.find(item=>item.id===id); if(!general)return; selectedGeneralId=id;
@@ -175,21 +200,30 @@ function openGeneral(id) {
   const units=document.querySelector('#general-units'); units.replaceChildren();
   general.units.forEach(unit=>{
     const card=document.createElement('article'), img=document.createElement('img'), info=document.createElement('div'), remove=document.createElement('button');
-    img.src=unit.image_path; img.alt=unit.name; const strong=document.createElement('strong'),small=document.createElement('small');strong.textContent=unit.name;small.textContent=`${unit.troop_type} · атака ${unit.attack} · защита ${unit.defense}`;info.append(strong,small);
+    img.src=unit.image_path; img.alt=unit.name; const strong=document.createElement('strong'),small=document.createElement('small');strong.textContent=unit.name;small.textContent=`${unit.troop_type} · жизни ${unit.current_health}/${unit.max_health} · атака ${unit.attack} · защита ${unit.defense} · дальность ${unit.attack_range} · скорость ${unit.speed}`;info.append(strong,small);
     remove.type='button'; remove.textContent='Удалить'; remove.addEventListener('click',async()=>{await api(`/api/cabinet/army/generals/${id}/units/${unit.assignment_id}`,'DELETE',{});await loadArmy();openGeneral(id);});
     card.append(img,info,remove); units.append(card);
   });
-  const select=document.querySelector('#unit-catalogue'); select.replaceChildren(new Option('Выберите юнита',''));
-  armyState.catalogue.forEach(unit=>{
-    const cost=Object.entries(unit.cost||{}).map(([code,amount])=>`${amount} ${({gold:'золото',wood:'дерево',cloth:'ткань',bronze:'бронза',leather:'кожа',iron:'железо',horse:'лошадь'})[code]||code}`).join(', ');
-    select.append(new Option(`${unit.name} · ${cost}`,unit.id));
-  });
-  document.querySelector('#hire-unit-form').hidden=general.units.length>=5 || general.status!=='active';
+  const openHire=document.querySelector('#open-unit-hire');openHire.hidden=general.status!=='active';
   const generalDialog=document.querySelector('#general-dialog'); if(!generalDialog.open)generalDialog.showModal();
 }
-document.querySelector('#hire-general').addEventListener('click',async()=>{if(busy)return;busy=true;try{await api('/api/cabinet/army/generals','POST',{});await loadArmy();status.textContent='Генерал нанят за 100 золотых.';}catch(error){status.textContent=error.message;}finally{busy=false;}});
 document.querySelector('#close-general').addEventListener('click',()=>document.querySelector('#general-dialog').close());
-document.querySelector('#hire-unit-form').addEventListener('submit',async event=>{event.preventDefault();const unitId=Number(document.querySelector('#unit-catalogue').value);if(!unitId)return;await api(`/api/cabinet/army/generals/${selectedGeneralId}/units`,'POST',{unit_id:unitId});await loadArmy();openGeneral(selectedGeneralId);});
+document.querySelector('#open-unit-hire').addEventListener('click',()=>{
+  const general=armyState.generals.find(item=>item.id===selectedGeneralId);if(!general)return;
+  const catalogue=document.querySelector('#unit-hire-catalogue');catalogue.replaceChildren();document.querySelector('#unit-hire-status').textContent=`Отряд «${general.name}»: ${general.units.length} из 5`;
+  armyState.catalogue.forEach(unit=>{
+    const missing=missingCost(unit.cost);
+    if(unit.upgrade_from_unit_id&&!general.units.some(existing=>existing.id===unit.upgrade_from_unit_id))missing.push(`нужен юнит «${unit.upgrade_from_name}»`);
+    if(!unit.upgrade_from_unit_id&&general.units.length>=5)missing.push('в армии нет свободного места');
+    catalogue.append(hireCard(unit,'unit',missing,async()=>{
+      if(busy)return;busy=true;
+      try{await api(`/api/cabinet/army/generals/${selectedGeneralId}/units`,'POST',{unit_id:unit.id});await loadArmy();document.querySelector('#unit-hire-dialog').close();openGeneral(selectedGeneralId);status.textContent=`Юнит «${unit.name}» нанят.`;}
+      catch(error){document.querySelector('#unit-hire-status').textContent=`Найм не выполнен: ${error.message}`;}finally{busy=false;}
+    }));
+  });
+  document.querySelector('#unit-hire-dialog').showModal();
+});
+document.querySelector('#close-unit-hire').addEventListener('click',()=>document.querySelector('#unit-hire-dialog').close());
 /** Блокирует форму на время мутации и единообразно выводит результат. */
 async function action(form,handler) {
   if (busy) return;

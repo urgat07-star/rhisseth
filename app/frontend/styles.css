@@ -440,6 +440,20 @@ footer code { color: #9da493; }
 .general-units article { display: grid; grid-template-columns: 64px 1fr auto; align-items: center; gap: 10px; padding: 8px; border: 1px solid #75806a55; }
 .general-units img { width: 64px; height: 52px; object-fit: contain; }
 .general-units small { display: block; color: #bfc5b8; }
+.army-hire-section { margin-top:24px; padding-top:18px; border-top:1px solid #756846; }
+.hire-catalogue { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px; margin-top:12px; }
+.hire-card { position:relative; display:flex; flex-direction:column; gap:7px; min-width:0; padding:12px; border:1px solid #75806a77; border-radius:7px; background:#182019; }
+.hire-card img { width:100%; height:180px; object-fit:contain; background:#0d120e; border-radius:4px; }
+.hire-card h3,.hire-card p { margin:0; }
+.hire-card-stats { color:#d5d8ca; font-size:13px; }
+.hire-card-price { color:#f0d781; font-weight:800; }
+.hire-card-missing { min-height:2.5em; color:#89c88e; font-size:13px; }
+.hire-card.unavailable { border-color:#7e4848; background:#241817; }
+.hire-card.unavailable img { filter:grayscale(1) brightness(.55); }
+.hire-card.unavailable::after { content:''; position:absolute; left:8%; right:8%; top:96px; height:4px; border-radius:3px; background:#c8443d; transform:rotate(-24deg); box-shadow:0 0 3px #000; pointer-events:none; }
+.hire-card.unavailable .hire-card-missing { color:#ef8f87; font-weight:700; }
+.hire-card button { margin-top:auto; }
+.hire-dialog { width:min(1040px,calc(100vw - 24px)); max-height:88vh; overflow:auto; }
 
 #hire-unit-form { display: flex; align-items: end; gap: 10px; }
 #hire-unit-form label { display: grid; gap: 5px; flex: 1; }
