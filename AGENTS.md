@@ -49,3 +49,11 @@ the full commit SHA and its subject. If the repository has no commit, the
 report must explicitly state that a commit has not been created. This applies
 to every `rhisseth-sync` command that writes a report, not only `status` or
 GitHub publication commands.
+
+Menu item 5 / `pull-vds` must export both the sanitized project files and all
+database content editable through the Rhisseth administration UI: hexes,
+military units with costs and upgrade links, resource catalogues, additional
+building catalogues and placements, and general templates. The import branch
+must contain `data/snapshots/editable-database.json` and a separate commit.
+Secrets, users, sessions, wallets, inventories and battle history must never
+be included. Deployment applies the reviewed snapshot only after migrations.
