@@ -2,7 +2,6 @@
 from pathlib import Path
 from db import connect
 from crest_catalog import sync_crests
-from editable_snapshot import apply_editable_snapshot
 
 def main():
     with connect() as conn:
@@ -15,7 +14,6 @@ def main():
                 print('Applied:', file.name)
         report = sync_crests(conn, apply=True)
         print('Crests:', report)
-        print('Editable snapshot:', apply_editable_snapshot(conn))
 
 if __name__ == '__main__':
     main()
