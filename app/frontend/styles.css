@@ -249,7 +249,7 @@ main { padding: clamp(12px, 2vw, 28px); }
 .battle-grid[data-terrain="tactical"] { background: radial-gradient(circle,#39482c,#111a16 70%); }
 .battle-unit-figure { position:absolute; z-index:2; left:50%; top:50%; height:90%; aspect-ratio:275/369; transform:translate(-50%,-50%); pointer-events:none; }
 .battle-unit-figure img { display:block; width:100%; height:100%; object-fit:contain; }
-.battle-unit-stat { position:absolute; z-index:4; display:flex; align-items:center; justify-content:center; width:18%; aspect-ratio:1; bottom:5.5%; color:#f8f1dc; font-weight:800; font-size:clamp(8px,1.05vw,16px); line-height:1; text-shadow:0 1px 2px #000,0 0 2px #000; }
+.battle-unit-stat { position:absolute; z-index:4; display:flex; align-items:center; justify-content:center; width:18%; aspect-ratio:1; bottom:5.5%; color:#f8f1dc; font-family:"Irish Grover",system-ui; font-weight:800; font-size:clamp(8px,1.05vw,16px); line-height:1; text-shadow:0 1px 2px #000,0 0 2px #000; }
 .battle-unit-defense { left:7.5%; }
 .battle-unit-attack { right:7.5%; }
 .battle-cell.attacker::after { background: #8bb3da66; }
@@ -443,13 +443,17 @@ footer code { color: #9da493; }
 .army-hire-section { margin-top:24px; padding-top:18px; border-top:1px solid #756846; }
 .hire-catalogue { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px; margin-top:12px; }
 .hire-card { position:relative; display:flex; flex-direction:column; gap:7px; min-width:0; padding:12px; border:1px solid #75806a77; border-radius:7px; background:#182019; }
-.hire-card img { width:100%; height:180px; object-fit:contain; background:#0d120e; border-radius:4px; }
+.hire-card-figure { position:relative; width:100%; height:180px; background:#0d120e; border-radius:4px; }
+.hire-card-figure img { display:block; width:100%; height:100%; object-fit:contain; border-radius:4px; }
+.hire-card-stat { position:absolute; bottom:5.5%; z-index:2; display:flex; align-items:center; justify-content:center; width:18%; aspect-ratio:1; color:#f8f1dc; font-family:"Irish Grover",system-ui; font-weight:800; font-size:clamp(14px,1.4vw,21px); line-height:1; text-shadow:0 1px 2px #000,0 0 2px #000; pointer-events:none; }
+.hire-card-defense { left:7.5%; }
+.hire-card-attack { right:7.5%; }
 .hire-card h3,.hire-card p { margin:0; }
 .hire-card-stats { color:#d5d8ca; font-size:13px; }
 .hire-card-price { color:#f0d781; font-weight:800; }
 .hire-card-missing { min-height:2.5em; color:#89c88e; font-size:13px; }
 .hire-card.unavailable { border-color:#7e4848; background:#241817; }
-.hire-card.unavailable img { filter:grayscale(1) brightness(.55); }
+.hire-card.unavailable .hire-card-figure { filter:grayscale(1) brightness(.55); }
 .hire-card.unavailable::after { content:''; position:absolute; left:8%; right:8%; top:96px; height:4px; border-radius:3px; background:#c8443d; transform:rotate(-24deg); box-shadow:0 0 3px #000; pointer-events:none; }
 .hire-card.unavailable .hire-card-missing { color:#ef8f87; font-weight:700; }
 .hire-card button { margin-top:auto; }

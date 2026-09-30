@@ -152,7 +152,13 @@ function missingCost(cost){return Object.entries(cost||{}).filter(([code,amount]
 function costText(cost){const entries=Object.entries(cost||{});return entries.length?entries.map(([code,amount])=>`${amount} ${resourceNames[code]||code}`).join(' · '):'Цена не установлена';}
 function hireCard(item,kind,missing,onHire){
   const card=document.createElement('article');card.className=`hire-card${missing.length?' unavailable':''}`;
-  const img=document.createElement('img');img.src=kind==='general'?item.image_path:item.image_path;img.alt=item.name;
+  const figure=document.createElement('div');figure.className='hire-card-figure';
+  const img=document.createElement('img');img.src=item.image_path;img.alt=item.name;figure.append(img);
+  if(kind==='unit'){
+    const defense=document.createElement('span');defense.className='hire-card-stat hire-card-defense';defense.textContent=item.defense;defense.title=`Защита: ${item.defense}`;
+    const attack=document.createElement('span');attack.className='hire-card-stat hire-card-attack';attack.textContent=item.attack;attack.title=`Атака: ${item.attack}`;
+    figure.append(defense,attack);
+  }
   const title=document.createElement('h3');title.textContent=item.name;
   const stats=document.createElement('p');stats.className='hire-card-stats';stats.textContent=kind==='general'
     ?`Жизни ${item.health} · атака ${item.attack} · защита ${item.defense} · инициатива ${item.initiative} · скорость ${item.speed}`
@@ -160,7 +166,7 @@ function hireCard(item,kind,missing,onHire){
   const price=document.createElement('p');price.className='hire-card-price';price.textContent=costText(kind==='general'?{gold:armyState.general_price}:item.cost);
   const reason=document.createElement('p');reason.className='hire-card-missing';reason.textContent=missing.length?`Не хватает: ${missing.join(' · ')}`:'Доступен для найма';
   const button=document.createElement('button');button.type='button';button.className='save';button.textContent=kind==='general'?'Нанять генерала':item.upgrade_from_name?`Улучшить из «${item.upgrade_from_name}»`:'Нанять юнита';button.disabled=missing.length>0;button.addEventListener('click',onHire);
-  card.append(img,title,stats,price,reason,button);return card;
+  card.append(figure,title,stats,price,reason,button);return card;
 }
 /** Перестраивает карточки генералов и доступные действия армии. */
 function renderArmy() {
@@ -208,8 +214,9 @@ function openGeneral(id) {
   const generalDialog=document.querySelector('#general-dialog'); if(!generalDialog.open)generalDialog.showModal();
 }
 document.querySelector('#close-general').addEventListener('click',()=>document.querySelector('#general-dialog').close());
-document.querySelector('#open-unit-hire').addEventListener('click',()=>{
-  const general=armyState.generals.find(item=>item.id===selectedGeneralId);if(!general)return;
+function openUnitHire(generalId) {
+  const general=armyState.generals.find(item=>item.id===generalId);if(!general)return;
+  selectedGeneralId=generalId;
   const catalogue=document.querySelector('#unit-hire-catalogue');catalogue.replaceChildren();document.querySelector('#unit-hire-status').textContent=`Отряд «${general.name}»: ${general.units.length} из 5`;
   armyState.catalogue.forEach(unit=>{
     const missing=missingCost(unit.cost);
@@ -217,13 +224,22 @@ document.querySelector('#open-unit-hire').addEventListener('click',()=>{
     if(!unit.upgrade_from_unit_id&&general.units.length>=5)missing.push('в армии нет свободного места');
     catalogue.append(hireCard(unit,'unit',missing,async()=>{
       if(busy)return;busy=true;
-      try{await api(`/api/cabinet/army/generals/${selectedGeneralId}/units`,'POST',{unit_id:unit.id});await loadArmy();document.querySelector('#unit-hire-dialog').close();openGeneral(selectedGeneralId);status.textContent=`Юнит «${unit.name}» нанят.`;}
+      try{
+        const result=await api(`/api/cabinet/army/generals/${generalId}/units`,'POST',{unit_id:unit.id});
+        await loadArmy();openGeneral(generalId);openUnitHire(generalId);
+        const message=result.upgraded
+          ?`«${unit.upgrade_from_name}» улучшен до «${unit.name}». Списано: ${costText(unit.cost)}.`
+          :`Юнит «${unit.name}» нанят. Списано: ${costText(unit.cost)}.`;
+        document.querySelector('#unit-hire-status').textContent=message;status.textContent=message;
+      }
       catch(error){document.querySelector('#unit-hire-status').textContent=`Найм не выполнен: ${error.message}`;}finally{busy=false;}
     }));
   });
-  document.querySelector('#unit-hire-dialog').showModal();
-});
+  const hireDialog=document.querySelector('#unit-hire-dialog');if(!hireDialog.open)hireDialog.showModal();
+}
+document.querySelector('#open-unit-hire').addEventListener('click',()=>openUnitHire(selectedGeneralId));
 document.querySelector('#close-unit-hire').addEventListener('click',()=>document.querySelector('#unit-hire-dialog').close());
+document.querySelector('#close-unit-hire-action').addEventListener('click',()=>document.querySelector('#unit-hire-dialog').close());
 /** Блокирует форму на время мутации и единообразно выводит результат. */
 async function action(form,handler) {
   if (busy) return;
