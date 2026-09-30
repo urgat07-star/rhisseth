@@ -188,8 +188,22 @@ main { padding: clamp(12px, 2vw, 28px); }
 
 .finish-battle { position: absolute; right: 22px; bottom: 20px; }
 
-.battle-log { grid-area: log; min-height: 0; height: 100%; box-sizing: border-box; max-height: none; margin: 0; padding: 8px 8px 8px 30px; overflow: auto; border: 1px solid #756846; background: #0b0e0b99; font-size: 13px; }
-.battle-log li { margin: 2px 0; }
+.battle-log { grid-area: log; min-height:0; height:100%; box-sizing:border-box; max-height:none; margin:0; padding:8px; overflow:auto; border:1px solid #756846; background:#0b0e0b99; font-size:13px; list-style:none; }
+.battle-log li { margin:0; }
+.battle-log-round { position:sticky; top:-8px; z-index:2; margin:8px -2px 5px!important; padding:5px 8px; border-bottom:1px solid #756846; background:#101710f2; color:#eadba5; font-weight:800; text-transform:uppercase; letter-spacing:.08em; }
+.battle-log-round:first-child { margin-top:-2px!important; }
+.battle-log-event { margin:0 0 6px!important; padding:7px 8px 7px 10px; border:1px solid #354033; border-left-width:4px; border-radius:3px; background:#151b15; }
+.battle-log-attacker { border-left-color:#bd4c3f; background:linear-gradient(90deg,#3a1d19aa,#151b15 46%); }
+.battle-log-defender { border-left-color:#5685b8; background:linear-gradient(90deg,#172b40aa,#151b15 46%); }
+.battle-log-action,.battle-log-result { display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+.battle-log-side { flex:0 0 auto; font-size:11px; font-weight:800; }
+.battle-log-attacker .battle-log-side { color:#f09a8e; }
+.battle-log-defender .battle-log-side { color:#91bdeb; }
+.battle-log-actors { min-width:0; text-align:right; color:#f2e8c3; }
+.battle-log-result { margin-top:4px; color:#bcb9a9; font-variant-numeric:tabular-nums; }
+.battle-log-damage { color:#f2bd55; font-weight:800; }
+.battle-log-no-damage { color:#888f87; }
+.battle-log-empty { padding:8px; color:#aaa; font-style:italic; }
 
 /* Боевая гекс-сетка */
 .battle-grid {
@@ -252,6 +266,8 @@ main { padding: clamp(12px, 2vw, 28px); }
   .battle-arena { display: block; }
   .battle-arena h2, .battle-arena > #battle-status, .battle-log { margin-right: 0; }
   .battle-lines { margin-top: 12px; }
+  .battle-log-action { display:block; }
+  .battle-log-actors { display:block; margin-top:2px; text-align:left; }
 }
 
 
@@ -862,7 +878,7 @@ th { position: sticky; top: 0; background: #252b24; }
 
   .battle-arena { padding: 8px 6px 44px; }
   .battle-unit span { font-size: 11px; padding: 2px; }
-  .battle-log { font-size: 12px; padding-left: 22px; max-height: 90px; }
+  .battle-log { font-size: 12px; padding: 8px; max-height: 140px; }
 
   .cabinet-tabs { gap: 6px; }
   .cabinet-tabs button { padding: 6px 10px; font-size: 13px; }

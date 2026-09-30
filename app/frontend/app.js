@@ -620,12 +620,25 @@ function battleReachable(unit,x,y,units){
   }
   return false;
 }
-function battleLog(message) { const line=document.createElement('li'); line.textContent=message; document.querySelector('#battle-log').append(line); line.scrollIntoView({block:'nearest'}); }
+function battleLog(message) { const line=document.createElement('li'); line.className='battle-log-empty';line.textContent=message; document.querySelector('#battle-log').append(line); }
 function battleAttackLog(event,units){
   const details=event.details||{};
-  const attacker=units.find(unit=>unit.id===details.attacker_id)?.name||`Юнит №${details.attacker_id}`;
+  const attackingUnit=units.find(unit=>unit.id===details.attacker_id);
+  const attacker=attackingUnit?.name||`Юнит №${details.attacker_id}`;
   const target=units.find(unit=>unit.id===details.target_id)?.name||`юнита №${details.target_id}`;
-  return `Раунд ${event.round}: ${attacker} атаковал ${target}. Бросок атаки: ${details.attack_roll}. Бросок защиты: ${details.defense_roll}. Урон: ${details.damage}.`;
+  const side=attackingUnit?.side==='defender'?'defender':'attacker';
+  const row=document.createElement('li');row.className=`battle-log-event battle-log-${side}`;
+  const action=document.createElement('div');action.className='battle-log-action';
+  const sideLabel=document.createElement('span');sideLabel.className='battle-log-side';sideLabel.textContent=side==='attacker'?'⚔ Нападающий':'🛡 Защитник';
+  const actors=document.createElement('span');actors.className='battle-log-actors';
+  const attackerName=document.createElement('strong');attackerName.textContent=attacker;
+  const arrow=document.createTextNode(' → ');
+  const targetName=document.createElement('strong');targetName.textContent=target;
+  actors.append(attackerName,arrow,targetName);action.append(sideLabel,actors);
+  const result=document.createElement('div');result.className='battle-log-result';
+  const rolls=document.createElement('span');rolls.textContent=`🎲 ${details.attack_roll} против ${details.defense_roll}`;
+  const damage=document.createElement('span');damage.className=Number(details.damage)>0?'battle-log-damage':'battle-log-no-damage';damage.textContent=`Урон: ${details.damage}`;
+  result.append(rolls,damage);row.append(action,result);return row;
 }
 /** Отправляет команду боя и принимает подтверждённое сервером состояние. */
 async function battleCommand(path,payload) {
@@ -642,15 +655,21 @@ async function openBattle(_enemy,purpose='capture') {
 }
 function renderBattle() {
   const state=game.battle; if (!state) return;
-  document.querySelector('#battle-log').replaceChildren();
+  const battleLogList=document.querySelector('#battle-log');battleLogList.replaceChildren();
   const attacks=state.events.filter(event=>event.type==='attack').slice(-12);
-  if(attacks.length)attacks.forEach(event=>battleLog(battleAttackLog(event,state.units)));
+  let displayedRound=null;
+  if(attacks.length)attacks.forEach(event=>{
+    if(event.round!==displayedRound){displayedRound=event.round;const heading=document.createElement('li');heading.className='battle-log-round';heading.textContent=`Раунд ${event.round}`;battleLogList.append(heading);}
+    battleLogList.append(battleAttackLog(event,state.units));
+  });
   else battleLog('Атак пока не было.');
+  battleLogList.lastElementChild?.scrollIntoView({block:'nearest'});
+  const battleResults={attacker_won:'Победа нападающего',defender_won:'Победа защитника',retreated:'Нападающий отступил'};
   document.querySelector('#battle-status').textContent=state.battle.status==='active'
     ? state.battle.deployment_locked
       ? `Раунд ${state.battle.round_number}. Действуют: ${state.units.filter(u=>state.eligible_unit_ids.includes(u.id)).map(u=>u.name).join(', ') || 'защитники'}.`
       : 'Расставьте бойцов в первых четырёх столбцах и нажмите «Начать бой».'
-    : `Бой завершён: ${state.battle.status}`;
+    : `Бой завершён: ${battleResults[state.battle.status]||state.battle.status}`;
   document.querySelector('#battle-deploy').hidden=state.battle.status!=='active'||state.battle.deployment_locked;
   document.querySelector('#battle-end-round').disabled=state.battle.status!=='active'||!state.battle.deployment_locked;
   document.querySelector('#battle-retreat').disabled=state.battle.status!=='active'||state.battle.round_number<2;
