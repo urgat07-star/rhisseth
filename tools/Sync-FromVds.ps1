@@ -3,6 +3,7 @@ param(
     [string]$Credentials = "$PSScriptRoot\vds-credentials.json",
     [string]$SourceBranch = 'main',
     [string]$ImportBranch = '',
+    [string]$CommitMessage = '',
     [switch]$Push
 )
 
@@ -89,7 +90,9 @@ SELECT jsonb_pretty(jsonb_build_object(
         exit 0
     }
 
-    $message = "Import VDS state $stamp"
+    $message = $CommitMessage.Trim()
+    if (-not $message) { $message = (Read-Host 'Введите комментарий коммита для импортированных изменений VDS').Trim() }
+    if (-not $message) { throw 'Комментарий коммита обязателен.' }
     git commit -m $message
     if ($LASTEXITCODE) { throw 'Не удалось создать коммит состояния VDS.' }
     if ($Push) {

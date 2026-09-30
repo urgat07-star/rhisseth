@@ -45,7 +45,9 @@ change record included in that release.
 
 Every Markdown report created by `tools/rhisseth-sync.ps1` under
 `reports/Git-sync/` must include the current Git commit when `HEAD` exists:
-the full commit SHA and its subject. If the repository has no commit, the
-report must explicitly state that a commit has not been created. This applies
+the full commit SHA and its subject. The subject must be the exact commit
+comment entered by the operator when the commit was created; the report must
+show it separately as `Комментарий коммита`. If the repository has no commit,
+the report must explicitly state that a commit has not been created. This applies
 to every `rhisseth-sync` command that writes a report, not only `status` or
 GitHub publication commands.
