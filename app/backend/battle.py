@@ -6,14 +6,14 @@ from psycopg.types.json import Jsonb
 from db import connect
 from hex_rules import coordinates, HEX_BUILDINGS
 from battle_rules import (NEIGHBORS, WALL_HEALTH, choose_defenders, damage, defense_budget,
-                          defender_catalog_pattern, distance, reachable)
+                          defender_catalog_pattern, distance, reachable, shortest_path_steps)
 from army import award_general_victory, home_hex
 from movement import movement_cost
 from game_clock import _clock
 
 router=APIRouter()
 UNIT_FIELDS=('id','battle_id','side','assignment_id','unit_id','is_general','name','image_path','x','y',
-             'health','max_health','attack','defense','armor','attack_range','speed','initiative','active','moved','attacked','is_wall')
+             'health','max_health','attack','defense','armor','attack_range','speed','initiative','active','moved','attacked','is_wall','counterattack','movement_spent')
 BATTLE_FIELDS=('id','attacker_user_id','general_id','target_q','target_r','source_q','source_r',
                'target_owner_type','target_owner_id','purpose','status','round_number','created_turn','last_side','destroyed_at','deployment_locked')
 
@@ -41,7 +41,7 @@ def _battle(conn,battle_id,user_id,lock=True):
 
 def _units(conn,battle_id):
     rows=conn.execute('''SELECT id,battle_id,side,assignment_id,unit_id,is_general,name,image_path,x,y,
-        health,max_health,attack,defense,armor,attack_range,speed,initiative,active,moved,attacked,is_wall
+        health,max_health,attack,defense,armor,attack_range,speed,initiative,active,moved,attacked,is_wall,counterattack,movement_spent
         FROM game_battle_units WHERE battle_id=%s ORDER BY id''',(battle_id,)).fetchall()
     return [dict(zip(UNIT_FIELDS,row)) for row in rows]
 
@@ -72,7 +72,7 @@ def _activate_general(conn,battle,units):
 
 def _next_actor(battle,units):
     available=[u for u in units if u['health']>0 and u['active'] and not u['attacked'] and not u.get('is_wall')
-               and not (u['side']=='attacker' and u['attack_range']>2 and u['moved'])]
+               and not (u['side']=='attacker' and u['attack_range']>2 and u['moved'] and u.get('movement_spent',u['speed'])>=u['speed'])]
     if not available:return None,[]
     bonus=2 if battle['round_number']==1 else 1 if battle['round_number']==2 else 0
     score=max(u['initiative']+(bonus if u['side']=='attacker' else 0) for u in available)
@@ -86,6 +86,20 @@ def _record_side(conn,battle,side):
     battle['last_side']=side
     conn.execute('UPDATE game_battles SET last_side=%s WHERE id=%s',(side,battle['id']))
 
+def _counterattacks(conn,battle,mover,start,goal,units):
+    enemies=[u for u in units if u['side']!=mover['side'] and u['health']>0 and u['active'] and not u.get('is_wall')
+             and u.get('counterattack',0)>mover.get('counterattack',0)
+             and distance((u['x'],u['y']),start)==1 and distance((u['x'],u['y']),goal)==1]
+    for enemy in sorted(enemies,key=lambda u:(-u.get('counterattack',0),u['id'])):
+        roll_a,roll_d=random.randint(1,6),random.randint(1,6)
+        points=damage(enemy['attack'],mover['defense'],mover['armor'],roll_a,roll_d)
+        mover['health']=max(0,mover['health']-points)
+        conn.execute('UPDATE game_battle_units SET health=%s WHERE id=%s',(mover['health'],mover['id']))
+        _event(conn,battle,'counterattack',{'attacker_id':enemy['id'],'target_id':mover['id'],
+            'attack_roll':roll_a,'defense_roll':roll_d,'damage':points,'remaining':mover['health']})
+        if mover['health']==0:return False
+    return True
+
 
 def _drive_ai(conn,battle,units):
     """Resolve defender activations until the next player activation or result."""
@@ -95,8 +109,8 @@ def _drive_ai(conn,battle,units):
         if side is None:
             battle['round_number']+=1
             conn.execute('UPDATE game_battles SET round_number=%s WHERE id=%s',(battle['round_number'],battle['id']))
-            conn.execute('UPDATE game_battle_units SET moved=false,attacked=false WHERE battle_id=%s',(battle['id'],))
-            for unit in units:unit['moved']=False;unit['attacked']=False
+            conn.execute('UPDATE game_battle_units SET moved=false,attacked=false,movement_spent=0 WHERE battle_id=%s',(battle['id'],))
+            for unit in units:unit['moved']=False;unit['attacked']=False;unit['movement_spent']=0
             _event(conn,battle,'round_started',{'round':battle['round_number']})
             continue
         defender=min(tied,key=lambda u:u['id'])
@@ -113,9 +127,14 @@ def _drive_ai(conn,battle,units):
                 firing=[p for p in options if 0<distance(p,(target['x'],target['y']))<=defender['attack_range']]
                 next_cell=(max(firing,key=lambda p:(distance(p,(target['x'],target['y'])),-distance(p,(defender['x'],defender['y']))))
                            if firing else min(options,key=lambda p:(distance(p,(target['x'],target['y'])),distance(p,(defender['x'],defender['y'])))))
-                conn.execute('UPDATE game_battle_units SET x=%s,y=%s WHERE id=%s',(*next_cell,defender['id']))
-                defender['x'],defender['y']=next_cell
-                _event(conn,battle,'move',{'unit_id':defender['id'],'x':next_cell[0],'y':next_cell[1]})
+                start=(defender['x'],defender['y'])
+                if _counterattacks(conn,battle,defender,start,next_cell,units):
+                    spent=shortest_path_steps(start,next_cell,defender['speed'],occupied) or 0
+                    conn.execute('UPDATE game_battle_units SET x=%s,y=%s,moved=true,movement_spent=%s WHERE id=%s',(*next_cell,spent,defender['id']))
+                    defender['x'],defender['y']=next_cell;defender['moved']=True;defender['movement_spent']=spent
+                    _event(conn,battle,'move',{'unit_id':defender['id'],'x':next_cell[0],'y':next_cell[1]})
+            if defender['health']<=0:
+                _record_side(conn,battle,'defender');continue
             adjacent=[u for u in targets if 0<distance((defender['x'],defender['y']),(u['x'],u['y']))<=defender['attack_range']]
         if adjacent:
             target=min(adjacent,key=lambda u:(u['health'],u['defense']+u['armor'],-distance((defender['x'],defender['y']),(u['x'],u['y'])),u['id']))
@@ -244,6 +263,7 @@ def create_encounter_battle(conn,user_id,general_id,source,target,target_data,tu
             (battle_id,unit['id'],unit['name'],unit['image_path'],index+1,unit['health'],unit['health'],
              unit['attack'],unit['defense'],unit['armor'],max(1,unit['attack_range']),unit['speed'],unit['initiative']))
     _apply_template(conn,battle_id,user_id)
+    _snapshot_counterattack(conn,battle_id)
     battle=_battle(conn,battle_id,user_id)
     _event(conn,battle,'encounter',{'kind':kind,'attackers':len(attackers)+1,'defenders':len(defenders)})
     return _state(conn,battle)
@@ -280,6 +300,10 @@ def _apply_template(conn,battle_id,user_id):
     if len(set(positions))!=len(positions) or any(x!=0 or not 0<=y<6 for x,y in positions):return
     for (unit_id,_,_,_),(x,y) in zip(rows,positions):
         conn.execute('UPDATE game_battle_units SET x=%s,y=%s WHERE id=%s',(x,y,unit_id))
+
+def _snapshot_counterattack(conn,battle_id):
+    conn.execute('''UPDATE game_battle_units b SET counterattack=u.counterattack
+        FROM unit_catalog u WHERE b.battle_id=%s AND b.unit_id=u.id''',(battle_id,))
 
 
 def _insert_wall(conn,battle_id,level):
@@ -440,6 +464,7 @@ async def _start_battle(q:int,r:int,request:Request,purpose:str):
                  unit['attack'],unit['defense'],unit['armor'],max(1,unit['attack_range']),unit['speed'],unit['initiative']))
         _insert_wall(conn,battle_id,building)
         _apply_template(conn,battle_id,user_id)
+        _snapshot_counterattack(conn,battle_id)
         conn.execute('''UPDATE player_generals SET previous_q=q,previous_r=r,q=%s,r=%s,
             logistics_left=logistics_left-%s,last_moved_turn=CASE WHEN %s THEN %s ELSE last_moved_turn END WHERE id=%s''',
             (q,r,travel_cost,(q,r)!=(general[1],general[2]),turn,general[0]))
@@ -533,13 +558,19 @@ async def move_unit(battle_id:int,unit_id:int,request:Request):
         side,tied=_next_actor(battle,units)
         if side!='attacker' or unit not in tied:raise HTTPException(409,'Сейчас действует другой юнит')
         occupied={(item['x'],item['y']) for item in units if item['health']>0 and item['id']!=unit_id}
-        if not reachable((unit['x'],unit['y']),(data['x'],data['y']),unit['speed'],occupied):
+        start=(unit['x'],unit['y']);goal=(data['x'],data['y'])
+        steps=shortest_path_steps(start,goal,unit['speed'],occupied)
+        if steps is None:
             raise HTTPException(409,'Клетка недоступна')
-        conn.execute('UPDATE game_battle_units SET x=%s,y=%s,moved=true,attacked=%s WHERE id=%s',
-                     (data['x'],data['y'],unit['attack_range']>2,unit_id))
+        if not _counterattacks(conn,battle,unit,start,goal,units):
+            _record_side(conn,battle,'attacker');_drive_ai(conn,battle,units);return _state(conn,battle)
+        conn.execute('UPDATE game_battle_units SET x=%s,y=%s,moved=true,movement_spent=%s WHERE id=%s',
+                     (data['x'],data['y'],steps,unit_id))
         _event(conn,battle,'move',{'unit_id':unit_id,'x':data['x'],'y':data['y']})
-        if unit['attack_range']>2:
-            unit['moved']=True;unit['attacked']=True
+        unit['x'],unit['y']=goal;unit['moved']=True;unit['movement_spent']=steps
+        if unit['attack_range']>2 and steps>=unit['speed']:
+            unit['attacked']=True
+            conn.execute('UPDATE game_battle_units SET attacked=true WHERE id=%s',(unit_id,))
             _record_side(conn,battle,'attacker')
             _drive_ai(conn,battle,units)
         return _state(conn,battle)
@@ -559,8 +590,8 @@ async def attack_unit(battle_id:int,unit_id:int,request:Request):
         target=next((item for item in units if item['id']==data['target_id']),None)
         if not attacker or not target or attacker['side']!='attacker' or target['side']!='defender' or not attacker['active'] or attacker['health']<=0 or target['health']<=0 or attacker['attacked']:
             raise HTTPException(409,'Атака недоступна')
-        if attacker['moved'] and attacker['attack_range']>2:
-            raise HTTPException(409,'Стрелок выбирает движение или выстрел')
+        if attacker['moved'] and attacker['attack_range']>2 and attacker['movement_spent']>=attacker['speed']:
+            raise HTTPException(409,'У стрелка не осталось очков движения для выстрела')
         side,tied=_next_actor(battle,units)
         if side!='attacker' or attacker not in tied:raise HTTPException(409,'Сейчас действует другой юнит')
         separation=distance((attacker['x'],attacker['y']),(target['x'],target['y']))

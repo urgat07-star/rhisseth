@@ -9,7 +9,7 @@ from db import connect
 router = APIRouter()
 FIRST_NAMES = ('Альрик','Борислав','Велемир','Годвин','Драгомир','Казимир','Ратмир','Святозар')
 SURNAMES = ('Северный','Железная Рука','Храбрый','Серый Волк','из Речной Долины','Непреклонный')
-UNIT_FIELDS = ('name','troop_type','health','armor','defense','attack','attack_range','speed','initiative','morale','description','image_path','price','building','note','active','combat_level')
+UNIT_FIELDS = ('name','troop_type','health','armor','defense','attack','attack_range','speed','initiative','morale','counterattack','description','image_path','price','building','note','active','combat_level')
 GENERAL_FIELDS = ('name','description','image_path','health','attack','defense','initiative','speed','logistics','skills','experience_per_level','max_level','max_attack_bonus','max_defense_bonus','active')
 
 async def body(request):
@@ -45,7 +45,7 @@ def armies(conn,user_id):
             gc.attack+pg.attack_bonus,gc.defense+pg.defense_bonus,pg.status,pg.q,pg.r,pg.logistics_left,gc.logistics,pg.last_moved_turn
             FROM player_generals pg LEFT JOIN general_catalog gc ON gc.id=pg.catalog_id
             WHERE pg.user_id=%s ORDER BY pg.id''',(user_id,)).fetchall():
-        units=conn.execute('''SELECT pgu.id,uc.id,uc.name,uc.troop_type,uc.defense,uc.attack,uc.attack_range,uc.speed,uc.image_path,pgu.slot,
+        units=conn.execute('''SELECT pgu.id,uc.id,uc.name,uc.troop_type,uc.defense,uc.attack,uc.attack_range,uc.speed,uc.counterattack,uc.image_path,pgu.slot,
             pgu.current_health,uc.health,pgu.status,pgu.recover_turn
             FROM player_general_units pgu JOIN unit_catalog uc ON uc.id=pgu.unit_id
             WHERE pgu.general_id=%s ORDER BY pgu.slot''',(row[0],)).fetchall()
@@ -56,7 +56,7 @@ def armies(conn,user_id):
             'attack_bonus':row[5],'defense_bonus':row[6],'attack':row[7],'defense':row[8],'status':row[9],
             'q':row[10],'r':row[11],'logistics_left':row[12],'logistics':row[13],'last_moved_turn':row[14],
             'skills':[dict(zip(('code','name','description','is_positive','acquired_level'),skill)) for skill in skills],
-            'units':[dict(zip(('assignment_id','id','name','troop_type','defense','attack','attack_range','speed','image_path','slot',
+            'units':[dict(zip(('assignment_id','id','name','troop_type','defense','attack','attack_range','speed','counterattack','image_path','slot',
                                'current_health','max_health','status','recover_turn'),unit)) for unit in units]})
     return generals
 
@@ -243,7 +243,7 @@ async def edit_unit(unit_id: int, request: Request):
     if set(data)!=set(editable_fields)|{'upgrade_from_unit_id'}: raise HTTPException(400,'Передайте все редактируемые поля юнита')
     for key in ('name','troop_type','description','image_path','price','building','note'):
         if not isinstance(data[key],str) or len(data[key])>4000: raise HTTPException(400,f'Некорректное поле: {key}')
-    for key in ('armor','defense','attack','attack_range','speed','initiative','morale'):
+    for key in ('armor','defense','attack','attack_range','speed','initiative','morale','counterattack'):
         if type(data[key]) is not int or not 0<=data[key]<=100: raise HTTPException(400,f'{key}: число 0–100')
     if type(data['combat_level']) is not int or not 1<=data['combat_level']<=5:raise HTTPException(400,'Уровень юнита: число 1–5')
     if data['upgrade_from_unit_id'] is not None and (type(data['upgrade_from_unit_id']) is not int or data['upgrade_from_unit_id']<1 or data['upgrade_from_unit_id']==unit_id): raise HTTPException(400,'Некорректный предыдущий юнит')
@@ -269,7 +269,7 @@ async def create_unit(request: Request):
     for key in ('name','troop_type','description','image_path','price','building','note'):
         if not isinstance(data[key],str) or len(data[key])>4000: raise HTTPException(400,f'Некорректное поле: {key}')
     if type(data['health']) is not int or not 1<=data['health']<=10000: raise HTTPException(400,'health: число 1–10000')
-    for key in ('armor','defense','attack','attack_range','speed','initiative','morale'):
+    for key in ('armor','defense','attack','attack_range','speed','initiative','morale','counterattack'):
         if type(data[key]) is not int or not 0<=data[key]<=100: raise HTTPException(400,f'{key}: число 0–100')
     if type(data['combat_level']) is not int or not 1<=data['combat_level']<=5:raise HTTPException(400,'Уровень юнита: число 1–5')
     if data['upgrade_from_unit_id'] is not None and (type(data['upgrade_from_unit_id']) is not int or data['upgrade_from_unit_id']<1): raise HTTPException(400,'Некорректный предыдущий юнит')

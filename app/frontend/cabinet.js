@@ -162,7 +162,7 @@ function hireCard(item,kind,missing,onHire){
   const title=document.createElement('h3');title.textContent=item.name;
   const stats=document.createElement('p');stats.className='hire-card-stats';stats.textContent=kind==='general'
     ?`Жизни ${item.health} · атака ${item.attack} · защита ${item.defense} · инициатива ${item.initiative} · скорость ${item.speed}`
-    :`Жизни ${item.health} · атака ${item.attack} · защита ${item.defense} · броня ${item.armor} · дальность ${item.attack_range}`;
+    :`Жизни ${item.health} · атака ${item.attack} · защита ${item.defense} · броня ${item.armor} · дальность ${item.attack_range} · контратака ${item.counterattack}`;
   const price=document.createElement('p');price.className='hire-card-price';price.textContent=costText(kind==='general'?{gold:armyState.general_price}:item.cost);
   const reason=document.createElement('p');reason.className='hire-card-missing';reason.textContent=missing.length?`Не хватает: ${missing.join(' · ')}`:'Доступен для найма';
   const button=document.createElement('button');button.type='button';button.className='save';button.textContent=kind==='general'?'Нанять генерала':item.upgrade_from_name?`Улучшить из «${item.upgrade_from_name}»`:'Нанять юнита';button.disabled=missing.length>0;button.addEventListener('click',()=>onHire(button));
@@ -206,7 +206,7 @@ function openGeneral(id) {
   const units=document.querySelector('#general-units'); units.replaceChildren();
   general.units.forEach(unit=>{
     const card=document.createElement('article'), figure=document.createElement('div'), img=document.createElement('img'), defense=document.createElement('span'), attack=document.createElement('span'), info=document.createElement('div'), remove=document.createElement('button');
-    figure.className='unit-portrait general-unit-portrait';img.src=unit.image_path;img.alt=unit.name;defense.className='unit-image-stat unit-image-defense';defense.textContent=unit.defense;attack.className='unit-image-stat unit-image-attack';attack.textContent=unit.attack;figure.append(img,defense,attack);const strong=document.createElement('strong'),small=document.createElement('small');strong.textContent=unit.name;small.textContent=`${unit.troop_type} · жизни ${unit.current_health}/${unit.max_health} · атака ${unit.attack} · защита ${unit.defense} · дальность ${unit.attack_range} · скорость ${unit.speed}`;info.append(strong,small);
+    figure.className='unit-portrait general-unit-portrait';img.src=unit.image_path;img.alt=unit.name;defense.className='unit-image-stat unit-image-defense';defense.textContent=unit.defense;attack.className='unit-image-stat unit-image-attack';attack.textContent=unit.attack;figure.append(img,defense,attack);const strong=document.createElement('strong'),small=document.createElement('small');strong.textContent=unit.name;small.textContent=`${unit.troop_type} · жизни ${unit.current_health}/${unit.max_health} · атака ${unit.attack} · защита ${unit.defense} · дальность ${unit.attack_range} · скорость ${unit.speed} · контратака ${unit.counterattack}`;info.append(strong,small);
     remove.type='button'; remove.textContent='Удалить'; remove.addEventListener('click',async()=>{await api(`/api/cabinet/army/generals/${id}/units/${unit.assignment_id}`,'DELETE',{});await loadArmy();openGeneral(id);});
     card.append(figure,info,remove); units.append(card);
   });

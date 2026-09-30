@@ -379,7 +379,7 @@ function showArmyDetails(general) {
     const title=document.createElement('h3'); title.textContent=unit.name;
     const health=document.createElement('p'); health.textContent=`Здоровье: ${unit.current_health}/${unit.max_health}`;
     const condition=document.createElement('p'); condition.textContent=`Состояние: ${statusLabels[unit.status]||unit.status||'Неизвестно'}`;
-    const stats=document.createElement('p'); stats.textContent=`Атака ${unit.attack} · Защита ${unit.defense} · Дальность ${unit.attack_range} · Скорость ${unit.speed}`;
+    const stats=document.createElement('p'); stats.textContent=`Атака ${unit.attack} · Защита ${unit.defense} · Дальность ${unit.attack_range} · Скорость ${unit.speed} · Контратака ${unit.counterattack}`;
     card.append(image,title,health,condition,stats); units.append(card);
   });
   armyDetailsModal.showModal();
@@ -619,7 +619,7 @@ function unitCard(unit) {
 function showBattleUnitDetails(unit){
   const dialog=document.querySelector('#battle-unit-details');document.querySelector('#battle-unit-details-title').textContent=unit.name;
   const body=document.querySelector('#battle-unit-details-body');body.replaceChildren();
-  for(const [label,value] of Object.entries({'Сторона':unit.side==='attacker'?'Нападающий':'Защитник','Здоровье':`${unit.health}/${unit.max_health}`,'Атака':unit.attack,'Защита':unit.defense,'Броня':unit.armor,'Дальность':unit.attack_range,'Скорость':unit.speed,'Инициатива':unit.initiative})){
+  for(const [label,value] of Object.entries({'Сторона':unit.side==='attacker'?'Нападающий':'Защитник','Здоровье':`${unit.health}/${unit.max_health}`,'Атака':unit.attack,'Защита':unit.defense,'Броня':unit.armor,'Дальность':unit.attack_range,'Скорость':unit.speed,'Инициатива':unit.initiative,'Контратака':unit.counterattack})){
     const line=document.createElement('p');line.textContent=`${label}: ${value}`;body.append(line);
   }
   dialog.showModal();
@@ -653,7 +653,7 @@ function battleAttackLog(event,units){
   const action=document.createElement('div');action.className='battle-log-action';
   const sideLabel=document.createElement('span');sideLabel.className='battle-log-side';sideLabel.textContent=side==='attacker'?'⚔ Нападающий':'🛡 Защитник';
   const actors=document.createElement('span');actors.className='battle-log-actors';
-  const attackerName=document.createElement('strong');attackerName.textContent=attacker;
+  const attackerName=document.createElement('strong');attackerName.textContent=(event.type==='counterattack'?'Контратака: ':'')+attacker;
   const arrow=document.createTextNode(' → ');
   const targetName=document.createElement('strong');targetName.textContent=target;
   actors.append(attackerName,arrow,targetName);action.append(sideLabel,actors);
@@ -678,7 +678,7 @@ async function openBattle(_enemy,purpose='capture') {
 function renderBattle() {
   const state=game.battle; if (!state) return;
   const battleLogList=document.querySelector('#battle-log');battleLogList.replaceChildren();
-  const attacks=state.events.filter(event=>event.type==='attack').slice(-12);
+  const attacks=state.events.filter(event=>event.type==='attack'||event.type==='counterattack').slice(-12);
   let displayedRound=null;
   if(attacks.length)attacks.forEach(event=>{
     if(event.round!==displayedRound){displayedRound=event.round;const heading=document.createElement('li');heading.className='battle-log-round';heading.textContent=`Раунд ${event.round}`;battleLogList.append(heading);}
@@ -722,7 +722,7 @@ function renderBattle() {
     if(unit&&game.selectedUnit?.id===unit.id)cell.classList.add('selected-unit');
     if(game.selectedUnit&&state.battle.deployment_locked){
       if(!unit&&battleReachable(game.selectedUnit,x,y,state.units))cell.classList.add('reachable');
-      if(unit&&unit.side==='defender'&&game.selectedUnit.side==='attacker'&&!game.selectedUnit.attacked&&tacticalDistance(game.selectedUnit,unit)<=game.selectedUnit.attack_range&&!(game.selectedUnit.moved&&game.selectedUnit.attack_range>2))cell.classList.add('attackable');
+      if(unit&&unit.side==='defender'&&game.selectedUnit.side==='attacker'&&!game.selectedUnit.attacked&&tacticalDistance(game.selectedUnit,unit)<=game.selectedUnit.attack_range&&!(game.selectedUnit.moved&&game.selectedUnit.attack_range>2&&game.selectedUnit.movement_spent>=game.selectedUnit.speed))cell.classList.add('attackable');
     }
     if(unit)cell.addEventListener('contextmenu',event=>{event.preventDefault();showBattleUnitDetails(unit);});
     cell.addEventListener('click',()=>unit?battleUnitClick(unit):battleMove(x,y));field.append(cell);
@@ -731,8 +731,9 @@ function renderBattle() {
 async function battleUnitClick(unit) {
   if (!game.battle || game.battle.battle.status!=='active' || unit.health<=0) return;
   if (unit.side==='attacker') {
+    if(!game.battle.battle.deployment_locked&&game.selectedUnit?.id===unit.id){game.selectedUnit=null;renderBattle();return;}
     if(!game.battle.battle.deployment_locked&&game.selectedUnit&&game.selectedUnit.id!==unit.id){
-      [game.selectedUnit.x,unit.x]=[unit.x,game.selectedUnit.x];[game.selectedUnit.y,unit.y]=[unit.y,game.selectedUnit.y];renderBattle();return;
+      [game.selectedUnit.x,unit.x]=[unit.x,game.selectedUnit.x];[game.selectedUnit.y,unit.y]=[unit.y,game.selectedUnit.y];game.selectedUnit=null;renderBattle();return;
     }
     if(game.battle.battle.deployment_locked&&!game.battle.eligible_unit_ids.includes(unit.id))return;game.selectedUnit=unit;renderBattle();document.querySelector('#battle-status').textContent=`${unit.name}: выберите цель или зелёный гекс`;return;
   }
@@ -745,7 +746,7 @@ async function battleMove(x,y) {
   if (!game.selectedUnit || game.battle?.battle.status!=='active') return;
   if(!game.battle.battle.deployment_locked){
     if(x!==0||game.battle.units.some(unit=>unit.id!==game.selectedUnit.id&&unit.health>0&&unit.x===x&&unit.y===y))return;
-    game.selectedUnit.x=x;game.selectedUnit.y=y;renderBattle();return;
+    game.selectedUnit.x=x;game.selectedUnit.y=y;game.selectedUnit=null;renderBattle();return;
   }
   try {await battleCommand(`/game/battles/${game.battle.battle.id}/units/${game.selectedUnit.id}/move`,{x,y,round:game.battle.battle.round_number});}
   catch(error){document.querySelector('#battle-status').textContent=error.message;}

@@ -23,7 +23,7 @@ def apply_editable_snapshot(conn):
     _upsert(conn,'produced_resources',data['produced_resources'],('code',),('code','name','ingredients','required_building','purpose','is_food','active'))
     _upsert(conn,'additional_building_catalog',data['buildings'],('code',),('code','name','level_1_effect','level_2_effect','level_3_effect','image_path','note','active'))
     _upsert(conn,'general_catalog',data['generals'],('id',),('id','name','description','image_path','health','attack','defense','initiative','speed','logistics','skills','experience_per_level','max_level','max_attack_bonus','max_defense_bonus','active'),True)
-    unit_fields=('id','name','troop_type','health','armor','defense','attack','attack_range','speed','initiative','morale','description','image_path','price','building','note','active','combat_level','purchasable')
+    unit_fields=('id','name','troop_type','health','armor','defense','attack','attack_range','speed','initiative','morale','counterattack','description','image_path','price','building','note','active','combat_level','purchasable')
     _upsert(conn,'unit_catalog',data['units'],('id',),unit_fields,True)
     conn.execute('DELETE FROM unit_resource_costs')
     conn.execute('DELETE FROM unit_upgrade_requirements')

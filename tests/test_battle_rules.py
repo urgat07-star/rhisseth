@@ -4,8 +4,8 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'app/backend'))
-from battle_rules import battle_neighbors,damage,distance,reachable,encounter,defense_budget,choose_defenders,defender_catalog_pattern
-from battle import _next_actor,_drive_ai
+from battle_rules import battle_neighbors,damage,distance,reachable,shortest_path_steps,encounter,defense_budget,choose_defenders,defender_catalog_pattern
+from battle import _counterattacks,_next_actor,_drive_ai
 from unittest.mock import MagicMock,patch
 
 
@@ -34,6 +34,20 @@ class BattleRuleTests(unittest.TestCase):
 
     def test_battle_board_has_only_six_rows(self):
         self.assertFalse(reachable((3,5),(3,6),1,set()))
+
+    def test_shortest_path_reports_spent_movement(self):
+        self.assertEqual(shortest_path_steps((1,1),(2,1),3,set()),1)
+        self.assertEqual(shortest_path_steps((1,1),(3,1),3,set()),2)
+
+    def test_higher_counterattack_strikes_adjacent_bypass(self):
+        battle={'id':1,'round_number':1}
+        mover={'id':1,'side':'attacker','health':10,'defense':0,'armor':0,'counterattack':1}
+        guard={'id':2,'side':'defender','health':10,'active':True,'is_wall':False,'x':2,'y':2,'attack':1,'counterattack':2}
+        conn=MagicMock()
+        with patch('battle.random.randint',return_value=1),patch('battle._event') as event:
+            self.assertTrue(_counterattacks(conn,battle,mover,(1,2),(1,3),[mover,guard]))
+        self.assertEqual(mover['health'],9)
+        self.assertEqual(event.call_args.args[2],'counterattack')
 
     def test_wall_blocks_passage_but_spear_and_archer_reach_across(self):
         wall=(6,5)

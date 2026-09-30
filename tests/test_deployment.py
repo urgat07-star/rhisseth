@@ -31,6 +31,8 @@ class DeploymentTests(unittest.TestCase):
         script=(Path(__file__).resolve().parents[1]/'app/frontend/app.js').read_text(encoding='utf-8')
         self.assertIn("!game.battle.battle.deployment_locked&&game.selectedUnit",script)
         self.assertIn("[game.selectedUnit.x,unit.x]=[unit.x,game.selectedUnit.x]",script)
+        self.assertIn("game.selectedUnit?.id===unit.id){game.selectedUnit=null",script)
+        self.assertIn("game.selectedUnit.y=y;game.selectedUnit=null",script)
 
     def test_accepted_deployment_locks_positions_and_saves_template(self):
         battle={'id':1,'attacker_user_id':2,'general_id':7,'status':'active','round_number':1,

@@ -46,6 +46,18 @@ def reachable(start,goal,speed,occupied):
                 seen.add(point);queue.append((point,steps+1))
     return False
 
+def shortest_path_steps(start,goal,speed,occupied):
+    if goal in occupied:return None
+    queue=deque([(start,0)]);seen={start}
+    while queue:
+        cell,steps=queue.popleft()
+        if cell==goal:return steps
+        if steps>=speed:continue
+        for point in battle_neighbors(cell):
+            if 0<=point[0]<BATTLE_WIDTH and 0<=point[1]<BATTLE_HEIGHT and point not in seen and point not in occupied:
+                seen.add(point);queue.append((point,steps+1))
+    return None
+
 
 def damage(attack,defense,armor,attack_roll,defense_roll):
     result=attack_roll*attack-defense_roll*defense
