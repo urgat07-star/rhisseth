@@ -205,10 +205,10 @@ function openGeneral(id) {
   document.querySelector('#general-count').textContent=`Состав: ${general.units.length} из 5`;
   const units=document.querySelector('#general-units'); units.replaceChildren();
   general.units.forEach(unit=>{
-    const card=document.createElement('article'), img=document.createElement('img'), info=document.createElement('div'), remove=document.createElement('button');
-    img.src=unit.image_path; img.alt=unit.name; const strong=document.createElement('strong'),small=document.createElement('small');strong.textContent=unit.name;small.textContent=`${unit.troop_type} · жизни ${unit.current_health}/${unit.max_health} · атака ${unit.attack} · защита ${unit.defense} · дальность ${unit.attack_range} · скорость ${unit.speed}`;info.append(strong,small);
+    const card=document.createElement('article'), figure=document.createElement('div'), img=document.createElement('img'), defense=document.createElement('span'), attack=document.createElement('span'), info=document.createElement('div'), remove=document.createElement('button');
+    figure.className='unit-portrait general-unit-portrait';img.src=unit.image_path;img.alt=unit.name;defense.className='unit-image-stat unit-image-defense';defense.textContent=unit.defense;attack.className='unit-image-stat unit-image-attack';attack.textContent=unit.attack;figure.append(img,defense,attack);const strong=document.createElement('strong'),small=document.createElement('small');strong.textContent=unit.name;small.textContent=`${unit.troop_type} · жизни ${unit.current_health}/${unit.max_health} · атака ${unit.attack} · защита ${unit.defense} · дальность ${unit.attack_range} · скорость ${unit.speed}`;info.append(strong,small);
     remove.type='button'; remove.textContent='Удалить'; remove.addEventListener('click',async()=>{await api(`/api/cabinet/army/generals/${id}/units/${unit.assignment_id}`,'DELETE',{});await loadArmy();openGeneral(id);});
-    card.append(img,info,remove); units.append(card);
+    card.append(figure,info,remove); units.append(card);
   });
   const openHire=document.querySelector('#open-unit-hire');openHire.hidden=general.status!=='active';
   const generalDialog=document.querySelector('#general-dialog'); if(!generalDialog.open)generalDialog.showModal();

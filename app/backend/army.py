@@ -154,7 +154,7 @@ async def hire_unit(general_id: int, request: Request):
             raise HTTPException(409,'Недостаточно ресурсов для найма юнита')
         if upgraded_assignment:
             conn.execute('''UPDATE player_general_units SET unit_id=%s,
-                current_health=(SELECT health FROM unit_catalog WHERE id=%s),status='active',recover_turn=NULL
+                current_health=(SELECT health FROM unit_catalog WHERE id=%s),status='ready',recover_turn=NULL
                 WHERE id=%s''',(data['unit_id'],data['unit_id'],upgraded_assignment[0]))
         else:
             conn.execute('''INSERT INTO player_general_units(general_id,unit_id,slot,current_health)

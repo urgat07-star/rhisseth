@@ -364,7 +364,7 @@ const armyDetailsModal = document.querySelector('#army-details-modal');
 function showArmyDetails(general) {
   if (!general || !armyDetailsModal) return;
   document.querySelector('#army-details-title').textContent=`Армия «${general.name}»`;
-  const statusLabels={active:'В строю',captured:'В плену',recovering:'Восстанавливается',dismissed:'Расформирована'};
+  const statusLabels={active:'В строю',ready:'В строю',wounded:'Ранен',captured:'В плену',recovering:'Восстанавливается',dismissed:'Расформирована'};
   document.querySelector('#army-details-summary').textContent=
     `Состояние: ${statusLabels[general.status]||general.status||'Неизвестно'} · Гекс Q${general.q}, R${general.r} · `+
     `Уровень ${general.level} · Опыт ${general.experience} · Атака ${general.attack} · Защита ${general.defense} · `+
@@ -375,7 +375,7 @@ function showArmyDetails(general) {
   }
   general.units.forEach(unit=>{
     const card=document.createElement('article'); card.className=`army-details-unit${unit.status!=='active'?' is-inactive':''}`;
-    const image=document.createElement('img'); image.src=unit.image_path; image.alt=unit.name;
+    const image=unitPortrait(unit,'army-unit-portrait');
     const title=document.createElement('h3'); title.textContent=unit.name;
     const health=document.createElement('p'); health.textContent=`Здоровье: ${unit.current_health}/${unit.max_health}`;
     const condition=document.createElement('p'); condition.textContent=`Состояние: ${statusLabels[unit.status]||unit.status||'Неизвестно'}`;
@@ -383,6 +383,14 @@ function showArmyDetails(general) {
     card.append(image,title,health,condition,stats); units.append(card);
   });
   armyDetailsModal.showModal();
+}
+
+function unitPortrait(unit,extraClass='') {
+  const figure=document.createElement('span'),img=document.createElement('img'),defense=document.createElement('span'),attack=document.createElement('span');
+  figure.className=`unit-portrait ${extraClass}`.trim();img.src=unit.image_path;img.alt=unit.name;
+  defense.className='unit-image-stat unit-image-defense';defense.textContent=unit.defense;defense.title=`Защита: ${unit.defense}`;
+  attack.className='unit-image-stat unit-image-attack';attack.textContent=unit.attack;attack.title=`Атака: ${unit.attack}`;
+  figure.append(img,defense,attack);return figure;
 }
 
 function bindMapArmyEvents(image,generalId) {
@@ -605,7 +613,7 @@ function unitCard(unit) {
   if (unit.moved || unit.attacked || !unit.active) button.classList.add('spent');
   if(unit.side==='attacker'&&game.battle?.battle.deployment_locked&&!game.battle?.eligible_unit_ids?.includes(unit.id))button.disabled=true;
   const label=document.createElement('span'); label.textContent=`${unit.name} · ${unit.health}/${unit.max_health} · ${unit.x},${unit.y}`;
-  if(!unit.is_wall){const img=document.createElement('img');img.src=unit.image_path;img.alt=unit.name;button.append(img);}
+  if(!unit.is_wall)button.append(unitPortrait(unit,'battle-list-portrait'));
   button.append(label); button.addEventListener('click',()=>battleUnitClick(unit));button.addEventListener('contextmenu',event=>{event.preventDefault();showBattleUnitDetails(unit);}); return button;
 }
 function showBattleUnitDetails(unit){
