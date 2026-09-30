@@ -624,12 +624,18 @@ function showBattleUnitDetails(unit){
   }
   dialog.showModal();
 }
-function tacticalDistance(a,b){return Math.max(Math.abs(a.x-b.x),Math.abs(a.y-b.y),Math.abs(a.x+a.y-b.x-b.y));}
+function battleNeighbors(x,y){return y%2
+  ? [[x+1,y],[x-1,y],[x+1,y+1],[x,y+1],[x+1,y-1],[x,y-1]]
+  : [[x+1,y],[x-1,y],[x,y+1],[x-1,y+1],[x,y-1],[x-1,y-1]];}
+function tacticalDistance(a,b){
+  const aq=a.x-(a.y-(a.y&1))/2,bq=b.x-(b.y-(b.y&1))/2,dq=aq-bq,dr=a.y-b.y;
+  return Math.max(Math.abs(dq),Math.abs(dr),Math.abs(dq+dr));
+}
 function battleReachable(unit,x,y,units){
   if(unit.moved||unit.attacked||unit.speed<1||units.some(other=>other.id!==unit.id&&other.health>0&&other.x===x&&other.y===y))return false;
   const seen=new Set([`${unit.x},${unit.y}`]),queue=[[unit.x,unit.y,0]];
   while(queue.length){const [cx,cy,steps]=queue.shift();if(cx===x&&cy===y)return true;if(steps>=unit.speed)continue;
-    for(const [dx,dy] of neighbors){const nx=cx+dx,ny=cy+dy,key=`${nx},${ny}`;
+    for(const [nx,ny] of battleNeighbors(cx,cy)){const key=`${nx},${ny}`;
       if(nx<0||nx>=8||ny<0||ny>=6||seen.has(key)||units.some(other=>other.id!==unit.id&&other.health>0&&other.x===nx&&other.y===ny))continue;
       seen.add(key);queue.push([nx,ny,steps+1]);
     }
@@ -724,7 +730,12 @@ function renderBattle() {
 }
 async function battleUnitClick(unit) {
   if (!game.battle || game.battle.battle.status!=='active' || unit.health<=0) return;
-  if (unit.side==='attacker') {if(game.battle.battle.deployment_locked&&!game.battle.eligible_unit_ids.includes(unit.id))return;game.selectedUnit=unit;renderBattle();document.querySelector('#battle-status').textContent=`${unit.name}: выберите цель или зелёный гекс`;return;}
+  if (unit.side==='attacker') {
+    if(!game.battle.battle.deployment_locked&&game.selectedUnit&&game.selectedUnit.id!==unit.id){
+      [game.selectedUnit.x,unit.x]=[unit.x,game.selectedUnit.x];[game.selectedUnit.y,unit.y]=[unit.y,game.selectedUnit.y];renderBattle();return;
+    }
+    if(game.battle.battle.deployment_locked&&!game.battle.eligible_unit_ids.includes(unit.id))return;game.selectedUnit=unit;renderBattle();document.querySelector('#battle-status').textContent=`${unit.name}: выберите цель или зелёный гекс`;return;
+  }
   if(!game.battle.battle.deployment_locked)return;
   if (!game.selectedUnit) return;
   try {await battleCommand(`/game/battles/${game.battle.battle.id}/units/${game.selectedUnit.id}/attack`,{target_id:unit.id,round:game.battle.battle.round_number});}

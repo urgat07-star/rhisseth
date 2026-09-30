@@ -20,6 +20,18 @@ class DeploymentTests(unittest.TestCase):
             response=self.client.post('/api/game/battles/1/deployment',headers=self.headers,json=body)
         self.assertEqual(response.status_code,400)
 
+    def test_rejects_deployment_outside_first_line_before_database_access(self):
+        body={'positions':[{'id':1,'x':1,'y':1}]}
+        with patch('main.current_user',return_value=self.user),patch('battle.connect',side_effect=AssertionError('no database')):
+            response=self.client.post('/api/game/battles/1/deployment',headers=self.headers,json=body)
+        self.assertEqual(response.status_code,400)
+        self.assertIn('первой линии',response.json()['error'])
+
+    def test_frontend_swaps_allied_units_only_before_deployment_lock(self):
+        script=(Path(__file__).resolve().parents[1]/'app/frontend/app.js').read_text(encoding='utf-8')
+        self.assertIn("!game.battle.battle.deployment_locked&&game.selectedUnit",script)
+        self.assertIn("[game.selectedUnit.x,unit.x]=[unit.x,game.selectedUnit.x]",script)
+
     def test_accepted_deployment_locks_positions_and_saves_template(self):
         battle={'id':1,'attacker_user_id':2,'general_id':7,'status':'active','round_number':1,
                 'deployment_locked':False}
@@ -27,7 +39,7 @@ class DeploymentTests(unittest.TestCase):
                {'id':12,'side':'attacker','health':5,'is_general':False,'assignment_id':20,'x':1,'y':1}]
         conn=MagicMock()
         conn.execute.return_value.fetchall.return_value=[(20,1)]
-        body={'positions':[{'id':11,'x':0,'y':4},{'id':12,'x':1,'y':2}]}
+        body={'positions':[{'id':11,'x':0,'y':4},{'id':12,'x':0,'y':2}]}
         with patch('main.current_user',return_value=self.user),patch('battle.connect') as connect,\
              patch('battle._battle',return_value=battle),patch('battle._units',return_value=units),\
              patch('battle._drive_ai'),patch('battle._state',return_value={'battle':{'deployment_locked':True}}):

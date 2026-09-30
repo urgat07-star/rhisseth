@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'app/backend'))
-from battle_rules import damage,distance,reachable,encounter,defense_budget,choose_defenders,defender_catalog_pattern
+from battle_rules import battle_neighbors,damage,distance,reachable,encounter,defense_budget,choose_defenders,defender_catalog_pattern
 from battle import _next_actor,_drive_ai
 from unittest.mock import MagicMock,patch
 
@@ -19,9 +19,21 @@ class BattleRuleTests(unittest.TestCase):
         self.assertEqual(distance((0,0),(1,1)),2)
         self.assertTrue(reachable((0,0),(2,0),2,set()))
         self.assertFalse(reachable((0,0),(2,0),2,{(1,0)}))
-        self.assertTrue(reachable((6,7),(7,7),1,set()))
-        self.assertFalse(reachable((7,7),(8,7),1,set()))
-        self.assertFalse(reachable((7,7),(7,8),1,set()))
+        self.assertTrue(reachable((6,5),(7,5),1,set()))
+        self.assertFalse(reachable((7,5),(8,5),1,set()))
+        self.assertFalse(reachable((7,5),(7,6),1,set()))
+
+    def test_speed_one_reaches_exactly_all_six_visual_neighbours(self):
+        for start in ((3,2),(3,3)):
+            neighbours=set(battle_neighbors(start))
+            self.assertEqual(len(neighbours),6)
+            for goal in neighbours:
+                self.assertEqual(distance(start,goal),1,(start,goal))
+                self.assertTrue(reachable(start,goal,1,set()),(start,goal))
+            self.assertFalse(reachable(start,(start[0],start[1]+2),1,set()))
+
+    def test_battle_board_has_only_six_rows(self):
+        self.assertFalse(reachable((3,5),(3,6),1,set()))
 
     def test_wall_blocks_passage_but_spear_and_archer_reach_across(self):
         wall=(6,5)
@@ -73,6 +85,19 @@ class BattleRuleTests(unittest.TestCase):
         self.assertEqual(units[0]['health'],4)
         self.assertTrue(units[1]['attacked'])
         self.assertEqual(_next_actor(battle,units)[0],'attacker')
+
+    def test_ai_attacks_equally_weak_target_from_longest_range(self):
+        battle={'id':9,'round_number':3,'last_side':'','status':'active'}
+        units=[{'id':1,'side':'attacker','is_general':False,'initiative':1,'active':True,'health':5,'attacked':False,
+                'attack_range':1,'moved':False,'x':3,'y':2,'defense':0,'armor':0},
+               {'id':2,'side':'attacker','is_general':False,'initiative':1,'active':True,'health':5,'attacked':False,
+                'attack_range':1,'moved':False,'x':5,'y':2,'defense':0,'armor':0},
+               {'id':3,'side':'defender','is_general':False,'initiative':4,'active':True,'health':5,'attacked':False,
+                'attack_range':3,'moved':False,'x':2,'y':2,'attack':1,'speed':1}]
+        with patch('battle.random.randint',return_value=1),patch('battle._event') as event:
+            _drive_ai(MagicMock(),battle,units)
+        attack=next(call.args[3] for call in event.call_args_list if call.args[2]=='attack')
+        self.assertEqual(attack['target_id'],2)
 
 
 if __name__=='__main__':unittest.main()

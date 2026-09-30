@@ -105,18 +105,20 @@ def _drive_ai(conn,battle,units):
             _finish(conn,battle,'defender');return
         adjacent=[u for u in targets if 0<distance((defender['x'],defender['y']),(u['x'],u['y']))<=defender['attack_range']]
         if not adjacent:
-            target=min(targets,key=lambda u:distance((defender['x'],defender['y']),(u['x'],u['y'])))
+            target=min(targets,key=lambda u:(u['health'],u['defense']+u['armor'],u['id']))
             occupied={(u['x'],u['y']) for u in units if u['health']>0 and u['id']!=defender['id']}
             options=[(x,y) for x in range(8) for y in range(6)
                      if reachable((defender['x'],defender['y']),(x,y),defender['speed'],occupied)]
             if options:
-                next_cell=min(options,key=lambda p:distance(p,(target['x'],target['y'])))
+                firing=[p for p in options if 0<distance(p,(target['x'],target['y']))<=defender['attack_range']]
+                next_cell=(max(firing,key=lambda p:(distance(p,(target['x'],target['y'])),-distance(p,(defender['x'],defender['y']))))
+                           if firing else min(options,key=lambda p:(distance(p,(target['x'],target['y'])),distance(p,(defender['x'],defender['y'])))))
                 conn.execute('UPDATE game_battle_units SET x=%s,y=%s WHERE id=%s',(*next_cell,defender['id']))
                 defender['x'],defender['y']=next_cell
                 _event(conn,battle,'move',{'unit_id':defender['id'],'x':next_cell[0],'y':next_cell[1]})
             adjacent=[u for u in targets if 0<distance((defender['x'],defender['y']),(u['x'],u['y']))<=defender['attack_range']]
         if adjacent:
-            target=min(adjacent,key=lambda u:(u['health'],u['id']))
+            target=min(adjacent,key=lambda u:(u['health'],u['defense']+u['armor'],-distance((defender['x'],defender['y']),(u['x'],u['y'])),u['id']))
             roll_a,roll_d=random.randint(1,6),random.randint(1,6)
             points=damage(defender['attack'],target['defense'],target['armor'],roll_a,roll_d)
             target['health']=max(0,target['health']-points)
@@ -485,8 +487,8 @@ async def save_deployment(battle_id:int,request:Request):
         not isinstance(item,dict) or set(item)!={'id','x','y'} or any(type(item[key]) is not int for key in item)
         for item in positions):
         raise HTTPException(400,'Укажите позиции всех своих бойцов')
-    if any(not 0<=item['x']<=3 or not 0<=item['y']<=7 for item in positions):
-        raise HTTPException(400,'Расстановка возможна в первых четырёх столбцах')
+    if any(item['x']!=0 or not 0<=item['y']<6 for item in positions):
+        raise HTTPException(400,'Расстановка возможна только в первой линии')
     if len({item['id'] for item in positions})!=len(positions) or len({(item['x'],item['y']) for item in positions})!=len(positions):
         raise HTTPException(400,'Бойцы не могут делить клетку')
     with connect() as conn:

@@ -40,3 +40,12 @@ emergency publication does not waive this requirement: create the record in
 the same work session and clearly identify any period when the VDS was ahead
 of Git. The version-specific record in `docs/releases/` must link to every
 change record included in that release.
+
+## Rhisseth synchronization reports
+
+Every Markdown report created by `tools/rhisseth-sync.ps1` under
+`reports/Git-sync/` must include the current Git commit when `HEAD` exists:
+the full commit SHA and its subject. If the repository has no commit, the
+report must explicitly state that a commit has not been created. This applies
+to every `rhisseth-sync` command that writes a report, not only `status` or
+GitHub publication commands.

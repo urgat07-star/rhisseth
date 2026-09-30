@@ -2,7 +2,8 @@
 from collections import deque
 
 NEIGHBORS=((1,0),(-1,0),(0,1),(0,-1),(1,-1),(-1,1))
-BATTLE_SIZE=8
+BATTLE_WIDTH=8
+BATTLE_HEIGHT=6
 BUILDING_POWER={1:0,2:1,3:2,4:2,5:4,6:3,7:5,8:10}
 BUILDING_DANGER={1:0,2:0,3:0,4:0,5:2,6:1,7:3,8:0}
 WALL_HEALTH={4:5,5:7,6:9,7:12,8:12}
@@ -18,21 +19,30 @@ def defender_catalog_pattern(owner_type, terrain):
 
 
 def distance(a,b):
-    dq=a[0]-b[0];dr=a[1]-b[1]
+    """Hex distance for the odd-row offset coordinates used by the battle UI."""
+    aq=a[0]-(a[1]-(a[1]&1))//2
+    bq=b[0]-(b[1]-(b[1]&1))//2
+    dq=aq-bq;dr=a[1]-b[1]
     return max(abs(dq),abs(dr),abs(dq+dr))
 
 
+def battle_neighbors(cell):
+    """Return the six visual neighbours of a cell on the odd-row offset grid."""
+    x,y=cell
+    diagonals=((1,1),(0,1),(1,-1),(0,-1)) if y&1 else ((0,1),(-1,1),(0,-1),(-1,-1))
+    return ((x+1,y),(x-1,y),*((x+dx,y+dy) for dx,dy in diagonals))
+
+
 def reachable(start,goal,speed,occupied):
-    if goal in occupied or not 0<=goal[0]<BATTLE_SIZE or not 0<=goal[1]<BATTLE_SIZE:
+    if goal in occupied or not 0<=goal[0]<BATTLE_WIDTH or not 0<=goal[1]<BATTLE_HEIGHT:
         return False
     queue=deque([(start,0)]);seen={start}
     while queue:
         cell,steps=queue.popleft()
         if cell==goal:return True
         if steps>=speed:continue
-        for dq,dr in NEIGHBORS:
-            point=(cell[0]+dq,cell[1]+dr)
-            if 0<=point[0]<BATTLE_SIZE and 0<=point[1]<BATTLE_SIZE and point not in seen and point not in occupied:
+        for point in battle_neighbors(cell):
+            if 0<=point[0]<BATTLE_WIDTH and 0<=point[1]<BATTLE_HEIGHT and point not in seen and point not in occupied:
                 seen.add(point);queue.append((point,steps+1))
     return False
 
