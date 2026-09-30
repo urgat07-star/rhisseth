@@ -670,7 +670,13 @@ function renderBattle() {
     edge.setAttribute('points','50,0 100,25 100,75 50,100 0,75 0,25');
     edge.setAttribute('vector-effect','non-scaling-stroke');outline.append(edge);cell.append(outline);
     const unit=state.units.find(item=>item.health>0&&item.x===x&&item.y===y);
-    if(unit){if(unit.is_wall)cell.textContent='▦';else{const img=document.createElement('img');img.src=unit.image_path;img.alt=unit.name;cell.append(img);}cell.title=`${unit.name}: ${unit.health}/${unit.max_health}`;cell.classList.add(unit.is_wall?'wall':unit.side);}
+    if(unit){if(unit.is_wall)cell.textContent='▦';else{
+      const figure=document.createElement('span');figure.className='battle-unit-figure';
+      const img=document.createElement('img');img.src=unit.image_path;img.alt=unit.name;
+      const defense=document.createElement('span');defense.className='battle-unit-stat battle-unit-defense';defense.textContent=unit.defense;defense.title=`Защита: ${unit.defense}`;
+      const attack=document.createElement('span');attack.className='battle-unit-stat battle-unit-attack';attack.textContent=unit.attack;attack.title=`Атака: ${unit.attack}`;
+      figure.append(img,defense,attack);cell.append(figure);
+    }cell.title=`${unit.name}: ${unit.health}/${unit.max_health} · атака ${unit.attack} · защита ${unit.defense}`;cell.classList.add(unit.is_wall?'wall':unit.side);}
     if(unit&&state.eligible_unit_ids.includes(unit.id))cell.classList.add('active-unit');
     if(unit&&game.selectedUnit?.id===unit.id)cell.classList.add('selected-unit');
     if(game.selectedUnit&&state.battle.deployment_locked){

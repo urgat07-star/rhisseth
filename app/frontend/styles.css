@@ -233,8 +233,11 @@ main { padding: clamp(12px, 2vw, 28px); }
 .battle-toolbar select { margin-left:6px; padding:4px 8px; border:1px solid #9f8b51; border-radius:4px; background:#171e16; color:#f4eac7; }
 .battle-grid[data-terrain="forest"] { background: radial-gradient(circle at 20% 20%,#496c3b,#203c2b 55%,#12251e); }
 .battle-grid[data-terrain="tactical"] { background: radial-gradient(circle,#39482c,#111a16 70%); }
-.battle-cell img { width: 90%; height: 90%; object-fit: contain; pointer-events: none; }
-.battle-cell img { position: relative; z-index: 2; }
+.battle-unit-figure { position:absolute; z-index:2; left:50%; top:50%; height:90%; aspect-ratio:275/369; transform:translate(-50%,-50%); pointer-events:none; }
+.battle-unit-figure img { display:block; width:100%; height:100%; object-fit:contain; }
+.battle-unit-stat { position:absolute; z-index:4; display:flex; align-items:center; justify-content:center; width:18%; aspect-ratio:1; bottom:5.5%; color:#f8f1dc; font-weight:800; font-size:clamp(8px,1.05vw,16px); line-height:1; text-shadow:0 1px 2px #000,0 0 2px #000; }
+.battle-unit-defense { left:7.5%; }
+.battle-unit-attack { right:7.5%; }
 .battle-cell.attacker::after { background: #8bb3da66; }
 .battle-cell.defender::after { background: #d99a8066; }
 .battle-cell.wall { background: #716e69; color: #fff; font-size: 1.2rem; }

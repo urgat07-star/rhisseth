@@ -6,7 +6,7 @@ ALTER TABLE game_resources ADD COLUMN is_food boolean NOT NULL DEFAULT false;
 UPDATE extractable_resources SET is_food=(purpose ILIKE '%еда%');
 UPDATE produced_resources SET is_food=(purpose ILIKE '%еда%');
 UPDATE game_resources SET is_food=true WHERE name IN
- ('Еда','Пшеница','Рожь','Ячмень','Рис','Дичь','Рыба','Моллюски','Морской зверь',
+ ('Еда','Пшеница','Рожь','Ячмень','Рис','Рыба','Моллюски','Морской зверь',
   'Водоросли','Мёд','Пряности','Ягоды','Скот','Овцы');
 
 INSERT INTO game_resources(code,name,starting_quantity,is_food)
