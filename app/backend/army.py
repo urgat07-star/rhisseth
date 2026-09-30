@@ -136,7 +136,7 @@ async def hire_unit(general_id: int, request: Request):
         upgraded_assignment=None
         if requirement:
             upgraded_assignment=conn.execute('''SELECT id,slot FROM player_general_units
-                WHERE general_id=%s AND unit_id=%s AND status='active' ORDER BY slot LIMIT 1 FOR UPDATE''',
+                WHERE general_id=%s AND unit_id=%s ORDER BY slot LIMIT 1 FOR UPDATE''',
                 (general_id,requirement[0])).fetchone()
             if not upgraded_assignment: raise HTTPException(409,'Для апгрейда отсутствует требуемый предыдущий юнит')
             slot=upgraded_assignment[1]

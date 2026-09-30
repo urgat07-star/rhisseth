@@ -77,6 +77,7 @@ class ArmyTests(unittest.TestCase):
         self.assertEqual(response.json()['slot'],3)
         self.assertTrue(any('UPDATE player_general_units SET unit_id=' in call.args[0] for call in conn.execute.call_args_list))
         self.assertFalse(any('INSERT INTO player_general_units' in call.args[0] for call in conn.execute.call_args_list))
+        self.assertFalse(any('SELECT slot FROM player_general_units' in call.args[0] for call in conn.execute.call_args_list), 'upgrade must not look for a free slot')
         self.assertTrue(any('UPDATE game_inventory SET quantity=quantity-' in call.args[0] and call.args[1][:3] == (1,2,'wood') for call in conn.execute.call_args_list))
         self.assertTrue(any('UPDATE game_inventory SET quantity=quantity-' in call.args[0] and call.args[1][:3] == (1,2,'cloth') for call in conn.execute.call_args_list))
 

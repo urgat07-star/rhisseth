@@ -165,7 +165,7 @@ function hireCard(item,kind,missing,onHire){
     :`Жизни ${item.health} · атака ${item.attack} · защита ${item.defense} · броня ${item.armor} · дальность ${item.attack_range}`;
   const price=document.createElement('p');price.className='hire-card-price';price.textContent=costText(kind==='general'?{gold:armyState.general_price}:item.cost);
   const reason=document.createElement('p');reason.className='hire-card-missing';reason.textContent=missing.length?`Не хватает: ${missing.join(' · ')}`:'Доступен для найма';
-  const button=document.createElement('button');button.type='button';button.className='save';button.textContent=kind==='general'?'Нанять генерала':item.upgrade_from_name?`Улучшить из «${item.upgrade_from_name}»`:'Нанять юнита';button.disabled=missing.length>0;button.addEventListener('click',onHire);
+  const button=document.createElement('button');button.type='button';button.className='save';button.textContent=kind==='general'?'Нанять генерала':item.upgrade_from_name?`Улучшить из «${item.upgrade_from_name}»`:'Нанять юнита';button.disabled=missing.length>0;button.addEventListener('click',()=>onHire(button));
   card.append(figure,title,stats,price,reason,button);return card;
 }
 /** Перестраивает карточки генералов и доступные действия армии. */
@@ -222,8 +222,11 @@ function openUnitHire(generalId) {
     const missing=missingCost(unit.cost);
     if(unit.upgrade_from_unit_id&&!general.units.some(existing=>existing.id===unit.upgrade_from_unit_id))missing.push(`нужен юнит «${unit.upgrade_from_name}»`);
     if(!unit.upgrade_from_unit_id&&general.units.length>=5)missing.push('в армии нет свободного места');
-    catalogue.append(hireCard(unit,'unit',missing,async()=>{
-      if(busy)return;busy=true;
+    catalogue.append(hireCard(unit,'unit',missing,async button=>{
+      button.disabled=true;
+      document.querySelector('#unit-hire-status').textContent=unit.upgrade_from_unit_id
+        ?`Улучшаем «${unit.upgrade_from_name}» до «${unit.name}»…`
+        :`Нанимаем «${unit.name}»…`;
       try{
         const result=await api(`/api/cabinet/army/generals/${generalId}/units`,'POST',{unit_id:unit.id});
         await loadArmy();openGeneral(generalId);openUnitHire(generalId);
@@ -232,7 +235,7 @@ function openUnitHire(generalId) {
           :`Юнит «${unit.name}» нанят. Списано: ${costText(unit.cost)}.`;
         document.querySelector('#unit-hire-status').textContent=message;status.textContent=message;
       }
-      catch(error){document.querySelector('#unit-hire-status').textContent=`Найм не выполнен: ${error.message}`;}finally{busy=false;}
+      catch(error){document.querySelector('#unit-hire-status').textContent=`Найм не выполнен: ${error.message}`;button.disabled=false;}
     }));
   });
   const hireDialog=document.querySelector('#unit-hire-dialog');if(!hireDialog.open)hireDialog.showModal();
