@@ -11,28 +11,29 @@
 </head>
 
 <body>
-    <header class="topbar">
-        <div class="logo">
-            <img src="logo.webp" class="logo-img">
-        </div>
-        <div class="goback-play">
-            <a href="index.html">&#127758;&nbsp;В Игру</a>
-        </div>
-        <div class="exit">
-            <button id="logout" type="button">⍈ &nbsp;<span id="user-status"></span></button>
-        </div>
+  <header class="topbar">
+    <div class="logo">
+       <img src="logo.webp" class="logo-img">
+    </div>
+    <div class="goback-play">
+        <a href="index.html">&#127758;&nbsp;В Игру</a>
+    </div>
+    <div class="exit">
+        <button id="logout" type="button">⍈ &nbsp;<span id="user-status"></span></button>
+    </div>
   </header>
   
   <main class="cabinet-page">
-        <p id="cabinet-status" role="status" aria-live="polite">Загрузка кабинета…</p>
-        <section id="barony-summary" class="player-panel cabinet-summary" hidden>
-            <img id="cabinet-crest" alt="Герб вашей баронии">
-            <div class="friherra">
-                <p id="cabinet-title" class="friherra-title"></p>
-                <h2 id="cabinet-name" class="friherra-name"></h2>
-                <p id="cabinet-cells" class="friherra-lens"></p>
-            </div>
-        </section>
+    <p id="cabinet-status" role="status" aria-live="polite">Загрузка кабинета…</p>
+
+    <section id="barony-summary" class="player-panel cabinet-summary" hidden>
+      <img id="cabinet-crest" alt="Герб вашей баронии">
+      <div class="friherra">
+        <p id="cabinet-title" class="friherra-title"></p>
+        <h2 id="cabinet-name" class="friherra-name"></h2>
+        <p id="cabinet-cells" class="friherra-lens"></p>
+      </div>
+    </section>
         
     <nav class="cabinet-tabs" role="tablist" aria-label="Разделы личного кабинета">
       <button id="tab-barony" role="tab" aria-controls="panel-barony" aria-selected="true">Барония</button>
@@ -41,6 +42,8 @@
       <button id="tab-diplomacy" role="tab" aria-controls="panel-diplomacy" aria-selected="false" tabindex="-1">Дипломатия</button>
       <button id="tab-settings" role="tab" aria-controls="panel-settings" aria-selected="false" tabindex="-1">Настройки</button>
     </nav>
+    
+    <!-- НАСТРОЙКИ -->
     <section id="panel-settings" class="player-panel" role="tabpanel" aria-labelledby="tab-settings" hidden>
       <h2>Управление аккаунтом</h2>
       <form id="account-form">
@@ -49,53 +52,176 @@
           <label>E-mail <input name="email" type="email" required maxlength="255" autocomplete="email"></label>
           <label>Текущий пароль <input name="current_password" type="password" required autocomplete="current-password"></label>
         </div>
-        <fieldset><legend>Смена пароля</legend><p>Оставьте поля пустыми, чтобы сохранить текущий пароль.</p><div class="player-fields">
-          <label>Новый пароль <input name="password" type="password" minlength="8" autocomplete="new-password"></label>
-          <label>Подтверждение нового пароля <input name="password_confirm" type="password" minlength="8" autocomplete="new-password"></label>
-        </div></fieldset>
+        <fieldset>
+          <legend>Смена пароля</legend>
+          <p>Оставьте поля пустыми, чтобы сохранить текущий пароль.</p>
+          <div class="player-fields">
+            <label>Новый пароль <input name="password" type="password" minlength="8" autocomplete="new-password"></label>
+            <label>Подтверждение нового пароля <input name="password_confirm" type="password" minlength="8" autocomplete="new-password"></label>
+          </div>
+        </fieldset>
         <p class="hint">Для сохранения нужен текущий пароль. После изменения остальные сеансы входа будут завершены.</p>
         <button class="save" type="submit">Сохранить аккаунт</button>
       </form>
-      <div id="no-barony" hidden><h2>У вас нет баронии</h2><p>Свободную территорию можно выбрать самостоятельно или получить случайный набор гексов.</p><a href="create-barony.html">Создать баронию</a></div>
+      <div id="no-barony" hidden>
+        <h2>У вас нет баронии</h2>
+        <p>Свободную территорию можно выбрать самостоятельно или получить случайный набор гексов.</p>
+        <a href="create-barony.html">Создать баронию</a>
+      </div>
       <div id="barony-settings" hidden>
-        <h2>Название баронии</h2><form id="barony-name-form"><label>Название <input name="name" required maxlength="200"></label><button class="save" type="submit">Сохранить название</button></form>
-        <h2>Герб и цвет баронии</h2><form id="crest-form"><fieldset><legend>Выберите герб</legend><div id="crest-list" class="crest-list"></div></fieldset><label class="color-choice">Цвет внешних границ <input id="crest-color" type="color"></label><button class="save" type="submit">Сохранить герб и цвет</button></form>
-        <section class="barony-danger"><h2>Отказ от баронии</h2><p>Барония исчезнет с карты. Её гексы станут свободными и смогут перейти к другим игрокам. Аккаунт останется у вас.</p><button id="open-abandon" class="danger-button" type="button">Отказаться от баронии</button></section>
+        <h2>Название баронии</h2>
+          <form id="barony-name-form">
+            <label>Название <input name="name" required maxlength="200"></label>
+            <button class="save" type="submit">Сохранить название</button>
+          </form>
+          <h2>Герб и цвет баронии</h2>
+          <form id="crest-form">
+            <fieldset>
+              <legend>Выберите герб</legend>
+              <div id="crest-list" class="crest-list"></div>
+            </fieldset>
+            <label class="color-choice">Цвет внешних границ <input id="crest-color" type="color"></label>
+            <button class="save" type="submit">Сохранить герб и цвет</button>
+          </form>
+            
+          <section class="barony-danger">
+            <h2>Отказ от баронии</h2>
+            <p>Барония исчезнет с карты. Её гексы станут свободными и смогут перейти к другим игрокам. Аккаунт останется у вас.</p>
+            <button id="open-abandon" class="danger-button" type="button">Отказаться от баронии</button>
+          </section>
+        </div>
+    </section>
+
+    <!-- АРМИЯ -->
+    <section id="panel-army" class="player-panel" role="tabpanel" aria-labelledby="tab-army" hidden>
+      <div class="army-heading">
+        <div>
+          <h2>Ваши генералы</h2>
+          <p>Нажмите на генерала, чтобы посмотреть состав армии и нанять бойцов.</p>
+          <p id="army-gold"></p>
+        </div>
+      </div>
+      <div id="generals-list" class="generals-list hired-generals"></div>
+      <section class="army-hire-section">
+        <h2>Найм генерала</h2>
+          <p class="hint">Недоступные кандидаты перечёркнуты; под карточкой указано, чего не хватает.</p>
+          <div id="general-catalogue" class="hire-catalogue"></div>
+      </section>
+    </section>
+    
+    <!-- ЭКОНОМИКА -->
+    <section id="panel-economy" class="player-panel economy-panel" role="tabpanel" aria-labelledby="tab-economy" hidden>
+      <div class="economy-content">
+        <h2>Экономика</h2>
+        <div class="economy-totals" aria-label="Общие показатели">
+          <div>
+            <span>Золото</span><strong id="economy-gold">0</strong>
+          </div>
+          <div>
+            <span>ИТОГО ЕДЫ</span><strong id="economy-food">0</strong>
+          </div>
+          <div>
+            <span>Холопы</span><strong id="economy-population">0</strong>
+          </div>
+        </div>
+
+        <section class="economy-block">
+          <h3>Ресурсы земель</h3>
+          <p class="hint">Федеральный запас и годовой прирост по ресурсам, находящимся на гексах баронии.</p>
+          <dl id="resource-stats" class="economy-resource-list-hex"></dl>
+        </section>
+        
+        <section class="economy-block">
+          <h3>Федеральные запасы</h3>
+          <dl id="inventory-stats" class="economy-resource-list-federal"><div></div></dl>
+        </section>
+        
+        <section class="economy-block">
+          <h3>Резерв крестьян</h3>
+          <p id="peasant-reserve"></p>
+          <form id="peasant-transfer-form">
+            <label>Q <input name="q" type="number" required></label>
+            <label>R <input name="r" type="number" required></label>
+            <label>Количество <input name="quantity" type="number" min="1" required></label>
+            <button type="submit">Отправить на свой гекс</button>
+          </form>
+          <p id="peasant-transfer-status" role="status"></p>
+          <ul id="peasant-hexes"></ul>
+        </section>
+        
+        <section class="economy-block">
+          <h3>Торговля и налоги</h3>
+          <p>Торговля и налоги ещё в разработке.</p>
+        </section>
       </div>
     </section>
-    <section id="panel-army" class="player-panel" role="tabpanel" aria-labelledby="tab-army" hidden>
-      <div class="army-heading"><div><h2>Ваши генералы</h2><p>Нажмите на генерала, чтобы посмотреть состав армии и нанять бойцов.</p><p id="army-gold"></p></div></div>
-      <div id="generals-list" class="generals-list hired-generals"></div>
-      <section class="army-hire-section"><h2>Найм генерала</h2><p class="hint">Недоступные кандидаты перечёркнуты; под карточкой указано, чего не хватает.</p><div id="general-catalogue" class="hire-catalogue"></div></section>
+
+    <!-- ДИПЛОМАТИЯ -->
+    <section id="panel-diplomacy" class="player-panel" role="tabpanel" aria-labelledby="tab-diplomacy" hidden>
+      <h2>Дипломатия</h2>
+      <p>Выкуп пленного генерала: 100 золотых.</p>
+      <div id="captive-generals"></div>
     </section>
-    <section id="panel-economy" class="player-panel economy-panel" role="tabpanel" aria-labelledby="tab-economy" hidden><div class="economy-content"><h2>Экономика</h2><div class="economy-totals" aria-label="Общие показатели"><div><span>Золото</span><strong id="economy-gold">0</strong></div><div><span>ИТОГО ЕДЫ</span><strong id="economy-food">0</strong></div><div><span>Холопы</span><strong id="economy-population">0</strong></div></div><section class="economy-block"><h3>Ресурсы земель</h3><p class="hint">Федеральный запас и годовой прирост по ресурсам, находящимся на гексах баронии.</p><dl id="resource-stats" class="economy-resource-list"></dl></section><section class="economy-block"><h3>Федеральные запасы</h3><dl id="inventory-stats" class="economy-resource-list"></dl></section><section class="economy-block"><h3>Резерв крестьян</h3><p id="peasant-reserve"></p><form id="peasant-transfer-form"><label>Q <input name="q" type="number" required></label><label>R <input name="r" type="number" required></label><label>Количество <input name="quantity" type="number" min="1" required></label><button type="submit">Отправить на свой гекс</button></form><p id="peasant-transfer-status" role="status"></p><ul id="peasant-hexes"></ul></section><section class="economy-block"><h3>Торговля и налоги</h3><p>Торговля и налоги ещё в разработке.</p></section></div></section>
-    <section id="panel-diplomacy" class="player-panel" role="tabpanel" aria-labelledby="tab-diplomacy" hidden><h2>Дипломатия</h2><p>Выкуп пленного генерала: 100 золотых.</p><div id="captive-generals"></div></section>
+
+    <!-- БАРОНИЯ -->
     <section id="panel-barony" class="player-panel" role="tabpanel" aria-labelledby="tab-barony">
       <div id="barony-content" hidden>
-        <h2>Статистика баронии</h2><button id="refresh-cabinet" type="button">Обновить статистику</button>
+        <h2>Статистика баронии</h2>
+        <button id="refresh-cabinet" type="button">Обновить статистику</button>
         <div id="barony-totals" class="stat-grid"></div>
-        <div class="stat-grid"><section><h3>Категории гексов</h3><dl id="category-stats"></dl></section><section><h3>Ландшафты</h3><dl id="landscape-stats"></dl></section></div>
-        <h3>Население и армии</h3><p>Учёт населения и управление армиями ещё в разработке.</p>
-        <h3>Параметры гексов</h3><p class="hint">Средние и диапазоны рассчитаны по известным оценкам. Неописанные параметры в расчёт не входят.</p>
+
+        <div class="stat-grid">
+          <section>
+            <h3>Категории гексов</h3>
+            <dl id="category-stats"></dl>
+          </section>
+          <section>
+            <h3>Ландшафты</h3>
+            <dl id="landscape-stats"></dl>
+          </section>
+        </div>
+
+        <h3>Население и армии</h3>
+        <p>Учёт населения и управление армиями ещё в разработке.</p>
+        <h3>Параметры гексов</h3>
+        <p class="hint">Средние и диапазоны рассчитаны по известным оценкам. Неописанные параметры в расчёт не входят.</p>
         <div id="rating-stats" class="stat-grid"></div>
-        <h3>Полные сведения по каждому гексу</h3><div id="barony-hexes" class="stat-grid"></div>
+        <h3>Полные сведения по каждому гексу</h3>
+        <div id="barony-hexes" class="stat-grid"></div>
       </div>
     </section>
+
+    <!-- ОТКАЗ ОТ БАРОНИИ-->
     <dialog id="abandon-dialog" aria-labelledby="abandon-title">
-      <h2 id="abandon-title">Подтвердите отказ от баронии</h2><p>Вы отказываетесь от <strong id="abandon-name"></strong>. Все её гексы, принадлежащие вам, станут свободными для других игроков.</p>
-      <form id="abandon-form"><label>Введите название баронии <input id="abandon-confirmation" required maxlength="200" autocomplete="off"></label><label><input id="abandon-confirmed" type="checkbox" required> Подтверждаю отказ и освобождение территории.</label><p id="abandon-status" role="status"></p><div class="dialog-actions"><button id="cancel-abandon" type="button">Отмена</button><button id="confirm-abandon" class="danger-button" type="submit" disabled>Подтвердить отказ</button></div></form>
+      <h2 id="abandon-title">Подтвердите отказ от баронии</h2>
+      <p>Вы отказываетесь от <strong id="abandon-name"></strong>. Все её гексы, принадлежащие вам, станут свободными для других игроков.</p>
+      <form id="abandon-form">
+        <label>Введите название баронии <input id="abandon-confirmation" required maxlength="200" autocomplete="off"></label>
+        <label><input id="abandon-confirmed" type="checkbox" required> Подтверждаю отказ и освобождение территории.</label>
+        <p id="abandon-status" role="status"></p>
+        <div class="dialog-actions">
+          <button id="cancel-abandon" type="button">Отмена</button>
+          <button id="confirm-abandon" class="danger-button" type="submit" disabled>Подтвердить отказ</button>
+        </div>
+      </form>
     </dialog>
+
     <dialog id="general-dialog" class="general-dialog" aria-labelledby="general-title">
       <button id="close-general" class="close" type="button" aria-label="Закрыть">×</button>
-      <h2 id="general-title">Армия генерала</h2><p id="general-count"></p>
+      <h2 id="general-title">Армия генерала</h2>
+      <p id="general-count"></p>
       <div id="general-units" class="general-units"></div>
       <button id="open-unit-hire" class="save" type="button">Нанять или улучшить юнита</button>
     </dialog>
+
     <dialog id="unit-hire-dialog" class="general-dialog hire-dialog" aria-labelledby="unit-hire-title">
       <button id="close-unit-hire" class="close" type="button" aria-label="Закрыть">×</button>
-      <h2 id="unit-hire-title">Найм юнитов</h2><p id="unit-hire-status" role="status" aria-live="polite"></p>
+      <h2 id="unit-hire-title">Найм юнитов</h2>
+      <p id="unit-hire-status" role="status" aria-live="polite"></p>
       <div id="unit-hire-catalogue" class="hire-catalogue"></div>
-      <div class="dialog-actions"><button id="close-unit-hire-action" type="button">Закрыть</button></div>
+      <div class="dialog-actions">
+        <button id="close-unit-hire-action" type="button">Закрыть</button>
+      </div>
     </dialog>
   </main>
 

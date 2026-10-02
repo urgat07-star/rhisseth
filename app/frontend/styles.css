@@ -118,7 +118,6 @@ main { padding: clamp(12px, 2vw, 28px); }
   font-size: 13px;
   pointer-events: none;
   max-width: calc(100vw - 16px);
-  
   align-content: start;
 }
 .game-panel strong { color: #f2df9c; text-align: center; font-size: 18px; }
@@ -414,12 +413,18 @@ footer code { color: #9da493; }
 .economy-totals span { color: #d6c891; }
 .economy-totals strong { color: #fff4bd; font-size: 1.45rem; }
 .economy-block { margin: 14px 0; padding: 14px; border: 1px solid #786c43; border-radius: 8px; background: rgba(7,13,9,.82); }
-.cabinet-page .economy-resource-list { display: grid; gap: 6px; margin-top: 10px; }
-.cabinet-page .economy-resource-list > div { grid-template-columns: minmax(0,1fr) auto; padding: 9px 12px; border-bottom: 1px solid #c2b47a; }
-.economy-resource-list > div:hover,
-.economy-resource-list > div:focus-within { border-color: #e6d18a; background: rgba(39,48,28,.94); }
-.economy-resource-list dt { font-weight: 700; }
-.economy-resource-list dd { color: #fff4bd; font-weight: 700; }
+.cabinet-page .economy-resource-list-hex { display: grid; grid-auto-flow: column; gap: 6px; margin-top: 10px; }
+.cabinet-page .economy-resource-list-hex > div { grid-template-columns: minmax(0,1fr); padding: 9px 12px; border: 1px solid #c2b47a; border-radius: 5px; }
+.economy-resource-list-hex > div:hover,
+.economy-resource-list-hex > div:focus-within { border-color: #e6d18a; background: rgba(39,48,28,.94); }
+.economy-resource-list-hex dt { font-weight: 700; }
+.economy-resource-list-hex dd { color: #fff4bd; font-weight: 700; }
+
+.cabinet-page .economy-resource-list-federal { grid-template-columns: minmax(0,1fr); padding: 9px 12px; border-bottom: 1px solid #c2b47a; }
+.economy-resource-list-federal > div:hover,
+.economy-resource-list-federal > div:focus-within { border-color: #e6d18a; background: rgba(39,48,28,.94); }
+.economy-resource-list-federal dt { font-weight: 700; }
+.economy-resource-list-federal dd { color: #fff4bd; font-weight: 700; }
 
 .barony-danger { margin-top: 28px; border-top: 1px solid #bd5b55; padding-top: 12px; }
 .danger-button { padding: 10px 14px; border: 1px solid #db8275; border-radius: 4px; background: #792e27; color: #fff; cursor: pointer; margin-top: 12px; }
