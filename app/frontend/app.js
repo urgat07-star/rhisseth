@@ -673,7 +673,7 @@ async function battleCommand(path,payload,preserveUnitId=null) {
   renderBattle();
   if(game.selectedUnit){
     const remaining=Math.max(0,Number(game.selectedUnit.speed||0)-Number(game.selectedUnit.movement_spent||0));
-    document.querySelector('#battle-status').textContent=`${game.selectedUnit.name}: осталось движения — ${remaining}. Можно выбрать цель для выстрела или продолжить движение.`;
+    document.querySelector('#battle-status').textContent=`${game.selectedUnit.name}: потрачено движения — ${game.selectedUnit.movement_spent}, осталось — ${remaining}. Выберите цель для атаки.`;
   }
 }
 async function openBattle(_enemy,purpose='capture') {

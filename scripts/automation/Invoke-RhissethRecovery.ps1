@@ -1,7 +1,7 @@
 # Release review 2026-09-18 (0.0.2): Control reviewed recovery operations through pinned runner SSH with audit logs.
 # Details: docs/releases/0.0.2-changes-2026-09-18.md.
 #requires -Version 7.0
-param([ValidateSet('inventory','setup-storage','backup','test-access','schedule','list','inspect-start-zones','inspect-vds-backups','inspect-barony-dumps','inspect-barony-zones','validate-v03','diagnose-storage','preflight-test','restore-test','validate-test','reboot-test','verify-scripts','collect-evidence','run-scheduled','inspect-version','diagnose-memory','backup-summary','pin-target','finalize-test','progress-test','external-check','source-git-status','network-test','cleanup-test')][string]$Operation = 'inventory', [ValidatePattern('^(?:(?:release/)?v?\d+\.\d+\.\d+)?$')][string]$ApprovedRef = '')
+param([ValidateSet('inventory','setup-storage','backup','test-access','schedule','list','inspect-start-zones','inspect-vds-backups','inspect-vps-storage','migrate-backups-stage','inspect-barony-dumps','inspect-barony-zones','validate-v03','diagnose-storage','preflight-test','restore-test','validate-test','reboot-test','verify-scripts','collect-evidence','run-scheduled','inspect-version','diagnose-memory','backup-summary','pin-target','finalize-test','progress-test','external-check','source-git-status','network-test','cleanup-test')][string]$Operation = 'inventory', [ValidatePattern('^(?:(?:release/)?v?\d+\.\d+\.\d+)?$')][string]$ApprovedRef = '')
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $workspaceRoot = (Resolve-Path (Join-Path $root '..')).Path
@@ -43,7 +43,7 @@ try {
         "Target validation: VDS 62.113.109.168; read-only production backup and temporary database; exit_code=$code" | Add-Content -LiteralPath $log
         exit $code
     }
-    $names = @('Inspect-RhissethRecoveryFromRunner.py','Inspect-RhissethStartZones.py','Inspect-RhissethVdsBackups.py','Run-RhissethRecovery.py','rhisseth_backup.py','rhisseth_storage.py','Bootstrap-RhissethStorage.py','rhisseth-backup.service','rhisseth-backup.timer','rhisseth_deploy.py','rhisseth_validate.py','Inspect-RhissethMemory.sh','Finalize-RhissethRecovery.py','Read-RhissethRecoveryProgress.py')
+    $names = @('Inspect-RhissethRecoveryFromRunner.py','Inspect-RhissethStartZones.py','Inspect-RhissethVdsBackups.py','Inspect-RhissethVpsStorage.py','Migrate-RhissethBackups.py','Run-RhissethRecovery.py','rhisseth_backup.py','rhisseth_storage.py','Bootstrap-RhissethStorage.py','rhisseth-backup.service','rhisseth-backup.timer','rhisseth_deploy.py','rhisseth_validate.py','Inspect-RhissethMemory.sh','Finalize-RhissethRecovery.py','Read-RhissethRecoveryProgress.py')
     foreach ($name in $names) {
         & scp.exe @opts "$root/scripts/automation/$name" "avalon@10.210.52.128:/home/avalon/rhisseth.ru/scripts/automation/$name"
         if ($LASTEXITCODE -ne 0) { throw 'Reviewed script transfer failed' }
@@ -52,9 +52,10 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Runner tests directory preparation failed' }
     & scp.exe @opts "$root/tests/test_recovery_safety.py" 'avalon@10.210.52.128:/home/avalon/rhisseth.ru/tests/test_recovery_safety.py'
     if ($LASTEXITCODE -ne 0) { throw 'Safety checks transfer failed' }
-    $remote = if ($Operation -eq 'inventory') { '/home/avalon/rhisseth.ru/scripts/automation/Inspect-RhissethRecoveryFromRunner.py' } elseif ($Operation -eq 'inspect-start-zones') { '/home/avalon/rhisseth.ru/scripts/automation/Inspect-RhissethStartZones.py' } elseif ($Operation -in @('inspect-vds-backups','inspect-barony-dumps','inspect-barony-zones')) { '/home/avalon/rhisseth.ru/scripts/automation/Inspect-RhissethVdsBackups.py' } else { '/home/avalon/rhisseth.ru/scripts/automation/Run-RhissethRecovery.py' }
+    $remote = if ($Operation -eq 'inventory') { '/home/avalon/rhisseth.ru/scripts/automation/Inspect-RhissethRecoveryFromRunner.py' } elseif ($Operation -eq 'inspect-start-zones') { '/home/avalon/rhisseth.ru/scripts/automation/Inspect-RhissethStartZones.py' } elseif ($Operation -eq 'inspect-vps-storage') { '/home/avalon/rhisseth.ru/scripts/automation/Inspect-RhissethVpsStorage.py' } elseif ($Operation -eq 'migrate-backups-stage') { '/home/avalon/rhisseth.ru/scripts/automation/Migrate-RhissethBackups.py' } elseif ($Operation -in @('inspect-vds-backups','inspect-barony-dumps','inspect-barony-zones')) { '/home/avalon/rhisseth.ru/scripts/automation/Inspect-RhissethVdsBackups.py' } else { '/home/avalon/rhisseth.ru/scripts/automation/Run-RhissethRecovery.py' }
     $command = "python3 $remote"
-    if ($Operation -eq 'inspect-barony-dumps') { $command += ' --counts' }
+    if ($Operation -eq 'migrate-backups-stage') { $command += ' stage' }
+    elseif ($Operation -eq 'inspect-barony-dumps') { $command += ' --counts' }
     elseif ($Operation -eq 'inspect-barony-zones') { $command += ' --zones' }
     elseif ($Operation -ne 'inventory' -and $Operation -ne 'inspect-start-zones' -and $Operation -ne 'inspect-vds-backups') { $command += " $Operation" }
     if ($ApprovedRef) {

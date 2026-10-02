@@ -70,9 +70,19 @@ def _activate_general(conn,battle,units):
         _event(conn,battle,'general_activated',{'unit_id':general['id']})
 
 
+def _can_attack_after_move(unit,units):
+    if unit['side']!='attacker' or not unit['moved']:
+        return False
+    if unit['attack_range']>2 and unit.get('movement_spent',unit['speed'])>=unit['speed']:
+        return False
+    return any(target['side']=='defender' and target['health']>0
+               and 0<distance((unit['x'],unit['y']),(target['x'],target['y']))<=unit['attack_range']
+               for target in units)
+
+
 def _next_actor(battle,units):
     available=[u for u in units if u['health']>0 and u['active'] and not u['attacked'] and not u.get('is_wall')
-               and not (u['side']=='attacker' and u['attack_range']>2 and u['moved'] and u.get('movement_spent',u['speed'])>=u['speed'])]
+               and (not u['moved'] or _can_attack_after_move(u,units))]
     if not available:return None,[]
     bonus=2 if battle['round_number']==1 else 1 if battle['round_number']==2 else 0
     score=max(u['initiative']+(bonus if u['side']=='attacker' else 0) for u in available)
@@ -568,7 +578,7 @@ async def move_unit(battle_id:int,unit_id:int,request:Request):
                      (data['x'],data['y'],steps,unit_id))
         _event(conn,battle,'move',{'unit_id':unit_id,'x':data['x'],'y':data['y']})
         unit['x'],unit['y']=goal;unit['moved']=True;unit['movement_spent']=steps
-        if unit['attack_range']>2 and steps>=unit['speed']:
+        if not _can_attack_after_move(unit,units):
             unit['attacked']=True
             conn.execute('UPDATE game_battle_units SET attacked=true WHERE id=%s',(unit_id,))
             _record_side(conn,battle,'attacker')

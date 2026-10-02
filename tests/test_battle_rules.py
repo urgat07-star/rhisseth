@@ -104,13 +104,45 @@ class BattleRuleTests(unittest.TestCase):
         battle={'round_number':1,'last_side':''}
         units=[
             {'id':1,'side':'attacker','initiative':4,'active':True,'health':10,'attacked':False,
-             'attack_range':3,'moved':True,'movement_spent':1,'speed':3},
+             'attack_range':3,'moved':True,'movement_spent':1,'speed':3,'x':1,'y':1},
             {'id':2,'side':'attacker','initiative':1,'active':True,'health':10,'attacked':False,
-             'attack_range':2,'moved':False,'movement_spent':0,'speed':1},
+             'attack_range':2,'moved':False,'movement_spent':0,'speed':1,'x':0,'y':2},
+            {'id':3,'side':'defender','initiative':1,'active':True,'health':10,'attacked':True,
+             'attack_range':1,'moved':False,'movement_spent':0,'speed':1,'x':3,'y':1},
         ]
         side,eligible=_next_actor(battle,units)
         self.assertEqual((side,[unit['id'] for unit in eligible]),('attacker',[1]))
         units[0]['attacked']=True
+        side,eligible=_next_actor(battle,units)
+        self.assertEqual((side,[unit['id'] for unit in eligible]),('attacker',[2]))
+
+    def test_moved_high_initiative_unit_without_target_does_not_block_allies(self):
+        battle={'round_number':1,'last_side':'attacker'}
+        units=[
+            {'id':1,'side':'attacker','initiative':4,'active':True,'health':10,'attacked':False,
+             'attack_range':1,'moved':True,'movement_spent':1,'speed':2,'x':1,'y':1},
+            {'id':2,'side':'attacker','initiative':1,'active':True,'health':10,'attacked':False,
+             'attack_range':1,'moved':False,'movement_spent':0,'speed':1,'x':0,'y':2},
+            {'id':3,'side':'defender','initiative':1,'active':True,'health':10,'attacked':True,
+             'attack_range':1,'moved':False,'movement_spent':0,'speed':1,'x':7,'y':5},
+        ]
+        side,eligible=_next_actor(battle,units)
+        self.assertEqual((side,[unit['id'] for unit in eligible]),('attacker',[2]))
+
+    def test_moved_unit_keeps_activation_when_living_target_is_in_range(self):
+        battle={'round_number':1,'last_side':''}
+        units=[
+            {'id':1,'side':'attacker','initiative':4,'active':True,'health':10,'attacked':False,
+             'attack_range':1,'moved':True,'movement_spent':1,'speed':2,'x':2,'y':2},
+            {'id':2,'side':'attacker','initiative':1,'active':True,'health':10,'attacked':False,
+             'attack_range':1,'moved':False,'movement_spent':0,'speed':1,'x':0,'y':2},
+            {'id':3,'side':'defender','initiative':1,'active':True,'health':10,'attacked':False,
+             'attack_range':1,'moved':False,'movement_spent':0,'speed':1,'x':3,'y':2},
+        ]
+        side,eligible=_next_actor(battle,units)
+        self.assertEqual((side,[unit['id'] for unit in eligible]),('attacker',[1]))
+
+        units[2]['health']=0
         side,eligible=_next_actor(battle,units)
         self.assertEqual((side,[unit['id'] for unit in eligible]),('attacker',[2]))
 
