@@ -97,7 +97,7 @@ function renderCabinet() {
     const entries=Object.entries(stats[key]); lineList(document.getElementById(id),entries.length ? entries : [['Описание','Нет данных']]);
   }
   lineList(document.querySelector('#resource-stats'),Object.entries(economy.resources).map(([name,value])=>[
-    name,`На складе: ${value.quantity}${value.annual_growth>0?` · ⬆ +${value.annual_growth}/год`:''}`]));
+    name,`На складе: ${value.quantity}${value.annual_growth>0?` · ⬆ +${value.annual_growth}/г.`:''}`]));
   document.querySelector('#rating-stats').replaceChildren(...Object.entries(stats.ratings).map(([field,value])=>statCard(field,[['Среднее',value.mean===null ? null : `${value.mean} / ${value.maximum}`],['Диапазон',value.min===null ? null : `${value.min}–${value.max}`],['Известно гексов',value.known],['Нет данных',value.missing]])));
   document.querySelector('#barony-hexes').replaceChildren(...barony.hexes.map(row=>{
     const details=document.createElement('details'), summary=document.createElement('summary'), dl=document.createElement('dl');

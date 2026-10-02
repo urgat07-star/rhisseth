@@ -100,7 +100,7 @@
 			<ol id="battle-log" class="battle-log" aria-live="polite"></ol>
 			<div class="battle-lines"><div id="battle-grid" class="battle-grid" aria-label="Тактическое поле 8 на 6"></div></div>
 			<div class="battle-controls"><div class="battle-controls-left"><button id="battle-deploy" type="button">Начать бой и сохранить расстановку</button>
-			<button id="battle-end-round" type="button">Завершить раунд</button>
+			<button id="battle-end-round" type="button">Завершить раунд (Пробел)</button>
 			</div><div class="battle-controls-right"><button id="battle-retreat" type="button">Отступить</button>
 			<button id="battle-destroy" type="button" hidden>Разрушить постройку</button>
 			<button id="finish-battle" class="finish-battle" type="button">Закончить бой</button></div></div>
@@ -123,6 +123,8 @@
 	<footer id="data-status">Final V2 · подключение к PostgreSQL…</footer>
     <script src="app.js?v=fix-0.4.3-counterattack" defer></script>
 	<script>
+	document.addEventListener('keydown', function(event) { // Проверяем, что нажат именно пробел 
+	if (event.code === 'Space') { document.getElementById('battle-end-round').click(); } });
     const pageModal = document.getElementById('page-modal');
     const pageModalFrame = document.getElementById('page-modal-frame');
     window.openPageModal = function openPageModal(url) {
