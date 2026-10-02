@@ -345,7 +345,8 @@ footer code { color: #9da493; }
    10. PLAYER PANEL (выбор игрока)
    ============================================================ */
 .player-panel { max-width: 1600px; margin: 0 auto 20px; padding: 18px; border: 1px solid #75806a77; border-radius: 8px; }
-.player-panel form { display: grid; gap: 14px; }
+.player-panel form { display: grid; gap: 14px; grid-auto-flow: column; justify-content: center;}
+FORM.account-form {display: grid; gap: 14px; grid-auto-flow: row;justify-content: stretch;}
 .player-panel p { margin: 0; }
 
 .player-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
@@ -373,7 +374,7 @@ footer code { color: #9da493; }
 .cabinet-summary img { width: 110px; height: 110px; object-fit: contain; }
 .cabinet-summary > div { min-width: 0; overflow-wrap: anywhere; }
 
-.cabinet-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0; }
+.cabinet-tabs { display: flex; flex-wrap: wrap; gap: 8px;justify-content: center; margin: 18px 0; }
 .cabinet-tabs button { padding: 10px 14px; border: 1px solid #75806a; border-radius: 5px; background: #202a22; color: #e9ecdf; cursor: pointer; }
 .cabinet-tabs button[aria-selected=true] { background: #4d5134; border-color: #e0d49f; }
 
@@ -384,6 +385,8 @@ footer code { color: #9da493; }
 .cabinet-page dl div { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 5px 0; border-bottom: 1px solid #75806a33; overflow-wrap: anywhere; }
 .cabinet-page dd { margin: 0; }
 .cabinet-page summary { cursor: pointer; overflow-wrap: anywhere; }
+
+input[type="number"] {display: block; margin-top: 5px;}
 .cabinet-page h3 { margin: 8px 0; }
 .economy-panel {
   position: relative;
@@ -400,7 +403,7 @@ footer code { color: #9da493; }
   background: linear-gradient(90deg, rgba(7,13,9,.94), rgba(9,14,10,.82) 60%, rgba(9,14,10,.58));
   pointer-events: none;
 }
-.economy-content { position: relative; z-index: 1; max-width: 780px; }
+.economy-content { position: relative; z-index: 1; }
 .economy-totals { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; margin: 16px 0; }
 .economy-totals > div,
 .economy-resource-list > div {
@@ -485,6 +488,8 @@ footer code { color: #9da493; }
 .cabinet-page dialog form { display: grid; gap: 14px; }
 #abandon-confirmation { width: 100%; margin-top: 8px; padding: 9px; }
 .dialog-actions { display: flex; justify-content: flex-end; align-items: center; gap: 14px; }
+
+FORM.crest-form {display: grid;grid-auto-flow: row;}
 
 
 /* ============================================================
@@ -592,7 +597,7 @@ th { position: sticky; top: 0; background: #252b24; }
 }
 
 .user-menu__list { list-style: none; margin: 0; padding: 0; }
-.user-menu__link,
+.user-menu__link, .user-submenu__link,
 .user-menu__button {
   display: block;
   width: 100%;
@@ -613,6 +618,7 @@ th { position: sticky; top: 0; background: #252b24; }
   color: #d9c795;
 }
 .user-menu__item + .user-menu__item { border-top: 1px solid #75806a22; }
+.user-submenu__link { border-top: 1px solid #75806a22; margin-left:7px;}
 
 
 /* ============================================================

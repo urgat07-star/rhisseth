@@ -46,7 +46,7 @@
     <!-- НАСТРОЙКИ -->
     <section id="panel-settings" class="player-panel" role="tabpanel" aria-labelledby="tab-settings" hidden>
       <h2>Управление аккаунтом</h2>
-      <form id="account-form">
+      <form id="account-form" class="account-form">
         <div class="player-fields">
           <label>Логин <input name="login" required minlength="3" maxlength="50" autocomplete="username"></label>
           <label>E-mail <input name="email" type="email" required maxlength="255" autocomplete="email"></label>
@@ -68,14 +68,14 @@
         <p>Свободную территорию можно выбрать самостоятельно или получить случайный набор гексов.</p>
         <a href="create-barony.html">Создать баронию</a>
       </div>
-      <div id="barony-settings" hidden>
+      <div id="barony-settings" class="barony-settings" hidden>
         <h2>Название баронии</h2>
           <form id="barony-name-form">
             <label>Название <input name="name" required maxlength="200"></label>
             <button class="save" type="submit">Сохранить название</button>
           </form>
           <h2>Герб и цвет баронии</h2>
-          <form id="crest-form">
+          <form id="crest-form" class="crest-form">
             <fieldset>
               <legend>Выберите герб</legend>
               <div id="crest-list" class="crest-list"></div>
