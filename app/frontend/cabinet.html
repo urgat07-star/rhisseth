@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Rhisseth — личный кабинет</title>
-    <link rel="stylesheet" href="styles.css?v=fix-0.4.2-3">
+    <link rel="stylesheet" href="styles.css?v=fix-0.4.5-inventory">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Infant:ital,wght@0,300..700;1,300..700&family=Irish+Grover&family=Libertinus+Sans:ital,wght@0,400;0,700;1,400&family=Monomakh&display=swap" rel="stylesheet">
@@ -131,9 +131,12 @@
           <dl id="resource-stats" class="economy-resource-list-hex"></dl>
         </section>
         
-        <section class="economy-block">
-          <h3>Федеральные запасы</h3>
-          <dl id="inventory-stats" class="economy-resource-list-federal"><div></div></dl>
+        <section class="economy-block economy-inventory">
+          <div class="economy-block-heading">
+            <h3>Федеральные запасы</h3>
+            <button id="inventory-toggle" class="economy-toggle" type="button" aria-expanded="false" aria-controls="inventory-stats">Раскрыть</button>
+          </div>
+          <dl id="inventory-stats" class="economy-resource-list-federal" hidden></dl>
         </section>
         
         <section class="economy-block">
@@ -225,6 +228,6 @@
     </dialog>
   </main>
 
-  <script src="cabinet.js?v=fix-0.4.3-counterattack" defer></script>
+  <script src="cabinet.js?v=fix-0.4.5-inventory" defer></script>
 </body>
 </html>

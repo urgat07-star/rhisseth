@@ -7,6 +7,15 @@ let csrf = '', state = null, armyState = {generals:[],catalogue:[],general_catal
 const status = document.querySelector('#cabinet-status');
 const dialog = document.querySelector('#abandon-dialog');
 const defaults = ['#b51f24','#2355aa','#257346','#50545b','#dec78a'];
+const inventoryToggle = document.querySelector('#inventory-toggle');
+const inventoryStats = document.querySelector('#inventory-stats');
+
+inventoryToggle.addEventListener('click',()=>{
+  const expanded=inventoryToggle.getAttribute('aria-expanded')==='true';
+  inventoryToggle.setAttribute('aria-expanded',String(!expanded));
+  inventoryToggle.textContent=expanded ? 'Раскрыть' : 'Свернуть';
+  inventoryStats.hidden=expanded;
+});
 
 async function api(path, method='GET', body) {
   const response = await fetch(path,{method,cache:'no-store',headers:body ? {'Content-Type':'application/json','X-CSRF-Token':csrf} : {},body:body ? JSON.stringify(body) : undefined});
@@ -172,10 +181,11 @@ function hireCard(item,kind,missing,onHire){
 function renderArmy() {
   const list=document.querySelector('#generals-list'); list.replaceChildren();
   document.querySelector('#army-gold').textContent=`Казна: ${armyState.gold} золотых`;
-  const inventory=document.querySelector('#inventory-stats');inventory.replaceChildren();
-  for(const [name,value] of Object.entries(armyState.inventory||{}).map(([code,quantity])=>[({food:'Еда',wood:'Дерево',cloth:'Ткань',bronze:'Бронза',leather:'Кожа',iron:'Железо',horse:'Лошади'})[code]||code,quantity])){
-    const term=document.createElement('dt'),definition=document.createElement('dd');term.textContent=name;definition.textContent=value;inventory.append(term,definition);
-  }
+  const inventory=Object.entries(armyState.inventory||{}).map(([code,quantity])=>[
+    ({food:'Еда',wood:'Дерево',cloth:'Ткань',bronze:'Бронза',leather:'Кожа',iron:'Железо',horse:'Лошади'})[code]||code,
+    `На складе: ${quantity}`
+  ]);
+  lineList(inventoryStats,inventory.length ? inventory : [['Запасы','Нет данных']]);
   if (!armyState.generals.length) { const empty=document.createElement('p'); empty.textContent='Генералы пока не наняты.'; list.append(empty); }
   armyState.generals.forEach(general=>{
     const card=document.createElement('article'); card.className='general-card'; card.tabIndex=0;

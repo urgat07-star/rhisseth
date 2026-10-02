@@ -420,7 +420,12 @@ footer code { color: #9da493; }
 .economy-resource-list-hex dt { font-weight: 700; }
 .economy-resource-list-hex dd { color: #fff4bd; font-weight: 700; }
 
-.cabinet-page .economy-resource-list-federal { grid-template-columns: minmax(0,1fr); padding: 9px 12px; border-bottom: 1px solid #c2b47a; }
+.economy-block-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.economy-toggle { padding: 7px 12px; border: 1px solid #c2b47a; border-radius: 5px; background: rgba(26,35,24,.94); color: #fff4bd; cursor: pointer; }
+.economy-toggle:hover,
+.economy-toggle:focus-visible { border-color: #e6d18a; background: rgba(39,48,28,.98); }
+.cabinet-page .economy-resource-list-federal { display: grid; grid-template-columns: repeat(auto-fit,minmax(120px,1fr)); gap: 6px; margin-top: 10px; }
+.cabinet-page .economy-resource-list-federal > div { grid-template-columns: minmax(0,1fr); padding: 9px 12px; border: 1px solid #c2b47a; border-radius: 5px; }
 .economy-resource-list-federal > div:hover,
 .economy-resource-list-federal > div:focus-within { border-color: #e6d18a; background: rgba(39,48,28,.94); }
 .economy-resource-list-federal dt { font-weight: 700; }
