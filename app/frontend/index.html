@@ -17,7 +17,7 @@
         <!--h1>Оперативная карта</h1-->
     </div>
     <div class="hint" id="editor-hint"></div>
-    <nav class="map-top-actions" aria-label="Основная навигация">
+    <nav class="map-top-actions" aria-label="Основная навигация" hidden>
       <a id="admin-link" class="ornate-link" href="/admin/hexes" hidden>Админка</a>
       <button id="start-game" class="ornate-link" type="button">Барония</button>
       <a id="user-status" class="ornate-link" href="cabinet.html#settings" title="Личный кабинет"></a>
@@ -29,10 +29,39 @@
         <div class="user-menu__dropdown">
             <ul class="user-menu__list">
                 <li class="user-menu__item">
+                    <a class="user-menu__link js-modal-page" href="cabinet.html#army">Армия</a>
+                </li>
+                <li class="user-menu__item">
+                    <a class="user-menu__link js-modal-page" href="cabinet.html#economy">Экономика</a>
+                </li>
+                <li class="user-menu__item">
+                    <a class="user-menu__link js-modal-page" href="cabinet.html#diplomacy">Дипломатия</a>
+                </li>
+                <li class="user-menu__item">
                     <a class="user-menu__link js-modal-page" href="cabinet.html#settings">Профиль</a>
                 </li>
                 <li class="user-menu__item" id="admin-menu-item" hidden>
-                    <a class="user-menu__link" href="/map">Управление</a>
+                    <span class="user-menu__link">Управление</span>
+                    <ul class="user-menu__list">
+                        <li class="user-menu__item">
+                            <a class="user-menu__link js-modal-page" href="/admin/hexes">Хексы и владения</a>
+                        </li>
+                        <li class="user-menu__item">
+                            <a class="user-submenu__link js-modal-page" href="/admin/resources">Ресурсы</a>
+                        </li>
+                        <li class="user-menu__item">
+                            <a class="user-submenu__link js-modal-page" href="/admin/buildings">Постройки</a>
+                        </li>
+                        <li class="user-menu__item">
+                            <a class="user-submenu__link js-modal-page" href="/admin/units">Юниты</a>
+                        </li>
+                        <li class="user-menu__item">
+                            <a class="user-submenu__link js-modal-page" href="/admin/generalss">Генералы</a>
+                        </li>
+                        <li class="user-menu__item">
+                            <a class="user-submenu__link js-modal-page" href="/admin/users">Пользователи</a>
+                        </li>
+                    </ul>
                 </li>
                 <li class="user-menu__item">
                     <button class="user-menu__button" id="logout-btn" type="button">Выход</button>
