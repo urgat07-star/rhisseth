@@ -378,6 +378,9 @@ FORM.account-form {display: grid; gap: 14px; grid-auto-flow: row;justify-content
 .cabinet-tabs button { padding: 10px 14px; border: 1px solid #75806a; border-radius: 5px; background: #202a22; color: #e9ecdf; cursor: pointer; }
 .cabinet-tabs button[aria-selected=true] { background: #4d5134; border-color: #e0d49f; }
 
+.hex-table-tabs button { padding: 10px 14px; border: 1px solid #75806a; border-radius: 5px; background: #202a22; color: #e9ecdf; cursor: pointer; }
+.hex-table-tabs button[aria-selected=true] { background: #4d5134; border-color: #e0d49f; }
+
 .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 14px; margin: 18px 0; }
 .stat-grid > section, .stat-grid > details { border: 1px solid #75806a55; padding: 14px; border-radius: 6px; min-width: 0; }
 
@@ -495,6 +498,26 @@ FORM.crest-form {display: grid;grid-auto-flow: row;}
 /* ============================================================
    12. ADMIN (таблицы, редакторы)
    ============================================================ */
+main.admin-panel {
+    padding: clamp(12px, 2vw, 28px);
+    display: flex;
+    align-items: start;}
+.admin-panel-nav {
+    width: 300px;
+    display: flex;
+    flex-direction: column;
+}
+.admin-panel-nav a {text-decoration:none;}
+.admin-panel-nav-item {
+    height: 50px;
+    padding-left:10px;
+    display: flex;
+    align-content: center;
+    flex-wrap: wrap;
+    border: 1px solid #c2b47a;
+}
+.admin-content {width:90%}
+    
 .table-scroll { overflow: auto; max-height: 65vh; }
 table { border-collapse: collapse; font-size: 12px; }
 th, td { border: 1px solid #75806a55; padding: 6px; min-width: 90px; }
@@ -505,6 +528,10 @@ th { position: sticky; top: 0; background: #252b24; }
 .admin-editor form { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
 .admin-editor label { display: grid; gap: 4px; font-size: 13px; }
 .admin-editor input, .admin-editor select, .admin-editor textarea { width: 100%; }
+
+.admin-controls-table { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 12px; }
+.admin-editor-table { /*max-width: 700px;*/ border: 1px solid #c2b47a; padding: 16px; }
+
 .hex-level-preview { grid-column: 1/-1; display: flex; align-items: center; gap: 18px; min-height: 90px; padding: 10px 14px; border: 1px solid #756846; border-radius: 6px; background: #111712; }
 .hex-level-preview p { flex: 1; margin: 0; color: #f2df9c; }
 .hex-level-preview img { width: 130px; height: 100px; object-fit: contain; filter: drop-shadow(0 4px 4px #000b); }
@@ -513,6 +540,18 @@ th { position: sticky; top: 0; background: #252b24; }
 .unit-editor-form label { display: grid; gap: 4px; }
 .unit-editor-form textarea { min-height: 90px; }
 .admin-unit-image { width:min(100%,112px); margin-inline:auto; }
+
+.table-scroll button {
+    width: 100px;
+    padding: 3px 0px;
+    border: 1px solid #75806a;
+    border-radius: 5px;
+    background: #202a22;
+    color: #e9ecdf;
+    cursor: pointer;
+}
+.table-scroll button:first-child {margin-bottom:5px;}
+.admin-controls-table p {font-weight: bold;margin-right: 50px;}
 
 .landscape-part { display: grid; grid-template-columns: 1fr 70px auto; gap: 4px; margin: 4px 0; }
 
@@ -644,16 +683,16 @@ th { position: sticky; top: 0; background: #252b24; }
    ============================================================ */
 /*.game-date {font-family: "Cormorant Infant", serif;font-size:26px; position:absolute; z-index:5; top:12px; left:12px; padding:7px 11px; border-radius:5px; background:rgba(20,26,30,.85); color:#fff; font-weight:600; }*/
 .game-date {
-  font-family: "Cormorant Infant", serif;
-  font-size: 26px;
+  width: 406px;
+  background-image: url(time-border.svg);
+  padding: 17px 62px 17px 30px;
   position: absolute;
   z-index: 5;
-  top: 12px;
-  left: 12px;
-  padding: 14px 82px 20px 40px;
-  background-image: url(time-border.svg);
-  color: #fff;
+  top: 12px; left: 12px;
+  font-family: "Cormorant Infant", serif;
+  font-size: 26px;
   font-weight: 600;
+  color: #fff;
 }
 
 .game-resources {
@@ -704,6 +743,13 @@ th { position: sticky; top: 0; background: #252b24; }
 
 .admin-nav { display: flex; flex: 1 1 620px; gap: 8px; flex-wrap: wrap; align-items: center; justify-content: flex-end; }
 .admin-nav a { min-width: 145px; min-height: 42px; font-size: 14px; }
+
+.hex-admin {
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: row;
+    justify-content: center;
+}
 
 
 /* ============================================================

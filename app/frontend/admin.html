@@ -1,13 +1,139 @@
 <!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Rhisseth — таблица гексов</title><link rel="stylesheet" href="/interactive-map/styles.css?v=economy-level-test-20260929"><script src="/interactive-map/admin.js?v=economy-level-test-20260929" defer></script><script src="/interactive-map/admin-nav.js?v=batell-0.3.2" defer></script></head>
-<body><header class="topbar"><h1>Админ-панель</h1><nav class="admin-nav" aria-label="Разделы"><a href="/admin/hexes" aria-current="page">Гексы и владения</a><a href="/admin/resources">Ресурсы</a><a href="/admin/buildings">Дополнительные постройки</a><a href="/admin/users" data-admin-only hidden>Пользователи</a><a href="/admin/units">Военные юниты</a><a href="/admin/generals">Генералы</a><a href="/interactive-map/">Карта</a></nav></header><main>
-<p>Для проверки выберите у гекса уровень 1–8. Основная постройка, её изображение на глобальной карте, предел населения и диапазон налогов определяются выбранным уровнем автоматически.</p>
-<section id="clock-admin" class="admin-editor" hidden><h2>Глобальное время</h2><p id="clock-current"></p><form id="clock-form"><label>Год Эры Дракона <input name="year" type="number" min="0" max="1000000" required></label><label>Время года <select name="season"><option>Весна</option><option>Лето</option><option>Осень</option><option>Зима</option></select></label><button type="submit">Установить дату</button><button id="clock-reset" type="button">Сбросить к началу</button></form><p id="clock-status" role="status"></p></section>
-<section id="raid-admin" class="admin-editor" hidden><h2>Параметры грабежа</h2><p>Награда рассчитывается из гекса: золото = богатство, еда = плодородие, ресурс = богатство, крестьяне = треть населения с округлением вниз (минимум 1). Здесь редактируются мораль и срок повторного грабежа; старые поля награды оставлены только для совместимости схемы.</p><div id="raid-balance-rows"></div><p id="raid-status" role="status"></p></section>
-<section id="river-admin" class="admin-editor" hidden><h2>Соединения речных гексов</h2><p>Для каждой реки добавьте отдельную цепочку соседних пар от истока до дельты. Разные реки не соединятся без добавленной пары между ними. Проверяйте координаты: названия рек пока не хранятся. Связь даёт половинный расход логистики.</p><form id="river-form"><label>Q первого <input name="q1" type="number" required></label><label>R первого <input name="r1" type="number" required></label><label>Q второго <input name="q2" type="number" required></label><label>R второго <input name="r2" type="number" required></label><button type="submit">Добавить связь</button></form><div id="river-links"></div><p id="river-status" role="status"></p></section>
-<section id="barony-reset-admin" class="admin-editor" hidden><h2>Сброс бароний для тестирования</h2><p id="barony-reset-preview">Проверка стартовых зон…</p><form id="start-zone-form"><label>Барония <select name="barony_id"></select></label><p>Выберите 2–3 соседних гекса в таблице ниже.</p><button type="submit">Сохранить стартовую зону выбранной баронии</button></form><button id="barony-reset" type="button" disabled>Сбросить баронии к стартовым зонам</button><p id="barony-reset-status" role="status"></p></section>
-<div class="admin-controls"><label>Поиск <input id="search" type="search" placeholder="Название, координаты, ландшафт"></label><a href="/api/admin/hexes/export">Скачать CSV</a><button id="group-name" type="button">Название выбранных гексов</button><button id="group-territory" type="button">Создать / изменить владение</button></div>
-<p id="admin-status" role="status"></p><div class="table-scroll"><table><thead id="columns"></thead><tbody id="rows"></tbody></table></div>
-<section id="editor" class="admin-editor" hidden><h2 id="editor-title"></h2><form id="admin-form"></form></section>
-<section id="territory-editor" class="admin-editor" hidden><h2>Компьютерное владение</h2><p>Выберите в таблице 2–10 соседних гексов. Баронство: 2–3, княжество: 4–6, королевство: 7–10.</p><form id="territory-form"><label>ID существующего владения (пусто — новое)<input name="id" type="number" min="1"></label><label>Название<input name="name" maxlength="200" required></label><label>Правила компьютерного игрока<textarea name="rules" maxlength="4000"></textarea></label><button type="submit">Подтвердить назначение</button><button type="button" id="cancel-territory">Отмена</button></form></section>
-</main></body></html>
+<html lang="ru">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        
+        <title>Rhisseth — таблица гексов</title>
+        <link rel="stylesheet" href="/interactive-map/styles.css?v=economy-level-test-20260929">
+    </head>
+    
+    <body>
+        <header class="topbar">
+            <h1>Админ-панель</h1>
+            <!--nav class="admin-nav" aria-label="Разделы">
+                <a href="/admin/hexes" aria-current="page">Гексы и владения</a>
+                <a href="/admin/resources">Ресурсы</a>
+                <a href="/admin/buildings">Дополнительные постройки</a>
+                <a href="/admin/users" data-admin-only hidden>Пользователи</a>
+                <a href="/admin/units">Военные юниты</a>
+                <a href="/admin/generals">Генералы</a>
+                <a href="/interactive-map/">Карта</a>
+            </nav-->
+        </header>
+        
+        <main class="admin-panel">
+            <section class="admin-panel-nav">
+              <!--nav class="admin-nav" aria-label="Разделы"-->
+                <a href="/admin/hexes" aria-current="page"><div class="admin-panel-nav-item">Гексы и владения</div></a>
+                <a href="/admin/resources"><div class="admin-panel-nav-item">Ресурсы</div></a>
+                <a href="/admin/buildings"><div class="admin-panel-nav-item">Дополнительные постройки</div></a>
+                <a href="/admin/users" data-admin-only hidden><div class="admin-panel-nav-item">Пользователи</div></a>
+                <a href="/admin/units"><div class="admin-panel-nav-item">Военные юниты</div></a>
+                <a href="/admin/generals"><div class="admin-panel-nav-item">Генералы</div></a>
+                <a href="/interactive-map/"><div class="admin-panel-nav-item">Карта</div></a>
+              <!--/nav-->
+            </section>
+            <section class="admin-content">
+              <section class="admin-editor-table">
+                  <h2>Управление Хексами</h2>
+                  <p>Для проверки выберите у гекса уровень 1–8. Основная постройка, её изображение на глобальной карте, предел населения и диапазон налогов определяются выбранным уровнем автоматически.</p>
+                  <div class="admin-controls-table">
+                      <p id="admin-status" role="status"></p>
+                      <label>Поиск&nbsp;&nbsp;&nbsp;<input id="search" type="search" placeholder="Название, координаты, ландшафт"></label>
+                      <a href="/api/admin/hexes/export">Скачать CSV</a>
+                      <div class="cabinet-tabs">
+                          <button id="group-name" type="button">Название выбранных гексов</button>
+                          <button id="group-territory" type="button">Создать / изменить владение</button>
+                      </div>
+                  </div>
+                  <p id="admin-status" role="status"></p>
+                  <div class="table-scroll">
+                      <table>
+                          <thead id="columns"></thead>
+                          <tbody id="rows"></tbody>
+                      </table>
+                  </div>
+              </section>
+            
+              <section class="hex-admin">
+                <section id="clock-admin" class="admin-editor" hidden>
+                    <h2>Глобальное время</h2>
+                    <p id="clock-current"></p>
+                    <form id="clock-form" class="cabinet-tabs">
+                        <label>Год Эры Дракона <input name="year" type="number" min="0" max="1000000" required></label>
+                        <label>Время года
+                            <select name="season">
+                                <option>Весна</option>
+                                <option>Лето</option>
+                                <option>Осень</option>
+                                <option>Зима</option>
+                            </select>
+                        </label>
+                        <button type="submit">Установить дату</button>
+                        <button id="clock-reset" type="button">Сбросить к началу</button>
+                    </form>
+                    <p id="clock-status" role="status"></p>
+                </section>
+                
+                <section id="barony-reset-admin" class="admin-editor" hidden>
+                    <h2>Сброс бароний для тестирования</h2>
+                    <p id="barony-reset-preview">Проверка стартовых зон…</p>
+                    <form id="start-zone-form" class="cabinet-tabs">
+                        <label>Барония <select name="barony_id"></select></label>
+                        <p>Выберите 2–3 соседних гекса в таблице ниже.</p>
+                        <button type="submit">Сохранить стартовую зону выбранной баронии</button>
+                        <button id="barony-reset" type="button" disabled>Сбросить баронии к стартовым зонам</button>
+                    </form>
+                    <p id="barony-reset-status" role="status"></p>
+                </section>
+        
+                <section id="raid-admin" class="admin-editor" hidden>
+                    <h2>Параметры грабежа</h2>
+                    <p>Награда рассчитывается из гекса: золото = богатство, еда = плодородие, ресурс = богатство, крестьяне = треть населения с округлением вниз (минимум 1). Здесь редактируются мораль и срок повторного грабежа; старые поля награды оставлены только для совместимости схемы.</p>
+                    <div id="raid-balance-rows"></div>
+                    <p id="raid-status" role="status"></p>
+                </section>
+        
+                <section id="river-admin" class="admin-editor" hidden>
+                    <h2>Соединения речных гексов</h2>
+                    <p>Для каждой реки добавьте отдельную цепочку соседних пар от истока до дельты. Разные реки не соединятся без добавленной пары между ними. Проверяйте координаты: названия рек пока не хранятся. Связь даёт половинный расход логистики.</p>
+                    <form id="river-form">
+                        <label>Q первого <input name="q1" type="number" required></label>
+                        <label>R первого <input name="r1" type="number" required></label>
+                        <label>Q второго <input name="q2" type="number" required></label>
+                        <label>R второго <input name="r2" type="number" required></label>
+                        <button type="submit">Добавить связь</button>
+                    </form>
+                    <div id="river-links"></div>
+                    <p id="river-status" role="status"></p>
+                </section>
+        
+            </section>
+        
+        
+            <section id="editor" class="admin-editor" hidden>
+                <h2 id="editor-title"></h2>
+                <form id="admin-form"></form>
+            </section>
+        
+            <section id="territory-editor" class="admin-editor" hidden>
+                <h2>Компьютерное владение</h2>
+                <p>Выберите в таблице 2–10 соседних гексов. Баронство: 2–3, княжество: 4–6, королевство: 7–10.</p>
+                <form id="territory-form">
+                    <label>ID существующего владения (пусто — новое)<input name="id" type="number" min="1"></label>
+                    <label>Название<input name="name" maxlength="200" required></label>
+                    <label>Правила компьютерного игрока<textarea name="rules" maxlength="4000"></textarea></label>
+                    <div class="cabinet-tabs">
+                        <button type="submit">Подтвердить назначение</button>
+                        <button type="button" id="cancel-territory">Отмена</button>
+                    </div>
+                </form>
+            </section>
+        </section>
+    </main>
+    
+    <script src="/interactive-map/admin.js?v=economy-level-test-20260929" defer></script>
+    <script src="/interactive-map/admin-nav.js?v=batell-0.3.2" defer></script>
+</body>
+</html>
