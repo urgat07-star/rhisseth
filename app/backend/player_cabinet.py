@@ -86,12 +86,12 @@ def economy_summary(conn, user_id):
 def economy_history(conn, user_id, barony_id):
     if not barony_id or not conn.execute("SELECT to_regclass('hex_economy_history')").fetchone()[0]:
         return {'population':[],'taxes':[]}
-    rows=conn.execute('''SELECT year,q,r,population_before,food_delta,federal_food_used,
+    rows=conn.execute('''SELECT year,q,r,population_before,food_production,reserve_food_used,food_delta,federal_food_used,
         famine_loss,natural_growth,manual_change,population_after,tax,level_before,level_after,auto_level_up
         FROM hex_economy_history WHERE barony_id=%s ORDER BY year DESC,r,q''',(barony_id,)).fetchall()
     population=[];taxes=[]
     for row in rows:
-        item=dict(zip(('year','q','r','population_before','food_delta','federal_food_used','famine_loss',
+        item=dict(zip(('year','q','r','population_before','food_production','reserve_food_used','food_delta','federal_food_used','famine_loss',
             'natural_growth','manual_change','population_after','tax','level_before','level_after','auto_level_up'),row))
         item['change']=item['population_after']-item['population_before']
         population.append(item)

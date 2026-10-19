@@ -51,12 +51,12 @@ function renderEconomyHistory(history) {
   const yearly=new Map();
   (history?.population||[]).forEach(item=>{
     populationRows.append(tableRow([item.year,`Q${item.q} R${item.r}`,item.population_before,
-      signed(item.food_delta),item.federal_food_used,item.famine_loss,signed(item.natural_growth),
+      signed(item.food_production),item.reserve_food_used,signed(item.food_delta),item.federal_food_used,item.famine_loss,signed(item.natural_growth),
       signed(item.manual_change),item.population_after,signed(item.change)]));
     yearly.set(item.year,(yearly.get(item.year)||0)+item.change);
   });
-  if(!populationRows.children.length)populationRows.append(tableRow(['—','История пока пуста','—','—','—','—','—','—','—','—']));
-  [...yearly.entries()].sort((a,b)=>b[0]-a[0]).forEach(([year,total])=>populationTotals.append(tableRow([year,'Итого баронии','','','','','','','',signed(total)],true)));
+  if(!populationRows.children.length)populationRows.append(tableRow(['—','История пока пуста','—','—','—','—','—','—','—','—','—','—']));
+  [...yearly.entries()].sort((a,b)=>b[0]-a[0]).forEach(([year,total])=>populationTotals.append(tableRow([year,'Итого баронии','','','','','','','','','',signed(total)],true)));
   const yearlyTax=new Map();
   (history?.taxes||[]).forEach(item=>{taxRows.append(tableRow([item.year,`Q${item.q} R${item.r}`,item.tax]));yearlyTax.set(item.year,(yearlyTax.get(item.year)||0)+item.tax);});
   if(!taxRows.children.length)taxRows.append(tableRow(['—','История пока пуста','—']));

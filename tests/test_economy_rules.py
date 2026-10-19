@@ -8,6 +8,16 @@ from game_clock import _annual_resource_income, _proportional
 
 
 class EconomyRuleTests(unittest.TestCase):
+    def test_food_history_exposes_reserve_cost(self):
+        root=Path(__file__).resolve().parents[1]
+        clock=(root/'app/backend/game_clock.py').read_text(encoding='utf-8')
+        migration=(root/'data/migrations/047_food_history_breakdown.sql').read_text(encoding='utf-8')
+        cabinet=(root/'app/frontend/cabinet.html').read_text(encoding='utf-8')
+        self.assertIn("'reserve_food':0",clock)
+        self.assertIn("capital_item['reserve_food']=reserve",clock)
+        self.assertIn('reserve_food_used integer',migration)
+        self.assertIn('Содержание резерва',cabinet)
+
     def test_food_is_fertility_times_population_minus_population(self):
         self.assertEqual(generated_food(3, 2), 4)
         self.assertEqual(generated_food(0, 2), -2)

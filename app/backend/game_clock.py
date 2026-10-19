@@ -69,10 +69,11 @@ def _annual_population_and_tax(conn, year, rng=random):
         barony=_integer(data.get('ID территории'),0,0) or None
         manual=conn.execute('''SELECT COALESCE(sum(amount),0) FROM hex_population_events
             WHERE year=%s AND q=%s AND r=%s''',(year,q,r)).fetchone()[0]
+        food_production=0 if pure_sea else generated_food(_integer(data.get('Плодородие')),population,
+            mountain=bool(terrain & {'горы','высокогорье'}),neutral=owner_type!='Игрок')
         rows.append({'q':q,'r':r,'data':data,'level':level,'population':population,
             'pure_sea':pure_sea,'owner_type':owner_type,'owner_id':owner_id,'barony':barony,
-            'food':0 if pure_sea else generated_food(_integer(data.get('Плодородие')),population,
-                mountain=bool(terrain & {'горы','высокогорье'}),neutral=owner_type!='Игрок'),
+            'food':food_production,'food_production':food_production,'reserve_food':0,
             'manual':manual,'famine':0,'federal_used':0})
 
     player_groups=defaultdict(list)
@@ -86,7 +87,9 @@ def _annual_population_and_tax(conn, year, rng=random):
             WHERE b.user_id=%s ORDER BY s.position LIMIT 1''',(user_id,)).fetchone()
         if reserve and capital:
             capital_item=next((item for item in items if (item['q'],item['r'])==capital),None)
-            if capital_item:capital_item['food']-=reserve
+            if capital_item:
+                capital_item['reserve_food']=reserve
+                capital_item['food']-=reserve
         inventory=conn.execute("""SELECT quantity FROM game_inventory
             WHERE user_id=%s AND resource_code='food' FOR UPDATE""",(user_id,)).fetchone()
         stock=inventory[0] if inventory else 0
@@ -131,11 +134,11 @@ def _annual_population_and_tax(conn, year, rng=random):
         conn.execute('''UPDATE hexes SET data=data || jsonb_build_object('Население',%s::text,'Уровень гекса',%s::text,'Постройка',%s::text),updated_at=now()
             WHERE q=%s AND r=%s''',(str(grown),str(level_after),buildings[level_after],item['q'],item['r']))
         conn.execute('''INSERT INTO hex_economy_history(year,q,r,owner_type,owner_id,barony_id,
-            population_before,food_delta,federal_food_used,famine_loss,natural_growth,manual_change,
+            population_before,food_production,reserve_food_used,food_delta,federal_food_used,famine_loss,natural_growth,manual_change,
             population_after,tax,level_before,level_after,auto_level_up)
-            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)''',
+            VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)''',
             (year,item['q'],item['r'],item['owner_type'],item['owner_id'],item['barony'],population_before,
-             item['food'],item['federal_used'],item['famine'],growth,item['manual'],grown,tax,
+             item['food_production'],item['reserve_food'],item['food'],item['federal_used'],item['famine'],growth,item['manual'],grown,tax,
              item['level'],level_after,promote))
 
 
