@@ -49,6 +49,8 @@ try {
     if ($ScriptName -eq 'Diagnose-RhissethRunner.py') {
         $out = & scp.exe @opts "$root/scripts/automation/Diagnose-RhissethRunner.py" 'avalon@10.210.52.128:/home/avalon/rhisseth.ru/scripts/automation/Diagnose-RhissethRunner.py' 2>&1
         if ($LASTEXITCODE -ne 0) { $out | Add-Content -LiteralPath $log; throw 'Runner diagnostic script transfer failed' }
+        $out = & scp.exe @opts "$root/scripts/automation/Diagnose-RhissethVps.py" 'avalon@10.210.52.128:/home/avalon/rhisseth.ru/scripts/automation/Diagnose-RhissethVps.py' 2>&1
+        if ($LASTEXITCODE -ne 0) { $out | Add-Content -LiteralPath $log; throw 'VPS diagnostic payload transfer failed' }
     }
     if ($ScriptName -eq 'Configure-RhissethSharedAuthFromRunner.py') {
         $out = & scp.exe @opts "$root/scripts/automation/Configure-RhissethSharedAuthVps.py" 'avalon@10.210.52.128:/home/avalon/rhisseth.ru/scripts/automation/Configure-RhissethSharedAuthVps.py' 2>&1

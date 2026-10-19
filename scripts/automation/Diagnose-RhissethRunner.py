@@ -29,4 +29,10 @@ runuser -u rhisseth -- /opt/rhisseth/venv/bin/python -c 'import fastapi,psycopg;
 '''
 result = subprocess.run(['sshpass','-e','ssh',*options,'root@62.113.109.168','bash','-s'], env=sshenv, input=remote, capture_output=True, text=True, timeout=180)
 print((result.stdout + '\n' + result.stderr).replace(resource['password'],'<redacted>'), flush=True)
-sys.exit(result.returncode)
+if result.returncode: raise SystemExit(result.returncode)
+payload=Path.home()/'rhisseth.ru/scripts/automation/Diagnose-RhissethVps.py'
+transfer=subprocess.run(['sshpass','-e','scp',*options,str(payload),'root@62.113.109.168:/opt/rhisseth/scripts/automation/Diagnose-RhissethVps.py'],env=sshenv,capture_output=True,text=True,timeout=60)
+if transfer.returncode: raise SystemExit('Diagnostic payload transfer failed')
+detail=subprocess.run(['sshpass','-e','ssh',*options,'root@62.113.109.168','python3 /opt/rhisseth/scripts/automation/Diagnose-RhissethVps.py'],env=sshenv,capture_output=True,text=True,timeout=180)
+print((detail.stdout+'\n'+detail.stderr).replace(resource['password'],'<redacted>'),flush=True)
+sys.exit(detail.returncode)
