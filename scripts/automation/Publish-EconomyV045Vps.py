@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""Publish Economy v0.4.1 with restored-copy migration test and one safe backfill."""
+"""Publish Economy v0.4.5 with restored-copy migration test and one safe backfill."""
 import datetime as dt, hashlib, os, shutil, subprocess, sys, tarfile, time, secrets
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -7,8 +7,8 @@ from zoneinfo import ZoneInfo
 ROOT=Path('/opt/rhisseth'); ARCHIVE=ROOT/'temp/rhisseth-publish.tgz'; REPO=ROOT/'repository'
 NOW=dt.datetime.now(dt.timezone.utc); STAMP=NOW.strftime('%Y%m%d%H%M%S')
 LOGDIR=ROOT/'reports/automation-logs'/NOW.strftime('%Y-%m-%d'); LOGDIR.mkdir(parents=True,exist_ok=True)
-LOG=LOGDIR/(STAMP+'-economy-v041-publish.md')
-LOG.write_text(f'''# Rhisseth Economy v0.4.1 publication
+LOG=LOGDIR/(STAMP+'-economy-v045-publish.md')
+LOG.write_text(f'''# Rhisseth Economy v0.4.5 publication
 
 - UTC: {NOW.isoformat()}
 - Europe/Moscow: {NOW.astimezone(ZoneInfo('Europe/Moscow')).isoformat()}
@@ -37,17 +37,17 @@ def psql(database,statement):
     return run(['runuser','-u','postgres','--','psql','-X','-v','ON_ERROR_STOP=1','-At','-d',database,'-c',statement],quiet=True).stdout.strip()
 
 def main():
-    if sys.argv[1:]!=['publish-economy-v041'] or os.geteuid()!=0:raise RuntimeError('Invalid operation or identity')
+    if sys.argv[1:]!=['publish-economy-v045'] or os.geteuid()!=0:raise RuntimeError('Invalid operation or identity')
     if not ARCHIVE.is_file() or ARCHIVE.stat().st_size<1024 or not REPO.is_dir():raise RuntimeError('Archive or repository missing')
-    python=ROOT/'venv/bin/python';stage=ROOT/('repository.economy-v041-staging-'+STAMP)
-    backup=ROOT/'backups'/('economy-v041-'+STAMP);old=backup/'repository-before'
+    python=ROOT/'venv/bin/python';stage=ROOT/('repository.economy-v045-staging-'+STAMP)
+    backup=ROOT/'backups'/('economy-v045-'+STAMP);old=backup/'repository-before'
     stage.mkdir(mode=0o755);digest=hashlib.sha256(ARCHIVE.read_bytes()).hexdigest()
     emit(f'Preflight: archive bytes={ARCHIVE.stat().st_size}; SHA256={digest}; audit writable')
     with tarfile.open(ARCHIVE,'r:gz') as archive:
         members=archive.getmembers()
         if not members or any(m.name.startswith('/') or '..' in Path(m.name).parts or not(m.isfile() or m.isdir()) for m in members):raise RuntimeError('Unsafe archive')
         archive.extractall(stage,filter='data')
-    required=[stage/'app/backend/migrate.py',stage/'app/backend/game_clock.py',stage/'data/migrations/046_population_tax_history.sql',stage/'docs/releases/economy-v0.4.1.md']
+    required=[stage/'app/backend/migrate.py',stage/'app/backend/game_clock.py',stage/'data/migrations/046_population_tax_history.sql',stage/'docs/releases/economy-v0.4.5.md']
     if any(not path.is_file() for path in required):raise RuntimeError('Release archive incomplete')
     backup.mkdir(mode=0o700);dump=backup/'rhisseth.dump'
     with dump.open('wb') as stream:
@@ -55,11 +55,11 @@ def main():
     emit(f'pg_dump: exit_code={result.returncode}; bytes={dump.stat().st_size if dump.exists() else 0}; output suppressed')
     if result.returncode or dump.stat().st_size<1024:raise RuntimeError('Production backup failed')
     dump.chmod(0o600);run(['pg_restore','--list',str(dump)],quiet=True);shutil.copytree(REPO,old,symlinks=True)
-    testdb='rhisseth_e041_'+secrets.token_hex(4)
+    testdb='rhisseth_e045_'+secrets.token_hex(4)
     appenv={**os.environ,'DB_HOST':'127.0.0.1','DB_PASSWORD_FILE':str(ROOT/'secrets/db-password.txt')}
     try:
-        run(['runuser','-u','postgres','--','createdb',testdb])
-        run(['runuser','-u','postgres','--','pg_restore','-d',testdb,str(dump)],timeout=300)
+        run(['runuser','-u','postgres','--','createdb','-O','rhisseth',testdb])
+        run(['runuser','-u','postgres','--','pg_restore','--no-owner','-d',testdb,str(dump)],timeout=300)
         run([str(python),str(stage/'app/backend/migrate.py')],env={**appenv,'DB_NAME':testdb})
         if psql(testdb,"SELECT count(*) FROM schema_migrations WHERE name='046_population_tax_history.sql'")!='1':raise RuntimeError('Migration 046 missing in restored copy')
         if psql(testdb,"SELECT count(*) FROM information_schema.tables WHERE table_name IN ('hex_economy_history','hex_population_events','hex_economy_state','game_population_years')")!='4':raise RuntimeError('Economy tables missing in restored copy')
@@ -94,7 +94,7 @@ def main():
     except Exception:
         if swapped:
             run(['systemctl','stop','rhisseth']);stopped=True
-            REPO.rename(ROOT/('repository.economy-v041-failed-'+STAMP));(backup/'repository-swapped').rename(REPO)
+            REPO.rename(ROOT/('repository.economy-v045-failed-'+STAMP));(backup/'repository-swapped').rename(REPO)
         if stopped:run(['systemctl','start','rhisseth'])
         emit(f'Failure recovery: verified database backup retained at {dump}; no automatic DB restore')
         raise
