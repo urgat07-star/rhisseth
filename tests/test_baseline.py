@@ -15,6 +15,14 @@ economy_v040 = importlib.util.module_from_spec(economy_spec)
 economy_spec.loader.exec_module(economy_v040)
 
 class BaselineTests(unittest.TestCase):
+    def test_map_armies_are_raised_above_objects(self):
+        script=(ROOT/'app/frontend/app.js').read_text(encoding='utf-8')
+        self.assertIn("function raiseMapUnitLayer()",script)
+        self.assertIn("overlay.appendChild(unitLayer)",script)
+        self.assertGreaterEqual(script.count("raiseMapUnitLayer();"),3)
+        for page in ('index.html','create-barony.html'):
+            self.assertIn('app.js?v=map-units-on-top-1',(ROOT/'app/frontend'/page).read_text(encoding='utf-8'))
+
     def test_source_coordinates(self):
         rows = read_rows(ROOT / 'data/import/hex-initial-parameters.csv')
         self.assertGreater(len(rows), 0)

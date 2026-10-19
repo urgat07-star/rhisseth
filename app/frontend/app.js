@@ -76,6 +76,12 @@ let cardDetailed = false;
 const form = document.querySelector("#hex-form");
 const saveStatus = document.querySelector("#save-status");
 
+/** SVG draws later siblings on top; keep armies above buildings, emblems and hexes. */
+function raiseMapUnitLayer() {
+  const unitLayer = overlay.querySelector('.map-unit-layer');
+  if (unitLayer) overlay.appendChild(unitLayer);
+}
+
 function polygonPoints(q, r) {
   return hexCorners(q, r).map(([x,y]) => `${x.toFixed(2)},${y.toFixed(2)}`).join(" ");
 }
@@ -175,6 +181,7 @@ function redrawBaronyEmblems() {
     image.setAttribute('aria-label', 'Герб баронии');
     baronyEmblems.append(image);
   });
+  raiseMapUnitLayer();
 }
 
 function rating(value, maximum) {
@@ -350,6 +357,7 @@ function render(rows) {
   overlay.appendChild(structures);
   overlay.appendChild(fragment);
   redrawBaronyBoundaries();
+  raiseMapUnitLayer();
 }
 
 const game = { player: 1, moved: false, selected: false, unitKey: '', ownerId: '', pendingRow: null, selectedUnit: null, battle: null, general: null, armyUnits: [], armies: [] };
@@ -457,6 +465,7 @@ async function createMapUnit() {
     image.addEventListener('click',event=>{event.stopPropagation();if(!selectGeneral(general.id)&&game.player!==1)setGameMessage('Ваш ход уже завершён. Дождитесь остальных игроков или используйте «Пропустить ход», когда кнопка станет доступна.');});
     layer.append(image); positionGeneralImage(general,index,false);
   });
+  raiseMapUnitLayer();
   const activeResponse=await fetch(`${API_BASE}/game/active-battle`,{cache:'no-store'});
   if(activeResponse.ok){
     const active=await activeResponse.json();
