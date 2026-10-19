@@ -50,5 +50,12 @@ CREATE INDEX hex_economy_history_barony_year_idx ON hex_economy_history(barony_i
 CREATE INDEX hex_economy_history_owner_year_idx ON hex_economy_history(owner_id,year,q,r)
  WHERE owner_type='Игрок';
 
+-- Population/tax processing is intentionally independent from the older
+-- resource marker, which may already contain years reached by admin clock jumps.
+CREATE TABLE game_population_years (
+    year integer PRIMARY KEY CHECK (year >= 0),
+    processed_at timestamptz NOT NULL DEFAULT now()
+);
+
 UPDATE hexes SET data=data || jsonb_build_object('Население','0'),updated_at=now()
 WHERE data->>'Категория'='Море' AND COALESCE(data->>'Остров','Нет')<>'Да';

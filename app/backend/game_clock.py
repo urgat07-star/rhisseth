@@ -141,10 +141,13 @@ def _annual_population_and_tax(conn, year, rng=random):
 
 def _annual_economy(conn, year, rng=random):
     if not conn.execute("SELECT to_regclass('game_economy_years')").fetchone()[0]:return
-    if not conn.execute('''INSERT INTO game_economy_years(year) VALUES (%s)
-        ON CONFLICT(year) DO NOTHING RETURNING year''',(year,)).fetchone():return
-    _annual_resource_income(conn,year)
-    _annual_population_and_tax(conn,year,rng)
+    resource_year=conn.execute('''INSERT INTO game_economy_years(year) VALUES (%s)
+        ON CONFLICT(year) DO NOTHING RETURNING year''',(year,)).fetchone()
+    if resource_year:_annual_resource_income(conn,year)
+    if not conn.execute("SELECT to_regclass('game_population_years')").fetchone()[0]:return
+    population_year=conn.execute('''INSERT INTO game_population_years(year) VALUES (%s)
+        ON CONFLICT(year) DO NOTHING RETURNING year''',(year,)).fetchone()
+    if population_year:_annual_population_and_tax(conn,year,rng)
 
 
 def _annual_turns(conn, old, new):

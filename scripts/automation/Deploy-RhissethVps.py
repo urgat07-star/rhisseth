@@ -65,6 +65,15 @@ def inspect():
     run(['git', 'ls-remote', 'https://github.com/urgat07-star/rhisseth.git', 'refs/heads/main'], env={**os.environ, 'GIT_TERMINAL_PROMPT': '0'})
     run(['curl', '--max-time', '15', '-sS', '-o', '/dev/null', '-w', 'HTTP %{http_code}\n', '-H', 'Host: rhisseth.ru', 'http://127.0.0.1/'], check=False)
     run(['curl', '--max-time', '15', '-sS', '-o', '/dev/null', '-w', 'HTTPS %{http_code}\n', 'https://rhisseth.ru/'], check=False)
+    def inspect_sql(statement):
+        return run(['runuser','-u','postgres','--','psql','-X','-v','ON_ERROR_STOP=1','-At','-d','rhisseth','-c',statement]).stdout.strip()
+    emit('Annual economy schema: ' + inspect_sql("SELECT coalesce(to_regclass('hex_economy_history')::text,'missing')||'|'||coalesce(to_regclass('hex_population_events')::text,'missing')||'|'||coalesce(to_regclass('hex_economy_state')::text,'missing')||'|'||coalesce(to_regclass('game_population_years')::text,'missing');"))
+    emit('Game clock: ' + inspect_sql("SELECT turn_number||'|'||(turn_number/4)||'|'||(turn_number%4) FROM game_clock WHERE id=true;"))
+    emit('Processed economy years: ' + inspect_sql("SELECT coalesce(string_agg(year::text,',' ORDER BY year),'none') FROM game_economy_years;"))
+    run(['runuser','-u','postgres','--','psql','-X','-At','-d','rhisseth','-c',
+         "SELECT count(*)||'|'||coalesce(max(year)::text,'none') FROM hex_economy_history"],check=False)
+    run(['sha256sum',str(repo/'app/backend/game_clock.py'),str(repo/'app/frontend/cabinet.js')],check=False)
+    run(['test','-f',str(repo/'data/migrations/046_population_tax_history.sql')],check=False)
 
 def sql(statement, *, secret=False):
     return run(['runuser', '-u', 'postgres', '--', 'psql', '-X', '-v', 'ON_ERROR_STOP=1', '-At'], input=statement, raw=secret).stdout.strip()
