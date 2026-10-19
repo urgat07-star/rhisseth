@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 """Publish Economy v0.4.5 with restored-copy migration test and one safe backfill."""
-import datetime as dt, hashlib, os, shutil, subprocess, sys, tarfile, time, secrets
+import datetime as dt, hashlib, os, pwd, shutil, subprocess, sys, tarfile, time, secrets
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -56,16 +56,21 @@ def main():
     if result.returncode or dump.stat().st_size<1024:raise RuntimeError('Production backup failed')
     dump.chmod(0o600);run(['pg_restore','--list',str(dump)],quiet=True);shutil.copytree(REPO,old,symlinks=True)
     testdb='rhisseth_e045_'+secrets.token_hex(4)
+    restore_dump=Path('/tmp')/('rhisseth-economy-v045-restore-'+STAMP+'.dump')
     appenv={**os.environ,'DB_HOST':'127.0.0.1','DB_PASSWORD_FILE':str(ROOT/'secrets/db-password.txt')}
     try:
+        shutil.copyfile(dump,restore_dump)
+        postgres=pwd.getpwnam('postgres')
+        os.chown(restore_dump,postgres.pw_uid,postgres.pw_gid);restore_dump.chmod(0o600)
         run(['runuser','-u','postgres','--','createdb','-O','rhisseth',testdb])
-        run(['runuser','-u','postgres','--','pg_restore','--no-owner','-d',testdb,str(dump)],timeout=300)
+        run(['runuser','-u','postgres','--','pg_restore','--no-owner','--role=rhisseth','-d',testdb,str(restore_dump)],timeout=300)
         run([str(python),str(stage/'app/backend/migrate.py')],env={**appenv,'DB_NAME':testdb})
         if psql(testdb,"SELECT count(*) FROM schema_migrations WHERE name='046_population_tax_history.sql'")!='1':raise RuntimeError('Migration 046 missing in restored copy')
         if psql(testdb,"SELECT count(*) FROM information_schema.tables WHERE table_name IN ('hex_economy_history','hex_population_events','hex_economy_state','game_population_years')")!='4':raise RuntimeError('Economy tables missing in restored copy')
         emit('Restored-copy validation: migration 046 and four tables verified')
     finally:
         run(['runuser','-u','postgres','--','dropdb','--if-exists',testdb])
+        restore_dump.unlink(missing_ok=True)
     stopped=False;swapped=False
     try:
         run(['systemctl','stop','rhisseth']);stopped=True

@@ -128,7 +128,7 @@ def _annual_population_and_tax(conn, year, rng=random):
         previous=conn.execute('''SELECT population_after FROM hex_economy_history
             WHERE q=%s AND r=%s AND year<%s ORDER BY year DESC LIMIT 1''',(item['q'],item['r'],year)).fetchone()
         population_before=previous[0] if previous else max(0,item['population']-item['manual'])
-        conn.execute('''UPDATE hexes SET data=data || jsonb_build_object('Население',%s,'Уровень гекса',%s,'Постройка',%s),updated_at=now()
+        conn.execute('''UPDATE hexes SET data=data || jsonb_build_object('Население',%s::text,'Уровень гекса',%s::text,'Постройка',%s::text),updated_at=now()
             WHERE q=%s AND r=%s''',(str(grown),str(level_after),buildings[level_after],item['q'],item['r']))
         conn.execute('''INSERT INTO hex_economy_history(year,q,r,owner_type,owner_id,barony_id,
             population_before,food_delta,federal_food_used,famine_loss,natural_growth,manual_change,
