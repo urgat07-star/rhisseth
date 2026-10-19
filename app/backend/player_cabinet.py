@@ -83,6 +83,22 @@ def economy_summary(conn, user_id):
             'population':population+(reserve[0] if reserve else 0),'resources':resources}
 
 
+def economy_history(conn, user_id, barony_id):
+    if not barony_id or not conn.execute("SELECT to_regclass('hex_economy_history')").fetchone()[0]:
+        return {'population':[],'taxes':[]}
+    rows=conn.execute('''SELECT year,q,r,population_before,food_delta,federal_food_used,
+        famine_loss,natural_growth,manual_change,population_after,tax,level_before,level_after,auto_level_up
+        FROM hex_economy_history WHERE barony_id=%s ORDER BY year DESC,r,q''',(barony_id,)).fetchall()
+    population=[];taxes=[]
+    for row in rows:
+        item=dict(zip(('year','q','r','population_before','food_delta','federal_food_used','famine_loss',
+            'natural_growth','manual_change','population_after','tax','level_before','level_after','auto_level_up'),row))
+        item['change']=item['population_after']-item['population_before']
+        population.append(item)
+        taxes.append({key:item[key] for key in ('year','q','r','tax')})
+    return {'population':population,'taxes':taxes}
+
+
 @router.get('/api/cabinet/economy')
 def economy(request: Request):
     with connect() as conn:
@@ -101,8 +117,9 @@ def cabinet(request: Request):
             barony=dict(zip(('id','name','title','crest','color'),row))
             barony.update(hexes=cells,statistics=statistics(cells))
         economy_data=economy_summary(conn,user_id)
+        history=economy_history(conn,user_id,row[0] if row else None)
     return {'account':dict(zip(('login','email'),account)), 'barony':barony,
-            'economy':economy_data,'crests':CRESTS,'hex_fields':FIELDS}
+            'economy':economy_data,'economy_history':history,'crests':CRESTS,'hex_fields':FIELDS}
 
 @router.patch('/api/cabinet/account')
 async def account(request: Request):

@@ -153,8 +153,15 @@
         </section>
         
         <section class="economy-block">
-          <h3>Торговля и налоги</h3>
-          <p>Торговля и налоги ещё в разработке.</p>
+          <details id="tax-history">
+            <summary>История налогов по гексам</summary>
+            <p class="hint">Начисления каждого гекса и итог баронии за игровой год.</p>
+            <div class="history-table-wrap"><table class="history-table">
+              <thead><tr><th>Год</th><th>Гекс</th><th>Налог</th></tr></thead>
+              <tbody id="tax-history-rows"></tbody>
+              <tfoot id="tax-history-totals"></tfoot>
+            </table></div>
+          </details>
         </section>
       </div>
     </section>
@@ -184,8 +191,15 @@
           </section>
         </div>
 
-        <h3>Население и армии</h3>
-        <p>Учёт населения и управление армиями ещё в разработке.</p>
+        <details id="population-history" class="history-details">
+          <summary>История прироста и убыли населения</summary>
+          <p class="hint">История сохраняет состав баронии на момент каждого годового расчёта.</p>
+          <div class="history-table-wrap"><table class="history-table">
+            <thead><tr><th>Год</th><th>Гекс</th><th>До</th><th>Еда</th><th>Фед. еда</th><th>Голод</th><th>Прирост</th><th>Переселено</th><th>После</th><th>Итог</th></tr></thead>
+            <tbody id="population-history-rows"></tbody>
+            <tfoot id="population-history-totals"></tfoot>
+          </table></div>
+        </details>
         <h3>Параметры гексов</h3>
         <p class="hint">Средние и диапазоны рассчитаны по известным оценкам. Неописанные параметры в расчёт не входят.</p>
         <div id="rating-stats" class="stat-grid"></div>
@@ -228,6 +242,6 @@
     </dialog>
   </main>
 
-  <script src="cabinet.js?v=fix-0.4.5-inventory" defer></script>
+  <script src="cabinet.js?v=population-economy-20261019" defer></script>
 </body>
 </html>

@@ -36,6 +36,32 @@ function statCard(title, entries) {
   const card=document.createElement('section'), heading=document.createElement('h3'), dl=document.createElement('dl');
   heading.textContent=title; lineList(dl,entries); card.append(heading,dl); return card;
 }
+function tableRow(values,header=false) {
+  const row=document.createElement('tr');
+  values.forEach(value=>{const cell=document.createElement(header?'th':'td');cell.textContent=value;row.append(cell);});
+  return row;
+}
+function signed(value){return value>0?`+${value}`:String(value);}
+function renderEconomyHistory(history) {
+  const populationRows=document.querySelector('#population-history-rows');
+  const populationTotals=document.querySelector('#population-history-totals');
+  const taxRows=document.querySelector('#tax-history-rows');
+  const taxTotals=document.querySelector('#tax-history-totals');
+  populationRows.replaceChildren();populationTotals.replaceChildren();taxRows.replaceChildren();taxTotals.replaceChildren();
+  const yearly=new Map();
+  (history?.population||[]).forEach(item=>{
+    populationRows.append(tableRow([item.year,`Q${item.q} R${item.r}`,item.population_before,
+      signed(item.food_delta),item.federal_food_used,item.famine_loss,signed(item.natural_growth),
+      signed(item.manual_change),item.population_after,signed(item.change)]));
+    yearly.set(item.year,(yearly.get(item.year)||0)+item.change);
+  });
+  if(!populationRows.children.length)populationRows.append(tableRow(['—','История пока пуста','—','—','—','—','—','—','—','—']));
+  [...yearly.entries()].sort((a,b)=>b[0]-a[0]).forEach(([year,total])=>populationTotals.append(tableRow([year,'Итого баронии','','','','','','','',signed(total)],true)));
+  const yearlyTax=new Map();
+  (history?.taxes||[]).forEach(item=>{taxRows.append(tableRow([item.year,`Q${item.q} R${item.r}`,item.tax]));yearlyTax.set(item.year,(yearlyTax.get(item.year)||0)+item.tax);});
+  if(!taxRows.children.length)taxRows.append(tableRow(['—','История пока пуста','—']));
+  [...yearlyTax.entries()].sort((a,b)=>b[0]-a[0]).forEach(([year,total])=>taxTotals.append(tableRow([year,'Итого баронии',total],true)));
+}
 function hexValue(row,field) {
   if (field==='Состав ландшафта' && row[field]) {
     try {
@@ -101,6 +127,7 @@ function renderCabinet() {
   document.querySelector('#economy-gold').textContent=economy.gold;
   document.querySelector('#economy-food').textContent=economy.food;
   document.querySelector('#economy-population').textContent=economy.population;
+  renderEconomyHistory(state.economy_history);
   document.querySelector('#barony-totals').replaceChildren(statCard('Владение',[['Гексов',stats.hex_count],['Островных гексов',stats.islands],['Гексов с объектами',stats.objects]]));
   for (const [id,key] of [['category-stats','categories'],['landscape-stats','landscapes']]) {
     const entries=Object.entries(stats[key]); lineList(document.getElementById(id),entries.length ? entries : [['Описание','Нет данных']]);

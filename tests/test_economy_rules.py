@@ -4,7 +4,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'app/backend'))
 from economy_rules import generated_food, grow_population, settle_federal_food
-from game_clock import _annual_resource_income
+from game_clock import _annual_resource_income, _proportional
 
 
 class EconomyRuleTests(unittest.TestCase):
@@ -32,6 +32,11 @@ class EconomyRuleTests(unittest.TestCase):
         rng = FixedRandom()
         self.assertEqual(grow_population(75, 80, 1, 12, rng), 80)
         self.assertEqual(rng.range, (1, 12))
+
+    def test_famine_allocation_is_deterministic_and_preserves_total(self):
+        result=_proportional(5,{(2,0):2,(0,0):2,(1,0):2})
+        self.assertEqual(sum(result.values()),5)
+        self.assertEqual(result,{(0,0):2,(1,0):2,(2,0):1})
 
     def test_annual_resources_merge_food_and_credit_other_stock(self):
         class Result:

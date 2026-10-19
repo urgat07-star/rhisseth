@@ -10,8 +10,9 @@ def read_peasants(request:Request):
     user_id=request.state.user['user_id']
     with connect() as conn:
         row=conn.execute('SELECT quantity FROM barony_peasant_reserve WHERE user_id=%s',(user_id,)).fetchone()
-        cells=conn.execute('''SELECT p.q,p.r,p.quantity FROM game_hex_peasants p JOIN hexes h ON h.q=p.q AND h.r=p.r
-            WHERE h.data->>'Тип владельца'='Игрок' AND h.data->>'Владелец'=%s ORDER BY p.q,p.r''',
+        cells=conn.execute('''SELECT h.q,h.r,
+            CASE WHEN COALESCE(h.data->>'Население','')~'^[0-9]+$' THEN (h.data->>'Население')::integer ELSE 0 END
+            FROM hexes h WHERE h.data->>'Тип владельца'='Игрок' AND h.data->>'Владелец'=%s ORDER BY h.r,h.q''',
             (str(user_id),)).fetchall()
     return {'reserve':row[0] if row else 0,'hexes':[{'q':q,'r':r,'quantity':quantity} for q,r,quantity in cells]}
 
@@ -30,8 +31,18 @@ async def transfer_peasants(request:Request):
         target=conn.execute('SELECT data FROM hexes WHERE q=%s AND r=%s FOR UPDATE',(data['q'],data['r'])).fetchone()
         if not target or target[0].get('Тип владельца')!='Игрок' or target[0].get('Владелец')!=str(user_id):
             raise HTTPException(409,'Крестьян можно направить только на свой гекс')
+        if target[0].get('Категория')=='Море' and target[0].get('Остров')!='Да':
+            raise HTTPException(409,'Население нельзя переселять на морской гекс')
+        try:population=max(0,int(target[0].get('Население') or 0))
+        except (TypeError,ValueError):population=0
+        turn=conn.execute('SELECT turn_number FROM game_clock WHERE id=true').fetchone()[0]
         conn.execute('UPDATE barony_peasant_reserve SET quantity=quantity-%s WHERE user_id=%s',(data['quantity'],user_id))
+        conn.execute("""UPDATE hexes SET data=data || jsonb_build_object('Население',%s),updated_at=now()
+            WHERE q=%s AND r=%s""",(str(population+data['quantity']),data['q'],data['r']))
         conn.execute('''INSERT INTO game_hex_peasants(q,r,quantity) VALUES (%s,%s,%s)
             ON CONFLICT(q,r) DO UPDATE SET quantity=game_hex_peasants.quantity+EXCLUDED.quantity''',
             (data['q'],data['r'],data['quantity']))
-    return {'transferred':True,'reserve':reserve[0]-data['quantity']}
+        conn.execute("""INSERT INTO hex_population_events(year,turn_number,q,r,user_id,amount,reason)
+            VALUES (%s,%s,%s,%s,%s,%s,'reserve_transfer')""",
+            (turn//4,turn,data['q'],data['r'],user_id,data['quantity']))
+    return {'transferred':True,'reserve':reserve[0]-data['quantity'],'population':population+data['quantity']}

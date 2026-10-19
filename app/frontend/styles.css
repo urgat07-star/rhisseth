@@ -436,6 +436,16 @@ input[type="number"] {display: block; margin-top: 5px;}
 .economy-resource-list-federal > div:focus-within { border-color: #e6d18a; background: rgba(39,48,28,.94); }
 .economy-resource-list-federal dt { font-weight: 700; }
 .economy-resource-list-federal dd { color: #fff4bd; font-weight: 700; }
+.history-details { margin: 18px 0; }
+.history-table-wrap { overflow: auto; max-height: 30rem; margin-top: 10px; }
+.history-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.history-table th,
+.history-table td { padding: 7px 9px; border: 1px solid #8d8056; text-align: right; white-space: nowrap; }
+.history-table th:nth-child(2),
+.history-table td:nth-child(2) { text-align: left; }
+.history-table thead th { position: sticky; top: 0; background: #252719; z-index: 1; }
+.history-table tfoot th,
+.history-table tfoot td { font-weight: 700; background: rgba(70,65,39,.75); }
 
 .barony-danger { margin-top: 28px; border-top: 1px solid #bd5b55; padding-top: 12px; }
 .danger-button { padding: 10px 14px; border: 1px solid #db8275; border-radius: 4px; background: #792e27; color: #fff; cursor: pointer; margin-top: 12px; }
