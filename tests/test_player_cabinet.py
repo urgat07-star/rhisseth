@@ -40,7 +40,7 @@ class PlayerCabinetTests(unittest.TestCase):
                                        ({'Население':'4','Основной ресурс':'Дерево','Богатство ресурса':'3'},),
                                        ({'Основной ресурс':'Лён','Богатство ресурса':'2'},)])]
         result=economy_summary(conn,2)
-        self.assertEqual(result,{'gold':17,'food':9,'population':10,'resources':{
+        self.assertEqual(result,{'available':True,'missing_tables':[],'gold':17,'food':9,'population':10,'resources':{
             'Дерево':{'quantity':12,'annual_growth':3,'hexes':1},
             'Лён':{'quantity':4,'annual_growth':2,'hexes':1}}})
 

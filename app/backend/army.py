@@ -48,6 +48,12 @@ def barony_crest(conn, user_id):
         AND coalesce(data->>'Герб баронии','')<>'' ORDER BY r,q LIMIT 1""",(str(user_id),)).fetchone()
     return row[0].replace('.png','.webp') if row and row[0] else None
 
+def crest_catalog_supported(conn):
+    """Allow the cabinet to stay readable while migration 048 is pending."""
+    return bool(conn.execute("""SELECT 1 FROM information_schema.columns
+        WHERE table_schema=current_schema() AND table_name='general_catalog'
+        AND column_name='crest'""").fetchone())
+
 def armies(conn,user_id):
     generals=[]
     for row in conn.execute('''SELECT pg.id,pg.name,pg.icon,pg.experience,pg.level,pg.attack_bonus,pg.defense_bonus,
@@ -73,6 +79,7 @@ def armies(conn,user_id):
 def player_army(request: Request):
     with connect() as conn:
         crest=barony_crest(conn,request.state.user['user_id'])
+        crest_supported=crest_catalog_supported(conn)
         wallet=conn.execute('SELECT gold FROM game_wallets WHERE user_id=%s',(request.state.user['user_id'],)).fetchone()
         inventory=dict(conn.execute('SELECT resource_code,quantity FROM game_inventory WHERE user_id=%s',(request.state.user['user_id'],)).fetchall())
         costs={}
@@ -80,9 +87,17 @@ def player_army(request: Request):
             costs.setdefault(unit_id,{})[code]=quantity
         purchasable={row[0] for row in conn.execute('SELECT id FROM unit_catalog WHERE purchasable').fetchall()}
         units=[{**unit,'cost':costs.get(unit['id'],{})} for unit in catalogue(conn) if unit['id'] in purchasable]
-        general_catalogue=[dict(zip(('id','name','description','image_path','health','attack','defense','initiative','speed','logistics','crest','pose'),row))
-            for row in conn.execute('''SELECT id,name,description,image_path,health,attack,defense,initiative,speed,logistics,crest,pose
-                FROM general_catalog WHERE active AND crest=%s ORDER BY pose,id''',(crest,)).fetchall()] if crest else []
+        if crest_supported:
+            general_catalogue=[]
+            rows=conn.execute('''SELECT id,name,description,image_path,health,attack,defense,initiative,speed,logistics,crest,pose
+                FROM general_catalog WHERE active ORDER BY crest,pose,id''').fetchall()
+            for row in rows:
+                item=dict(zip(('id','name','description','image_path','health','attack','defense','initiative','speed','logistics','crest','pose'),row))
+                item['crest_available']=bool(crest and item['crest']==crest)
+                item['restriction']=None if item['crest_available'] else 'Герб генерала не совпадает с гербом вашей баронии'
+                general_catalogue.append(item)
+        else:
+            general_catalogue=[]
         return {'generals':armies(conn,request.state.user['user_id']),'catalogue':units,'general_catalogue':general_catalogue,
                 'gold':wallet[0] if wallet else 0,'inventory':inventory,'general_price':100}
 
@@ -95,6 +110,7 @@ async def hire_general(request: Request):
     with connect() as conn:
         crest=barony_crest(conn,user_id)
         if not crest: raise HTTPException(409,'У баронии не выбран герб')
+        if not crest_catalog_supported(conn): raise HTTPException(409,'Каталог гербовых генералов ещё не подготовлен миграцией 048')
         wallet=conn.execute('SELECT gold FROM game_wallets WHERE user_id=%s FOR UPDATE',(user_id,)).fetchone()
         if not wallet or wallet[0]<100: raise HTTPException(409,'Для найма генерала нужно 100 золотых')
         if conn.execute('SELECT count(*) FROM player_generals WHERE user_id=%s',(user_id,)).fetchone()[0]>=10: raise HTTPException(409,'Допускается не более 10 генералов')

@@ -74,14 +74,3 @@ UPDATE player_generals pg
 SET catalog_id=replacements.catalog_id,icon=replacements.image_path
 FROM replacements
 WHERE pg.id=replacements.player_general_id;
-
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1 FROM player_generals pg
-        JOIN general_catalog gc ON gc.id=pg.catalog_id
-        WHERE gc.crest IS NULL
-    ) THEN
-        RAISE EXCEPTION 'Не удалось определить герб баронии для одного или нескольких существующих генералов';
-    END IF;
-END $$;

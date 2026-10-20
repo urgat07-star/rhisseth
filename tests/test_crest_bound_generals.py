@@ -37,13 +37,20 @@ class CrestBoundGeneralTests(unittest.TestCase):
         self.assertIn("pg.icon LIKE '%gen-03%'",sql)
         self.assertIn('FROM player_baronies',sql)
         self.assertIn("data->>'Герб баронии'",sql)
-        self.assertIn("WHERE gc.crest IS NULL",sql)
-        self.assertIn('RAISE EXCEPTION',sql)
+        self.assertNotIn('RAISE EXCEPTION',sql)
 
     def test_api_filters_listing_and_purchase_by_barony_crest(self):
         source=(ROOT/'app/backend/army.py').read_text(encoding='utf-8')
-        self.assertGreaterEqual(source.count('active AND crest=%s'),3)
+        self.assertGreaterEqual(source.count('active AND crest=%s'),2)
         self.assertIn('def barony_crest(conn, user_id):',source)
+        self.assertIn('def crest_catalog_supported(conn):',source)
+        self.assertIn("item['crest_available']",source)
+
+    def test_cabinet_keeps_sections_visible_and_marks_restricted_hires(self):
+        source=(ROOT/'app/frontend/cabinet.js').read_text(encoding='utf-8')
+        self.assertIn('Promise.allSettled',source)
+        self.assertIn("general.crest_available===false",source)
+        self.assertIn('Часть данных недоступна',source)
 
 
 if __name__=='__main__':unittest.main()

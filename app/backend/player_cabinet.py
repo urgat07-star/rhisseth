@@ -53,6 +53,8 @@ def economy_summary(conn, user_id):
     tables=conn.execute("""SELECT to_regclass('game_wallets'),to_regclass('game_inventory'),
         to_regclass('game_resources'),to_regclass('barony_peasant_reserve')""").fetchone()
     wallet_table,inventory_table,resources_table,reserve_table=tables
+    table_names=('game_wallets','game_inventory','game_resources','barony_peasant_reserve')
+    missing_tables=[name for name,value in zip(table_names,tables) if not value]
     gold=(conn.execute('SELECT gold FROM game_wallets WHERE user_id=%s',(user_id,)).fetchone()
           if wallet_table else None)
     food=(conn.execute("SELECT quantity FROM game_inventory WHERE user_id=%s AND resource_code='food'",(user_id,)).fetchone()
@@ -86,7 +88,8 @@ def economy_summary(conn, user_id):
     for row in rows:
         try: population+=max(0,int(row.get('Население') or 1))
         except (ValueError,TypeError): population+=1
-    return {'gold':gold[0] if gold else 0,'food':food[0] if food else 0,
+    return {'available':not missing_tables,'missing_tables':missing_tables,
+            'gold':gold[0] if gold else 0,'food':food[0] if food else 0,
             'population':population+(reserve[0] if reserve else 0),'resources':resources}
 
 

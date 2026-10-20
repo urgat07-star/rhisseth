@@ -124,10 +124,11 @@ function renderCabinet() {
   document.querySelector('#cabinet-crest').src=`crests/${currentCrest}`;
   document.querySelector('#cabinet-cells').textContent=barony.hexes.map(row=>`Q${row.Q} R${row.R}`).join(' · ') || 'Нет принадлежащих вам гексов';
   const stats=barony.statistics;
-  const economy=state.economy||{gold:0,food:0,population:0,resources:{}};
-  document.querySelector('#economy-gold').textContent=economy.gold;
-  document.querySelector('#economy-food').textContent=economy.food;
-  document.querySelector('#economy-population').textContent=economy.population;
+  const economy=state.economy||{available:false,gold:0,food:0,population:0,resources:{}};
+  const economyValue=value=>economy.available===false?'Недоступно':value;
+  document.querySelector('#economy-gold').textContent=economyValue(economy.gold);
+  document.querySelector('#economy-food').textContent=economyValue(economy.food);
+  document.querySelector('#economy-population').textContent=economyValue(economy.population);
   renderEconomyHistory(state.economy_history);
   document.querySelector('#barony-totals').replaceChildren(statCard('Владение',[['Гексов',stats.hex_count],['Островных гексов',stats.islands],['Гексов с объектами',stats.objects]]));
   for (const [id,key] of [['category-stats','categories'],['landscape-stats','landscapes']]) {
@@ -135,6 +136,7 @@ function renderCabinet() {
   }
   lineList(document.querySelector('#resource-stats'),Object.entries(economy.resources).map(([name,value])=>[
     name,`На складе: ${value.quantity}${value.annual_growth>0?` · ⬆ +${value.annual_growth}/г.`:''}`]));
+  if(economy.available===false)lineList(document.querySelector('#resource-stats'),[['Состояние','Экономическая схема недоступна'],['Отсутствуют',(economy.missing_tables||[]).join(', ')||'неизвестные таблицы']]);
   document.querySelector('#rating-stats').replaceChildren(...Object.entries(stats.ratings).map(([field,value])=>statCard(field,[['Среднее',value.mean===null ? null : `${value.mean} / ${value.maximum}`],['Диапазон',value.min===null ? null : `${value.min}–${value.max}`],['Известно гексов',value.known],['Нет данных',value.missing]])));
   document.querySelector('#barony-hexes').replaceChildren(...barony.hexes.map(row=>{
     const details=document.createElement('details'), summary=document.createElement('summary'), dl=document.createElement('dl');
@@ -228,6 +230,7 @@ function renderArmy() {
   const catalogue=document.querySelector('#general-catalogue');catalogue.replaceChildren();
   (armyState.general_catalogue||[]).forEach(general=>{
     const missing=[];
+    if(general.crest_available===false)missing.push(general.restriction||'герб не соответствует баронии');
     if(armyState.generals.length>=10)missing.push('достигнут предел 10 генералов');
     missing.push(...missingCost({gold:armyState.general_price}));
     catalogue.append(hireCard(general,'general',missing,async()=>{
@@ -347,6 +350,10 @@ document.querySelector('#logout').addEventListener('click',async()=>{
   if (response.ok) location.href='/index.php'; else status.textContent='Не удалось выйти. Обновите страницу и повторите попытку.';
 });
 (async()=>{
-  try { const identity=await api('/api/me'); csrf=identity.csrf; await Promise.all([loadCabinet(),loadArmy(),loadDiplomacy(),loadPeasants()]); status.textContent=''; }
-  catch(error) { status.textContent=error.message; }
+  try {
+    const identity=await api('/api/me'); csrf=identity.csrf;
+    const sections=await Promise.allSettled([loadCabinet(),loadArmy(),loadDiplomacy(),loadPeasants()]);
+    const failed=sections.filter(result=>result.status==='rejected').map(result=>result.reason?.message||'Ошибка загрузки');
+    status.textContent=failed.length ? `Часть данных недоступна: ${[...new Set(failed)].join(' · ')}` : '';
+  } catch(error) { status.textContent=error.message; }
 })();

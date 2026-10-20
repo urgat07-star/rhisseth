@@ -15,6 +15,7 @@ class AdminBaronyCompatibilityTests(unittest.TestCase):
         source=(ROOT/'app/backend/player_cabinet.py').read_text(encoding='utf-8')
         self.assertIn("to_regclass('game_wallets')",source)
         self.assertIn('if inventory_table and resources_table else []',source)
+        self.assertIn("'available':not missing_tables",source)
 
     def test_read_only_fallback_hides_mutating_barony_settings(self):
         source=(ROOT/'app/frontend/cabinet.js').read_text(encoding='utf-8')

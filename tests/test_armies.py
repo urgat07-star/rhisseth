@@ -21,7 +21,7 @@ class ArmyTests(unittest.TestCase):
         mocked.return_value.__enter__.return_value=conn
 
     def test_player_can_hire_generated_general(self):
-        conn=MagicMock(); conn.execute.return_value.fetchone.side_effect=[('gerb_1.webp',),(300,),(0,),(4,'Генерал герба 1 · Пеший','general/general-gerb-01-foot.svg'),(0,0),(7,'Альрик Храбрый','general/general-gerb-01-foot.svg')]
+        conn=MagicMock(); conn.execute.return_value.fetchone.side_effect=[('gerb_1.webp',),(1,),(300,),(0,),(4,'Генерал герба 1 · Пеший','general/general-gerb-01-foot.svg'),(0,0),(7,'Альрик Храбрый','general/general-gerb-01-foot.svg')]
         self.connection(conn)
         with patch('main.current_user',return_value=self.player):
             response=self.client.post('/api/cabinet/army/generals',json={},headers=self.headers)
@@ -32,7 +32,7 @@ class ArmyTests(unittest.TestCase):
 
     def test_general_hire_rejects_insufficient_gold(self):
         conn=MagicMock()
-        conn.execute.return_value.fetchone.side_effect=[('gerb_1.webp',),(99,)]
+        conn.execute.return_value.fetchone.side_effect=[('gerb_1.webp',),(1,),(99,)]
         self.connection(conn)
         with patch('main.current_user',return_value=self.player):
             response=self.client.post('/api/cabinet/army/generals',json={},headers=self.headers)
@@ -41,7 +41,7 @@ class ArmyTests(unittest.TestCase):
 
     def test_general_hire_is_scoped_to_barony_crest(self):
         conn=MagicMock()
-        conn.execute.return_value.fetchone.side_effect=[('gerb_2.webp',),(300,),(0,),None]
+        conn.execute.return_value.fetchone.side_effect=[('gerb_2.webp',),(1,),(300,),(0,),None]
         self.connection(conn)
         with patch('main.current_user',return_value=self.player):
             response=self.client.post('/api/cabinet/army/generals',json={'catalog_id':4},headers=self.headers)
