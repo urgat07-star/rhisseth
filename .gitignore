@@ -14,3 +14,7 @@ reports/
 temp/
 secrets/
 tools/
+!tools/
+tools/*
+!tools/Apply-Vds.ps1
+!tools/Apply-VdsRemote.sh

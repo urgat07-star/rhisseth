@@ -54,7 +54,7 @@ function Start-InteractiveMenu {
         Write-Host '  4. Развернуть код из GitHub на VDS с резервной копией'
         Write-Host '  5. Скачать изменения VDS, создать коммит и отправить в GitHub'
         Write-Host '  6. Восстановить VDS из резервной копии (выбор по дате)'
-        Write-Host '  7. Применить изменения на VDS и перезапустить службы'
+        Write-Host '  7. Backup БД, репетиция всех миграций и применение изменений'
         Write-Host '  8. Управление ветками fix/*, batell и economic'
         Write-Host '  9. Выход'
         Write-Host ''
@@ -107,7 +107,7 @@ compare                сравнить локальный код, GitHub и VDS
 deploy-vds             развернуть подтверждённый код GitHub на VDS с backup
 pull-vds               создать ветку/коммит состояния VDS и отправить в GitHub
 rollback-vds           выбрать по дате и восстановить резервную копию VDS
-apply-vds              перезапустить службы и проверить сайт
+apply-vds              backup БД, тестовый restore, все миграции, restart и health-check
 branches               создать/выбрать рабочую ветку и подготовить PR в main
 
 Примеры:
@@ -160,10 +160,10 @@ branches               создать/выбрать рабочую ветку �
             Invoke-Tool 'Rollback-Vds.ps1' $p; Write-Host "Успешно: VDS восстановлен из резервной копии." -ForegroundColor Green; Write-Report 'rollback-vds' "Результат: успешно`nРезервная копия: $Backup"
         }
         'apply-vds' {
-            Write-Header "Применение изменений и проверка служб"
+            Write-Header "Backup БД, репетиция миграций и применение изменений"
             Invoke-Tool 'Apply-Vds.ps1' @{ Credentials=$Credentials }
-            Write-Host "Успешно: службы перезапущены, сайт проверен." -ForegroundColor Green
-            Write-Report 'apply-vds' "Результат: успешно`nПроверены: rhisseth, nginx, /health"
+            Write-Host "Успешно: все миграции проверены на копии и применены, сайт проверен." -ForegroundColor Green
+            Write-Report 'apply-vds' "Результат: успешно`nПроверены: backup PostgreSQL, restore во временную БД, все SQL migrations, production, rhisseth, nginx, /health"
         }
         'branches' {
             Write-Header "Управление ветками"

@@ -13,6 +13,15 @@ ALTER TABLE general_catalog
     ADD CONSTRAINT general_catalog_pose_check
     CHECK (pose IS NULL OR pose IN ('foot','mounted'));
 
+-- Миграция 011 разрешала только два старых WEBP-файла. Ограничение необходимо
+-- расширить до замены icon у уже нанятых генералов, иначе UPDATE ниже отклоняется.
+ALTER TABLE player_generals
+    DROP CONSTRAINT IF EXISTS player_generals_icon_check;
+
+ALTER TABLE player_generals
+    ADD CONSTRAINT player_generals_icon_check
+    CHECK (icon ~ '^general/[a-zA-Z0-9_-]+\.(webp|png|svg)$');
+
 UPDATE general_catalog SET active=false WHERE crest IS NULL;
 UPDATE general_catalog SET image_path=CASE id
     WHEN 1 THEN 'general/gen-01-transparent.png'
