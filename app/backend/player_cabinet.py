@@ -50,11 +50,18 @@ def statistics(rows):
 
 
 def economy_summary(conn, user_id):
-    gold=conn.execute('SELECT gold FROM game_wallets WHERE user_id=%s',(user_id,)).fetchone()
-    food=conn.execute("SELECT quantity FROM game_inventory WHERE user_id=%s AND resource_code='food'",(user_id,)).fetchone()
-    reserve=conn.execute('SELECT quantity FROM barony_peasant_reserve WHERE user_id=%s',(user_id,)).fetchone()
-    inventory_rows=conn.execute('''SELECT r.name,i.quantity,r.is_food FROM game_inventory i
+    tables=conn.execute("""SELECT to_regclass('game_wallets'),to_regclass('game_inventory'),
+        to_regclass('game_resources'),to_regclass('barony_peasant_reserve')""").fetchone()
+    wallet_table,inventory_table,resources_table,reserve_table=tables
+    gold=(conn.execute('SELECT gold FROM game_wallets WHERE user_id=%s',(user_id,)).fetchone()
+          if wallet_table else None)
+    food=(conn.execute("SELECT quantity FROM game_inventory WHERE user_id=%s AND resource_code='food'",(user_id,)).fetchone()
+          if inventory_table else None)
+    reserve=(conn.execute('SELECT quantity FROM barony_peasant_reserve WHERE user_id=%s',(user_id,)).fetchone()
+             if reserve_table else None)
+    inventory_rows=(conn.execute('''SELECT r.name,i.quantity,r.is_food FROM game_inventory i
         JOIN game_resources r ON r.code=i.resource_code WHERE i.user_id=%s''',(user_id,)).fetchall()
+        if inventory_table and resources_table else [])
     inventory={name:quantity for name,quantity,is_food in inventory_rows if not is_food and name!='Еда'}
     food_names={name for name,quantity,is_food in inventory_rows if is_food}
     rows=[row[0] for row in conn.execute("""SELECT data FROM hexes
@@ -115,7 +122,22 @@ def cabinet(request: Request):
         if row:
             cells=[public_row(item[0]) for item in conn.execute("SELECT data FROM hexes WHERE data->>'Тип владельца'='Игрок' AND data->>'Владелец'=%s AND data->>'ID территории'=%s ORDER BY r,q",(str(user_id),str(row[0]))).fetchall()]
             barony=dict(zip(('id','name','title','crest','color'),row))
-            barony.update(hexes=cells,statistics=statistics(cells))
+            barony.update(hexes=cells,statistics=statistics(cells),editable=True)
+        elif request.state.user['role_alias'] in ('admin','moderator'):
+            # Legacy/admin-created holdings may exist in hex JSON without a
+            # player_baronies record. Show them read-only instead of presenting
+            # an empty cabinet or failing while loading unrelated subsystems.
+            owned=[public_row(item[0]) for item in conn.execute("""SELECT data FROM hexes
+                WHERE data->>'Тип владельца'='Игрок' AND data->>'Владелец'=%s ORDER BY r,q""",
+                (str(user_id),)).fetchall()]
+            if owned:
+                first=owned[0]
+                raw_id=str(first.get('ID территории') or '')
+                barony={'id':int(raw_id) if raw_id.isdigit() else None,
+                        'name':first.get('Название баронии') or first.get('Название территории') or 'Барония администратора',
+                        'title':'Барон','crest':first.get('Герб баронии') or CRESTS[0],
+                        'color':first.get('Цвет баронии') or '#50545b','hexes':owned,
+                        'statistics':statistics(owned),'editable':False}
         economy_data=economy_summary(conn,user_id)
         history=economy_history(conn,user_id,row[0] if row else None)
     return {'account':dict(zip(('login','email'),account)), 'barony':barony,

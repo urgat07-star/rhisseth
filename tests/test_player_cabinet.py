@@ -32,7 +32,8 @@ class PlayerCabinetTests(unittest.TestCase):
 
     def test_economy_summary_uses_hex_population_and_omits_no_resource(self):
         conn=MagicMock()
-        conn.execute.side_effect=[MagicMock(fetchone=lambda:(17,)),MagicMock(fetchone=lambda:(9,)),
+        conn.execute.side_effect=[MagicMock(fetchone=lambda:('game_wallets','game_inventory','game_resources','barony_peasant_reserve')),
+            MagicMock(fetchone=lambda:(17,)),MagicMock(fetchone=lambda:(9,)),
             MagicMock(fetchone=lambda:(3,)),
             MagicMock(fetchall=lambda:[('Дерево',12,False),('Лён',4,False)]),
             MagicMock(fetchall=lambda:[({'Население':'2','Основной ресурс':'Нет'},),
@@ -131,6 +132,7 @@ class PlayerCabinetTests(unittest.TestCase):
             result=MagicMock()
             if sql.startswith('SELECT user_login'):result.fetchone.return_value=('player','player@example.invalid')
             elif sql.startswith('SELECT id,name,title'):result.fetchone.return_value=(7,'Барония','Барон','gerb_1.png','#b51f24')
+            elif "to_regclass('game_wallets')" in sql:result.fetchone.return_value=('game_wallets','game_inventory','game_resources','barony_peasant_reserve')
             elif sql.startswith('SELECT gold'):result.fetchone.return_value=(10,)
             elif sql.startswith('SELECT quantity'):result.fetchone.return_value=(4,)
             elif 'SELECT data FROM hexes' in sql:result.fetchall.return_value=[({'Q':'0','R':'0','Плодородие':'0','Население':'1'},)]

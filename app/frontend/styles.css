@@ -39,9 +39,39 @@ a { color: #e0d49f; }
 .eyebrow, .card-kicker { margin: 0 0 3px; color: #b8c092; font-size: 11px; font-weight: 800; letter-spacing: .19em; }
 h1 { margin: 0; font-family: Georgia, serif; font-size: clamp(22px, 3vw, 32px); font-weight: 500; }
 .hint { color: #cbd0c1; font-size: 14px; }
+.topbar > .hint { flex: 1 1 auto; }
 .mouse-icon { display: inline-grid; place-items: center; width: 27px; height: 27px; margin-right: 6px; border: 1px solid #87906e; border-radius: 50%; color: #d9c795; }
 .logo-img {width:110px;}
 .goback-play A {text-decoration:none;}
+
+.barony-menu-link {
+  display: inline-grid;
+  place-items: center;
+  width: 66px;
+  height: 66px;
+  padding: 5px;
+  flex: 0 0 66px;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  text-decoration: none;
+  transition: transform .15s ease, border-color .15s ease, background .15s ease, filter .15s ease;
+}
+.barony-menu-link:hover,
+.barony-menu-link:focus-visible {
+  transform: translateY(-2px) scale(1.06);
+  border-color: #b8a86b99;
+  background: #263126a8;
+  filter: drop-shadow(0 0 7px #e5cf7c88);
+  outline: none;
+}
+.barony-menu-link:active { transform: scale(.98); }
+.barony-menu-crest {
+  display: block;
+  width: 54px;
+  height: 54px;
+  object-fit: contain;
+  filter: drop-shadow(0 3px 3px #000c);
+}
 
 /* ============================================================
    3. MAIN / КАРТА (map-viewport, map-stage, hex, barony)

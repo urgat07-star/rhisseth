@@ -140,6 +140,30 @@ function crestAsset(crest) {
   return `crests/${crest.replace(/\.png$/i, '.webp')}`;
 }
 
+/** Показывает в шапке герб текущего игрока как вход в меню баронии. */
+function updateBaronyMenuCrest(rows) {
+  const link = document.querySelector('#barony-menu-link');
+  const image = document.querySelector('#barony-menu-crest');
+  if (!link || !image) return;
+  const barony = rows.find(row =>
+    row['Тип владельца'] === 'Игрок' &&
+    String(row['Владелец'] || '') === String(userId) &&
+    row['Герб баронии']
+  );
+  if (!barony) {
+    link.hidden = true;
+    image.removeAttribute('src');
+    image.alt = '';
+    return;
+  }
+  const name = barony['Название баронии'] || 'вашей баронии';
+  image.src = crestAsset(barony['Герб баронии']);
+  image.alt = `Герб ${name}`;
+  link.title = `Барония: ${name}`;
+  link.setAttribute('aria-label', `Открыть меню баронии «${name}»`);
+  link.hidden = false;
+}
+
 function redrawBaronyEmblems() {
   if (!baronyEmblems) return;
   const groups = new Map();
@@ -973,6 +997,7 @@ async function claimBarony(event) {
 loadData()
   .then(async ({ rows, source }) => {
     render(rows);
+    updateBaronyMenuCrest(rows);
     if (!creatingBarony) await refreshGameClock();
     if (!creatingBarony) await createMapUnit();
     await setupPlayerPage();

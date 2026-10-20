@@ -39,6 +39,15 @@ def home_hex(conn, user_id):
     return conn.execute('''SELECT q,r FROM hexes WHERE data->>'Тип владельца'='Игрок'
         AND data->>'Владелец'=%s ORDER BY q,r LIMIT 1''',(str(user_id),)).fetchone()
 
+def barony_crest(conn, user_id):
+    """Return the canonical crest assigned to the player's barony."""
+    row=conn.execute('SELECT crest FROM player_baronies WHERE user_id=%s',(user_id,)).fetchone()
+    if row and row[0]: return row[0].replace('.png','.webp')
+    row=conn.execute("""SELECT data->>'Герб баронии' FROM hexes
+        WHERE data->>'Тип владельца'='Игрок' AND data->>'Владелец'=%s
+        AND coalesce(data->>'Герб баронии','')<>'' ORDER BY r,q LIMIT 1""",(str(user_id),)).fetchone()
+    return row[0].replace('.png','.webp') if row and row[0] else None
+
 def armies(conn,user_id):
     generals=[]
     for row in conn.execute('''SELECT pg.id,pg.name,pg.icon,pg.experience,pg.level,pg.attack_bonus,pg.defense_bonus,
@@ -63,6 +72,7 @@ def armies(conn,user_id):
 @router.get('/api/cabinet/army')
 def player_army(request: Request):
     with connect() as conn:
+        crest=barony_crest(conn,request.state.user['user_id'])
         wallet=conn.execute('SELECT gold FROM game_wallets WHERE user_id=%s',(request.state.user['user_id'],)).fetchone()
         inventory=dict(conn.execute('SELECT resource_code,quantity FROM game_inventory WHERE user_id=%s',(request.state.user['user_id'],)).fetchall())
         costs={}
@@ -70,9 +80,9 @@ def player_army(request: Request):
             costs.setdefault(unit_id,{})[code]=quantity
         purchasable={row[0] for row in conn.execute('SELECT id FROM unit_catalog WHERE purchasable').fetchall()}
         units=[{**unit,'cost':costs.get(unit['id'],{})} for unit in catalogue(conn) if unit['id'] in purchasable]
-        general_catalogue=[dict(zip(('id','name','description','image_path','health','attack','defense','initiative','speed','logistics'),row))
-            for row in conn.execute('''SELECT id,name,description,image_path,health,attack,defense,initiative,speed,logistics
-                FROM general_catalog WHERE active ORDER BY id''').fetchall()]
+        general_catalogue=[dict(zip(('id','name','description','image_path','health','attack','defense','initiative','speed','logistics','crest','pose'),row))
+            for row in conn.execute('''SELECT id,name,description,image_path,health,attack,defense,initiative,speed,logistics,crest,pose
+                FROM general_catalog WHERE active AND crest=%s ORDER BY pose,id''',(crest,)).fetchall()] if crest else []
         return {'generals':armies(conn,request.state.user['user_id']),'catalogue':units,'general_catalogue':general_catalogue,
                 'gold':wallet[0] if wallet else 0,'inventory':inventory,'general_price':100}
 
@@ -83,15 +93,19 @@ async def hire_general(request: Request):
         raise HTTPException(400,'Выберите генерала')
     user_id=request.state.user['user_id']
     with connect() as conn:
+        crest=barony_crest(conn,user_id)
+        if not crest: raise HTTPException(409,'У баронии не выбран герб')
         wallet=conn.execute('SELECT gold FROM game_wallets WHERE user_id=%s FOR UPDATE',(user_id,)).fetchone()
         if not wallet or wallet[0]<100: raise HTTPException(409,'Для найма генерала нужно 100 золотых')
         if conn.execute('SELECT count(*) FROM player_generals WHERE user_id=%s',(user_id,)).fetchone()[0]>=10: raise HTTPException(409,'Допускается не более 10 генералов')
         name=f'{random.choice(FIRST_NAMES)} {random.choice(SURNAMES)}'
         if data.get('catalog_id') is not None:
-            template=conn.execute('SELECT id,name,image_path FROM general_catalog WHERE id=%s AND active',(data['catalog_id'],)).fetchone()
+            template=conn.execute('''SELECT id,name,image_path FROM general_catalog
+                WHERE id=%s AND active AND crest=%s''',(data['catalog_id'],crest)).fetchone()
         else:
-            template=conn.execute('SELECT id,name,image_path FROM general_catalog WHERE active ORDER BY random() LIMIT 1').fetchone()
-        if not template: raise HTTPException(409,'Нет доступных шаблонов генералов')
+            template=conn.execute('''SELECT id,name,image_path FROM general_catalog
+                WHERE active AND crest=%s ORDER BY random() LIMIT 1''',(crest,)).fetchone()
+        if not template: raise HTTPException(409,'Этот генерал недоступен для герба вашей баронии')
         home=home_hex(conn,user_id)
         if not home: raise HTTPException(409,'У баронии нет стартовой территории')
         row=conn.execute('''INSERT INTO player_generals(user_id,name,icon,catalog_id,q,r)
@@ -210,7 +224,7 @@ def _validate_general(data):
     for key in ('health','attack','defense','initiative','speed','logistics','experience_per_level','max_level','max_attack_bonus','max_defense_bonus'):
         if type(data[key]) is not int or not 0<=data[key]<=10000: raise HTTPException(400,f'{key}: некорректное число')
     if type(data['active']) is not bool or not data['name'].strip(): raise HTTPException(400,'Заполните имя и доступность')
-    if not data['image_path'].startswith('general/gen-') or not data['image_path'].endswith('.webp'): raise HTTPException(400,'Изображение должно находиться в general/*.webp')
+    if not data['image_path'].startswith('general/') or not data['image_path'].endswith(('.webp','.png','.svg')): raise HTTPException(400,'Изображение должно находиться в general/*.(webp|png|svg)')
 
 @router.patch('/api/admin/generals/{general_id}')
 async def edit_general(general_id: int, request: Request):

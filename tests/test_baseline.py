@@ -21,7 +21,7 @@ class BaselineTests(unittest.TestCase):
         self.assertIn("overlay.appendChild(unitLayer)",script)
         self.assertGreaterEqual(script.count("raiseMapUnitLayer();"),3)
         for page in ('index.html','create-barony.html'):
-            self.assertIn('app.js?v=map-units-on-top-1',(ROOT/'app/frontend'/page).read_text(encoding='utf-8'))
+            self.assertIn('app.js?v=crest-bound-generals-1',(ROOT/'app/frontend'/page).read_text(encoding='utf-8'))
 
     def test_source_coordinates(self):
         rows = read_rows(ROOT / 'data/import/hex-initial-parameters.csv')

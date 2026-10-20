@@ -21,7 +21,7 @@ class ArmyTests(unittest.TestCase):
         mocked.return_value.__enter__.return_value=conn
 
     def test_player_can_hire_generated_general(self):
-        conn=MagicMock(); conn.execute.return_value.fetchone.side_effect=[(300,),(0,),(1,'Генерал 1','general/gen-01.webp'),(0,0),(7,'Альрик Храбрый','general/gen-01.webp')]
+        conn=MagicMock(); conn.execute.return_value.fetchone.side_effect=[('gerb_1.webp',),(300,),(0,),(4,'Генерал герба 1 · Пеший','general/general-gerb-01-foot.svg'),(0,0),(7,'Альрик Храбрый','general/general-gerb-01-foot.svg')]
         self.connection(conn)
         with patch('main.current_user',return_value=self.player):
             response=self.client.post('/api/cabinet/army/generals',json={},headers=self.headers)
@@ -31,11 +31,23 @@ class ArmyTests(unittest.TestCase):
         self.assertTrue(any('SET gold=gold-100' in call.args[0] for call in conn.execute.call_args_list))
 
     def test_general_hire_rejects_insufficient_gold(self):
-        conn=MagicMock(); conn.execute.return_value.fetchone.return_value=(99,)
+        conn=MagicMock()
+        conn.execute.return_value.fetchone.side_effect=[('gerb_1.webp',),(99,)]
         self.connection(conn)
         with patch('main.current_user',return_value=self.player):
             response=self.client.post('/api/cabinet/army/generals',json={},headers=self.headers)
         self.assertEqual(response.status_code,409)
+        self.assertFalse(any('INSERT INTO player_generals' in call.args[0] for call in conn.execute.call_args_list))
+
+    def test_general_hire_is_scoped_to_barony_crest(self):
+        conn=MagicMock()
+        conn.execute.return_value.fetchone.side_effect=[('gerb_2.webp',),(300,),(0,),None]
+        self.connection(conn)
+        with patch('main.current_user',return_value=self.player):
+            response=self.client.post('/api/cabinet/army/generals',json={'catalog_id':4},headers=self.headers)
+        self.assertEqual(response.status_code,409)
+        template_call=next(call for call in conn.execute.call_args_list if 'FROM general_catalog' in call.args[0])
+        self.assertEqual(template_call.args[1],(4,'gerb_2.webp'))
         self.assertFalse(any('INSERT INTO player_generals' in call.args[0] for call in conn.execute.call_args_list))
 
     def test_player_cannot_change_foreign_general(self):

@@ -114,6 +114,7 @@ function renderCabinet() {
   document.querySelector('#barony-content').hidden=!barony;
   document.querySelector('#no-barony').hidden=Boolean(barony);
   if (!barony) return;
+  document.querySelector('#barony-settings').hidden=barony.editable===false;
   document.querySelector('#barony-name-form').elements.name.value=barony.name;
   document.querySelector('#cabinet-name').textContent=barony.name;
   document.querySelector('#cabinet-title').textContent=barony.title;

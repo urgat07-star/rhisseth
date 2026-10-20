@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Rhisseth — интерактивная карта</title>
-  <link rel="stylesheet" href="styles.css?v=fix-0.4.2-3">
+  <link rel="stylesheet" href="styles.css?v=crest-bound-generals-1">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Infant:ital,wght@0,300..700;1,300..700&family=Irish+Grover&family=Libertinus+Sans:ital,wght@0,400;0,700;1,400&family=Monomakh&display=swap" rel="stylesheet">
@@ -22,6 +22,10 @@
       <button id="start-game" class="ornate-link" type="button">Барония</button>
       <a id="user-status" class="ornate-link" href="cabinet.html#settings" title="Личный кабинет"></a>
     </nav>
+    <a id="barony-menu-link" class="barony-menu-link js-modal-page" href="cabinet.html#barony"
+       title="Открыть меню «Барония»" aria-label="Открыть меню «Барония»" hidden>
+      <img id="barony-menu-crest" class="barony-menu-crest" alt="">
+    </a>
     <!-- ▼ Выпадающее меню пользователя (CSS-only) ▼ -->
     <details class="user-menu">
         <summary class="user-menu__trigger" title="Меню пользователя">☰</summary>
@@ -150,7 +154,7 @@
     </dialog>
 	
 	<footer id="data-status">Final V2 · подключение к PostgreSQL…</footer>
-    <script src="app.js?v=map-units-on-top-1" defer></script>
+    <script src="app.js?v=crest-bound-generals-1" defer></script>
 	<script>
 	document.addEventListener('keydown', function(event) { // Проверяем, что нажат именно пробел 
 	if (event.code === 'Space') { document.getElementById('battle-end-round').click(); } });
